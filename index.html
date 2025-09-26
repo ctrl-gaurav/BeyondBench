@@ -5,11 +5,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BeyondBench - Benchmark-Free Evaluation of Reasoning in Language Models</title>
-    <meta name="description" content="BeyondBench: A comprehensive leaderboard for evaluating reasoning capabilities in language models without traditional benchmarks.">
+    <meta name="description"
+        content="BeyondBench: A comprehensive leaderboard for evaluating reasoning capabilities in language models without traditional benchmarks.">
     <meta name="keywords" content="language models, reasoning, benchmark, evaluation, AI, machine learning">
-    <meta name="author" content="Gaurav Srivastava, Aafiya Hussain, Zhenyu Bi, Swastik Roy, Priya Pitre, Meng Lu, Morteza Ziyadi, Xuan Wang">
+    <meta name="author"
+        content="Gaurav Srivastava, Aafiya Hussain, Zhenyu Bi, Swastik Roy, Priya Pitre, Meng Lu, Morteza Ziyadi, Xuan Wang">
 
-    <link rel="icon" type="image/x-icon" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiBmaWxsPSIjNjY3ZWVhIi8+CjxwYXRoIGQ9Ik0xNiA4TDI0IDE2TDE2IDI0TDggMTZMMTYgOFoiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPgo=">
+    <link rel="icon" type="image/x-icon"
+        href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiBmaWxsPSIjNjY3ZWVhIi8+CjxwYXRoIGQ9Ik0xNiA4TDI0IDE2TDE2IDI0TDggMTZMMTYgOFoiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPgo=">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
@@ -160,10 +163,28 @@
                 </h2>
                 <div class="table-container">
                     <table class="leaderboard-table" id="leaderboardTable">
+                        <colgroup>
+                            <col class="col-rank">
+                            <col class="col-model">
+                            <col class="col-num">
+                            <col class="col-num">
+                            <col class="col-tokens">
+                            <col class="col-num">
+                            <col class="col-num">
+                            <col class="col-tokens">
+                            <col class="col-num">
+                            <col class="col-num">
+                            <col class="col-tokens">
+                            <col class="col-num overall-colgroup">
+                            <col class="col-num overall-colgroup">
+                            <col class="col-tokens overall-colgroup">
+                            <col class="col-actions">
+                        </colgroup>
                         <thead>
                             <tr>
                                 <th rowspan="2" onclick="sortTable('rank')" class="sortable main-header">Rank</th>
-                                <th rowspan="2" onclick="sortTable('model')" class="sortable main-header">Model (Param)</th>
+                                <th rowspan="2" onclick="sortTable('model')" class="sortable main-header">Model (Param)
+                                </th>
                                 <th colspan="3" class="difficulty-header easy-header">Easy</th>
                                 <th colspan="3" class="difficulty-header medium-header">Medium</th>
                                 <th colspan="3" class="difficulty-header hard-header">Hard</th>
@@ -173,16 +194,19 @@
                             <tr>
                                 <th onclick="sortTable('easy_acc')" class="sortable sub-header">Acc (%)</th>
                                 <th onclick="sortTable('easy_inst')" class="sortable sub-header">Inst (%)</th>
-                                <th onclick="sortTable('easy_tokens')" class="sortable sub-header">Tokens</th>
+                                <th onclick="sortTable('easy_tokens')" class="sortable sub-header">Tokens (avg)</th>
                                 <th onclick="sortTable('medium_acc')" class="sortable sub-header">Acc (%)</th>
                                 <th onclick="sortTable('medium_inst')" class="sortable sub-header">Inst (%)</th>
-                                <th onclick="sortTable('medium_tokens')" class="sortable sub-header">Tokens</th>
+                                <th onclick="sortTable('medium_tokens')" class="sortable sub-header">Tokens (avg)</th>
                                 <th onclick="sortTable('hard_acc')" class="sortable sub-header">Acc (%)</th>
                                 <th onclick="sortTable('hard_inst')" class="sortable sub-header">Inst (%)</th>
-                                <th onclick="sortTable('hard_tokens')" class="sortable sub-header">Tokens</th>
-                                <th onclick="sortTable('overall_acc')" class="sortable sub-header overall-col">Acc (%)</th>
-                                <th onclick="sortTable('overall_inst')" class="sortable sub-header overall-col">Inst (%)</th>
-                                <th onclick="sortTable('overall_tokens')" class="sortable sub-header overall-col">Tokens</th>
+                                <th onclick="sortTable('hard_tokens')" class="sortable sub-header">Tokens (avg)</th>
+                                <th onclick="sortTable('overall_acc')" class="sortable sub-header overall-col">Acc (%)
+                                </th>
+                                <th onclick="sortTable('overall_inst')" class="sortable sub-header overall-col">Inst (%)
+                                </th>
+                                <th onclick="sortTable('overall_tokens')" class="sortable sub-header overall-col">Tokens
+                                    (avg)</th>
                             </tr>
                         </thead>
                         <tbody id="tableBody">
@@ -200,31 +224,31 @@
     <!-- Charts Section -->
     <section class="charts-section slide-in-left" id="charts">
         <div class="container">
-            <h2 class="section-title">📊 Interactive Visualizations</h2>
+            <h2 class="section-title">📊 Interactive Visualizations (Insights)</h2>
             <div class="charts-grid">
                 <div class="chart-container fade-in">
                     <h3 class="chart-title">Accuracy vs Efficiency Trade-off</h3>
                     <canvas id="efficiencyChart"></canvas>
                 </div>
                 <div class="chart-container fade-in">
-                    <h3 class="chart-title">Model Size vs Performance</h3>
-                    <canvas id="sizeChart"></canvas>
-                </div>
-                <div class="chart-container fade-in">
-                    <h3 class="chart-title">Overthinking vs Accuracy</h3>
-                    <canvas id="overthinkingChart"></canvas>
-                </div>
-                <div class="chart-container fade-in">
                     <h3 class="chart-title">Token Efficiency by Model Family</h3>
                     <canvas id="tokenEfficiencyChart"></canvas>
+                </div>
+                <div class="chart-container fade-in">
+                    <h3 class="chart-title">Difficulty Scaling Performance</h3>
+                    <canvas id="difficultyScalingChart"></canvas>
+                </div>
+                <div class="chart-container fade-in">
+                    <h3 class="chart-title">Parameter Count vs Performance</h3>
+                    <canvas id="parameterPerformanceChart"></canvas>
                 </div>
                 <div class="chart-container fade-in">
                     <h3 class="chart-title">Instruction Following Distribution</h3>
                     <canvas id="instructionChart"></canvas>
                 </div>
                 <div class="chart-container fade-in">
-                    <h3 class="chart-title">Top Models Performance</h3>
-                    <canvas id="distributionChart"></canvas>
+                    <h3 class="chart-title">Performance vs Parameter Size Trends</h3>
+                    <canvas id="parameterTrendsChart"></canvas>
                 </div>
             </div>
         </div>
@@ -245,11 +269,16 @@
             <div class="key-insights">
                 <h3>🔍 Key Insights</h3>
                 <ul>
-                    <li><strong>Reasoning Gap:</strong> Even the best models show significant performance drops on harder reasoning tasks</li>
-                    <li><strong>Scaling Effects:</strong> Larger models generally perform better, but the relationship is not always linear</li>
-                    <li><strong>Instruction Following:</strong> High accuracy doesn't always correlate with instruction-following compliance</li>
-                    <li><strong>Token Efficiency:</strong> Some models achieve comparable accuracy with significantly fewer tokens</li>
-                    <li><strong>True Reasoning:</strong> Dynamic generation reveals genuine capabilities vs. memorization</li>
+                    <li><strong>Reasoning Gap:</strong> Even the best models show significant performance drops on
+                        harder reasoning tasks</li>
+                    <li><strong>Scaling Effects:</strong> Larger models generally perform better, but the relationship
+                        is not always linear</li>
+                    <li><strong>Instruction Following:</strong> High accuracy doesn't always correlate with
+                        instruction-following compliance</li>
+                    <li><strong>Token Efficiency:</strong> Some models achieve comparable accuracy with significantly
+                        fewer tokens</li>
+                    <li><strong>True Reasoning:</strong> Dynamic generation reveals genuine capabilities vs.
+                        memorization</li>
                 </ul>
             </div>
         </div>

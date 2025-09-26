@@ -265,8 +265,11 @@ function renderTable(data) {
                     <button class="btn-icon" onclick="showModelDetails('${model.model}')" title="View Details">
                         <i class="fas fa-info-circle"></i>
                     </button>
-                    <button class="btn-icon" onclick="toggleModelSelection('${model.model}')" title="Select for Comparison">
-                        <i class="fas fa-plus"></i>
+                    <button class="btn-icon ${selectedModels.has(model.model) ? 'selected' : ''}"
+                            onclick="toggleModelSelection('${model.model}')"
+                            title="${selectedModels.has(model.model) ? 'Remove from Comparison' : 'Select for Comparison'}"
+                            ${selectedModels.has(model.model) ? 'style="background: var(--success-color); color: white;"' : ''}>
+                        <i class="fas ${selectedModels.has(model.model) ? 'fa-check' : 'fa-plus'}"></i>
                     </button>
                 </div>
             </td>
@@ -426,10 +429,6 @@ function showModelDetails(modelId) {
                     <span>Quantization</span>
                     <span>${model.quantization}</span>
                 </div>
-                <div class="metric-row">
-                    <span>Overthinking Ratio</span>
-                    <span>${model.overthinking.toFixed(1)}</span>
-                </div>
             </div>
             <div class="detail-card">
                 <h3>Token Statistics</h3>
@@ -448,8 +447,10 @@ function showModelDetails(modelId) {
             </div>
         </div>
         <div class="modal-actions">
-            <button class="btn btn-primary" onclick="toggleModelSelection('${model.model}')">
-                <i class="fas fa-plus"></i> Add to Comparison
+            <button class="btn ${selectedModels.has(model.model) ? 'btn-success' : 'btn-primary'}"
+                    onclick="toggleModelSelection('${model.model}')">
+                <i class="fas ${selectedModels.has(model.model) ? 'fa-check' : 'fa-plus'}"></i>
+                ${selectedModels.has(model.model) ? 'Remove from Comparison' : 'Add to Comparison'}
             </button>
         </div>
     `;
@@ -459,12 +460,39 @@ function showModelDetails(modelId) {
 
 // Toggle model selection for comparison
 function toggleModelSelection(modelId) {
-    if (selectedModels.has(modelId)) {
+    const isSelected = selectedModels.has(modelId);
+
+    if (isSelected) {
         selectedModels.delete(modelId);
     } else {
         selectedModels.add(modelId);
     }
+
+    // Update the visual state of the button
+    updateModelSelectionButton(modelId, !isSelected);
     updateCompareButton();
+}
+
+// Update the visual state of model selection button
+function updateModelSelectionButton(modelId, isSelected) {
+    // Find the button for this model
+    const buttons = document.querySelectorAll(`button[onclick="toggleModelSelection('${modelId.replace(/'/g, "\\'")}')"]`);
+    buttons.forEach(button => {
+        const icon = button.querySelector('i');
+        if (isSelected) {
+            button.classList.add('selected');
+            button.title = 'Remove from Comparison';
+            icon.className = 'fas fa-check';
+            button.style.background = 'var(--success-color)';
+            button.style.color = 'white';
+        } else {
+            button.classList.remove('selected');
+            button.title = 'Select for Comparison';
+            icon.className = 'fas fa-plus';
+            button.style.background = '';
+            button.style.color = '';
+        }
+    });
 }
 
 // Update compare button
@@ -544,84 +572,146 @@ function initCharts() {
         });
     }
 
-    // Model Size vs Performance Chart
-    const sizeCtx = document.getElementById('sizeChart');
-    if (sizeCtx) {
-        const top15 = rankedModelData.slice(0, 15);
-        new Chart(sizeCtx, {
-            type: 'bar',
+    // Difficulty Scaling Chart - Shows how models perform across difficulty levels
+    const difficultyScalingCtx = document.getElementById('difficultyScalingChart');
+    if (difficultyScalingCtx) {
+        const topModels = rankedModelData.slice(0, 10);
+
+        new Chart(difficultyScalingCtx, {
+            type: 'line',
             data: {
-                labels: top15.map(m => m.model.split('/').pop()),
-                datasets: [{
-                    label: 'Accuracy',
-                    data: top15.map(m => m.accuracy),
-                    backgroundColor: 'rgba(102, 126, 234, 0.8)',
-                    borderColor: 'rgba(102, 126, 234, 1)',
-                    borderWidth: 1
-                }]
+                labels: ['Easy', 'Medium', 'Hard'],
+                datasets: topModels.map((model, index) => ({
+                    label: model.model.split('/').pop(),
+                    data: [model.easy_acc, model.medium_acc, model.hard_acc],
+                    borderColor: `hsl(${index * 36}, 70%, 60%)`,
+                    backgroundColor: `hsla(${index * 36}, 70%, 60%, 0.1)`,
+                    borderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    tension: 0.3
+                }))
             },
             options: {
                 responsive: true,
                 plugins: {
-                    legend: { display: true }
+                    legend: {
+                        display: true,
+                        position: 'right',
+                        labels: {
+                            boxWidth: 12,
+                            font: { size: 10 }
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.dataset.label}: ${context.raw.toFixed(1)}%`;
+                            }
+                        }
+                    }
+                },
+                interaction: {
+                    mode: 'nearest',
+                    axis: 'x',
+                    intersect: false
                 },
                 scales: {
                     x: {
-                        title: { display: true, text: 'Model' },
-                        ticks: { maxRotation: 45 }
+                        title: { display: true, text: 'Difficulty Level' },
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' }
                     },
                     y: {
                         title: { display: true, text: 'Accuracy (%)' },
-                        beginAtZero: true
+                        beginAtZero: true,
+                        max: 100,
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' }
                     }
                 }
             }
         });
     }
 
-    // Overthinking vs Accuracy Chart
-    const overthinkingCtx = document.getElementById('overthinkingChart');
-    if (overthinkingCtx) {
-        new Chart(overthinkingCtx, {
+    // Parameter Count vs Performance Scatter Plot
+    const parameterPerformanceCtx = document.getElementById('parameterPerformanceChart');
+    if (parameterPerformanceCtx) {
+        // Group models by family for color coding
+        const familyData = {
+            'OpenAI': { models: [], color: 'rgba(255, 215, 0, 0.8)' },
+            'Google': { models: [], color: 'rgba(102, 126, 234, 0.8)' },
+            'Qwen': { models: [], color: 'rgba(240, 147, 251, 0.8)' },
+            'Meta': { models: [], color: 'rgba(16, 185, 129, 0.8)' },
+            'Microsoft': { models: [], color: 'rgba(245, 158, 11, 0.8)' },
+            'Mistral': { models: [], color: 'rgba(239, 68, 68, 0.8)' },
+            'Others': { models: [], color: 'rgba(107, 114, 128, 0.8)' }
+        };
+
+        // Categorize models by family
+        rankedModelData.forEach(model => {
+            const paramCount = parseFloat(model.params);
+            const dataPoint = {
+                x: paramCount,
+                y: model.accuracy,
+                model: model.model
+            };
+
+            if (model.model.includes('OpenAI')) familyData.OpenAI.models.push(dataPoint);
+            else if (model.model.includes('Google')) familyData.Google.models.push(dataPoint);
+            else if (model.model.includes('Qwen')) familyData.Qwen.models.push(dataPoint);
+            else if (model.model.includes('Meta')) familyData.Meta.models.push(dataPoint);
+            else if (model.model.includes('Microsoft')) familyData.Microsoft.models.push(dataPoint);
+            else if (model.model.includes('Mistral')) familyData.Mistral.models.push(dataPoint);
+            else familyData.Others.models.push(dataPoint);
+        });
+
+        const datasets = Object.keys(familyData)
+            .filter(family => familyData[family].models.length > 0)
+            .map(family => ({
+                label: family,
+                data: familyData[family].models,
+                backgroundColor: familyData[family].color,
+                borderColor: familyData[family].color.replace('0.8', '1'),
+                pointRadius: 6,
+                pointHoverRadius: 8
+            }));
+
+        new Chart(parameterPerformanceCtx, {
             type: 'scatter',
-            data: {
-                datasets: [{
-                    label: 'Models',
-                    data: rankedModelData.map(m => ({
-                        x: m.overthinking,
-                        y: m.accuracy,
-                        model: m.model
-                    })),
-                    backgroundColor: 'rgba(240, 147, 251, 0.6)',
-                    borderColor: 'rgba(240, 147, 251, 1)',
-                    pointRadius: 6
-                }]
-            },
+            data: { datasets },
             options: {
                 responsive: true,
                 plugins: {
-                    legend: { display: false },
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
                     tooltip: {
                         callbacks: {
                             label: function(context) {
                                 const point = context.raw;
-                                return `${point.model.split('/').pop()}: Overthinking ${point.x.toFixed(1)}, Accuracy ${point.y.toFixed(1)}%`;
+                                return `${point.model.split('/').pop()}: ${point.x}B params, ${point.y.toFixed(1)}% accuracy`;
                             }
                         }
                     }
                 },
                 scales: {
                     x: {
-                        title: { display: true, text: 'Overthinking Ratio' },
-                        type: 'logarithmic'
+                        type: 'logarithmic',
+                        title: { display: true, text: 'Parameter Count (Billions)' },
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' }
                     },
                     y: {
-                        title: { display: true, text: 'Accuracy (%)' }
+                        title: { display: true, text: 'Overall Accuracy (%)' },
+                        beginAtZero: true,
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' }
                     }
                 }
             }
         });
     }
+
 
     // Token Efficiency by Family Chart
     const tokenCtx = document.getElementById('tokenEfficiencyChart');
@@ -672,9 +762,91 @@ function initCharts() {
         });
     }
 
+    // Parameter Trends Chart
+    const parameterTrendsCtx = document.getElementById('parameterTrendsChart');
+    if (parameterTrendsCtx) {
+        // Group models by parameter size categories
+        const sizeCategories = {
+            'Small (<3B)': rankedModelData.filter(m => parseFloat(m.params) < 3),
+            'Medium (3-20B)': rankedModelData.filter(m => parseFloat(m.params) >= 3 && parseFloat(m.params) < 20),
+            'Large (20-100B)': rankedModelData.filter(m => parseFloat(m.params) >= 20 && parseFloat(m.params) < 100),
+            'XLarge (100B+)': rankedModelData.filter(m => parseFloat(m.params) >= 100)
+        };
+
+        const categories = Object.keys(sizeCategories);
+        const avgAccuracy = categories.map(cat => {
+            const models = sizeCategories[cat];
+            return models.length > 0 ? models.reduce((sum, m) => sum + m.accuracy, 0) / models.length : 0;
+        });
+        const avgInstruction = categories.map(cat => {
+            const models = sizeCategories[cat];
+            return models.length > 0 ? models.reduce((sum, m) => sum + m.instruction, 0) / models.length : 0;
+        });
+
+        new Chart(parameterTrendsCtx, {
+            type: 'line',
+            data: {
+                labels: categories,
+                datasets: [
+                    {
+                        label: 'Average Accuracy',
+                        data: avgAccuracy,
+                        borderColor: 'rgba(102, 126, 234, 1)',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        borderWidth: 3,
+                        pointRadius: 6,
+                        pointHoverRadius: 8,
+                        tension: 0.4,
+                        fill: true
+                    },
+                    {
+                        label: 'Average Instruction Following',
+                        data: avgInstruction,
+                        borderColor: 'rgba(240, 147, 251, 1)',
+                        backgroundColor: 'rgba(240, 147, 251, 0.1)',
+                        borderWidth: 3,
+                        pointRadius: 6,
+                        pointHoverRadius: 8,
+                        tension: 0.4,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                    }
+                },
+                interaction: {
+                    mode: 'nearest',
+                    axis: 'x',
+                    intersect: false
+                },
+                scales: {
+                    x: {
+                        title: { display: true, text: 'Parameter Size Category' },
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                    },
+                    y: {
+                        title: { display: true, text: 'Performance Score (%)' },
+                        beginAtZero: true,
+                        max: 100,
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                    }
+                }
+            }
+        });
+    }
+
     // Additional charts...
     initInstructionChart();
-    initDistributionChart();
 }
 
 // Initialize instruction following chart
@@ -722,47 +894,6 @@ function initInstructionChart() {
     });
 }
 
-// Initialize distribution chart
-function initDistributionChart() {
-    const distributionCtx = document.getElementById('distributionChart');
-    if (!distributionCtx) return;
-
-    const topModels = rankedModelData.slice(0, 20);
-
-    new Chart(distributionCtx, {
-        type: 'radar',
-        data: {
-            labels: ['Accuracy', 'Efficiency', 'Instruction Following', 'Low Overthinking', 'Token Efficiency'],
-            datasets: topModels.slice(0, 5).map((model, index) => ({
-                label: model.model.split('/').pop(),
-                data: [
-                    model.accuracy,
-                    model.efficiency * 100,
-                    model.instruction,
-                    Math.max(0, 100 - model.overthinking * 10),
-                    Math.min(100, (1000 / model.tokens) * 100)
-                ],
-                borderColor: `hsl(${index * 72}, 70%, 60%)`,
-                backgroundColor: `hsla(${index * 72}, 70%, 60%, 0.2)`,
-                pointBackgroundColor: `hsl(${index * 72}, 70%, 60%)`
-            }))
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                }
-            },
-            scales: {
-                r: {
-                    beginAtZero: true,
-                    max: 100
-                }
-            }
-        }
-    });
-}
 
 // Initialize scroll animations
 function initScrollAnimations() {
@@ -800,7 +931,7 @@ function exportData() {
 }
 
 function generateCSV(data) {
-    const headers = ['Rank', 'Model', 'Parameters', 'Accuracy', 'Efficiency', 'Instruction', 'Overthinking', 'Tokens', 'Words', 'Characters'];
+    const headers = ['Rank', 'Model', 'Parameters', 'Accuracy', 'Efficiency', 'Instruction', 'Tokens', 'Words', 'Characters'];
     const csvRows = [headers.join(',')];
 
     data.forEach(model => {
@@ -811,7 +942,6 @@ function generateCSV(data) {
             model.accuracy.toFixed(2),
             model.efficiency.toFixed(3),
             model.instruction.toFixed(1),
-            model.overthinking.toFixed(1),
             model.tokens.toFixed(0),
             model.words.toFixed(0),
             model.chars.toFixed(0)
