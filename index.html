@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BeyondBench - Benchmark-Free Evaluation of Reasoning in Language Models</title>
+    <meta name="description" content="BeyondBench: A comprehensive leaderboard for evaluating reasoning capabilities in language models without traditional benchmarks.">
+    <meta name="keywords" content="language models, reasoning, benchmark, evaluation, AI, machine learning">
+    <meta name="author" content="Gaurav Srivastava, Aafiya Hussain, Zhenyu Bi, Swastik Roy, Priya Pitre, Meng Lu, Morteza Ziyadi, Xuan Wang">
+
+    <link rel="icon" type="image/x-icon" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiBmaWxsPSIjNjY3ZWVhIi8+CjxwYXRoIGQ9Ik0xNiA4TDI0IDE2TDE2IDI0TDggMTZMMTYgOFoiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPgo=">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.js"></script>
+</head>
+
+<body>
+    <!-- Animated Background -->
+    <div class="bg-animation"></div>
+    <div class="particles"></div>
+
+    <!-- Header -->
+    <header class="header fade-in">
+        <div class="theme-toggle">
+            <button id="themeToggle" class="theme-btn" title="Toggle dark/light mode">
+                <i class="fas fa-moon" id="themeIcon"></i>
+            </button>
+        </div>
+        <div class="container">
+            <div class="header-content">
+                <h1 class="title">BeyondBench</h1>
+                <p class="subtitle">Benchmark-Free Evaluation of Reasoning in Language Models</p>
+
+                <div class="authors"></div>
+                <div class="affiliations"></div>
+                <div class="correspondence"></div>
+
+                <nav class="nav-links">
+                    <a href="#leaderboard" class="nav-link">
+                        <i class="fas fa-trophy"></i> Leaderboard
+                    </a>
+                    <a href="#charts" class="nav-link">
+                        <i class="fas fa-chart-line"></i> Visualizations
+                    </a>
+                    <a href="https://github.com/your-repo/beyondbench" class="nav-link" target="_blank">
+                        <i class="fab fa-github"></i> GitHub
+                    </a>
+                    <a href="#about" class="nav-link">
+                        <i class="fas fa-info-circle"></i> About
+                    </a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Top Models Showcase -->
+    <section class="top-models-section slide-in-left">
+        <div class="container">
+            <h2 class="section-title">🏆 Top Performers</h2>
+            <div class="top-models-grid" id="topModelsGrid">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Advanced Filters -->
+    <section class="filter-panel fade-in">
+        <div class="container">
+            <h3><i class="fas fa-filter"></i> Advanced Filters</h3>
+            <div class="filter-grid">
+                <div class="filter-group">
+                    <label class="filter-label">Accuracy Range (%)</label>
+                    <div class="range-inputs">
+                        <input type="number" id="minAccuracy" placeholder="Min" min="0" max="100">
+                        <input type="number" id="maxAccuracy" placeholder="Max" min="0" max="100">
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Model Family</label>
+                    <select id="familyFilter">
+                        <option value="">All Families</option>
+                        <option value="OpenAI">OpenAI</option>
+                        <option value="Google">Google</option>
+                        <option value="Qwen">Qwen</option>
+                        <option value="Meta">Meta (Llama)</option>
+                        <option value="Microsoft">Microsoft (Phi)</option>
+                        <option value="Mistral">Mistral</option>
+                        <option value="OpenSource">Open Source</option>
+                        <option value="HuggingFace">HuggingFace</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Parameter Size</label>
+                    <select id="sizeFilter">
+                        <option value="">All Sizes</option>
+                        <option value="small">Small (&lt;3B)</option>
+                        <option value="medium">Medium (3B-20B)</option>
+                        <option value="large">Large (20B-100B)</option>
+                        <option value="xlarge">XLarge (100B+)</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Quantization Type</label>
+                    <select id="quantizationFilter">
+                        <option value="">All Types</option>
+                        <option value="None">None</option>
+                        <option value="Instruct">Instruct</option>
+                        <option value="Reasoning">Reasoning</option>
+                        <option value="Thinking">Thinking</option>
+                        <option value="Math">Math</option>
+                        <option value="MOE">MOE</option>
+                    </select>
+                </div>
+                <div class="filter-group clear-filters-group">
+                    <button id="clearFilters" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Clear Filters
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Controls -->
+    <section class="controls slide-in-right">
+        <div class="container">
+            <div class="controls-grid">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="searchInput" placeholder="Search models...">
+                </div>
+                <select class="sort-select" id="sortSelect">
+                    <option value="rank">Rank (Best First)</option>
+                    <option value="accuracy">Accuracy</option>
+                    <option value="efficiency">Efficiency</option>
+                    <option value="instruction">Instruction Following</option>
+                    <option value="tokens">Token Count</option>
+                    <option value="params">Parameter Size</option>
+                </select>
+                <button class="btn btn-primary" id="compareBtn">
+                    <i class="fas fa-chart-line"></i> Compare Models
+                </button>
+                <button class="btn btn-secondary" id="exportBtn">
+                    <i class="fas fa-download"></i> Export Data
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Leaderboard -->
+    <main class="main-content" id="leaderboard">
+        <div class="container">
+            <section class="section">
+                <h2 class="section-title">
+                    <i class="fas fa-trophy"></i> BeyondBench Leaderboard
+                </h2>
+                <div class="table-container">
+                    <table class="leaderboard-table" id="leaderboardTable">
+                        <thead>
+                            <tr>
+                                <th rowspan="2" onclick="sortTable('rank')" class="sortable main-header">Rank</th>
+                                <th rowspan="2" onclick="sortTable('model')" class="sortable main-header">Model (Param)</th>
+                                <th colspan="3" class="difficulty-header easy-header">Easy</th>
+                                <th colspan="3" class="difficulty-header medium-header">Medium</th>
+                                <th colspan="3" class="difficulty-header hard-header">Hard</th>
+                                <th colspan="3" class="difficulty-header overall-header">Overall</th>
+                                <th rowspan="2" class="actions-header">Actions</th>
+                            </tr>
+                            <tr>
+                                <th onclick="sortTable('easy_acc')" class="sortable sub-header">Acc (%)</th>
+                                <th onclick="sortTable('easy_inst')" class="sortable sub-header">Inst (%)</th>
+                                <th onclick="sortTable('easy_tokens')" class="sortable sub-header">Tokens</th>
+                                <th onclick="sortTable('medium_acc')" class="sortable sub-header">Acc (%)</th>
+                                <th onclick="sortTable('medium_inst')" class="sortable sub-header">Inst (%)</th>
+                                <th onclick="sortTable('medium_tokens')" class="sortable sub-header">Tokens</th>
+                                <th onclick="sortTable('hard_acc')" class="sortable sub-header">Acc (%)</th>
+                                <th onclick="sortTable('hard_inst')" class="sortable sub-header">Inst (%)</th>
+                                <th onclick="sortTable('hard_tokens')" class="sortable sub-header">Tokens</th>
+                                <th onclick="sortTable('overall_acc')" class="sortable sub-header overall-col">Acc (%)</th>
+                                <th onclick="sortTable('overall_inst')" class="sortable sub-header overall-col">Inst (%)</th>
+                                <th onclick="sortTable('overall_tokens')" class="sortable sub-header overall-col">Tokens</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                            <!-- Will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="table-stats" id="tableStats">
+                    Showing 0 of 0 models
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Charts Section -->
+    <section class="charts-section slide-in-left" id="charts">
+        <div class="container">
+            <h2 class="section-title">📊 Interactive Visualizations</h2>
+            <div class="charts-grid">
+                <div class="chart-container fade-in">
+                    <h3 class="chart-title">Accuracy vs Efficiency Trade-off</h3>
+                    <canvas id="efficiencyChart"></canvas>
+                </div>
+                <div class="chart-container fade-in">
+                    <h3 class="chart-title">Model Size vs Performance</h3>
+                    <canvas id="sizeChart"></canvas>
+                </div>
+                <div class="chart-container fade-in">
+                    <h3 class="chart-title">Overthinking vs Accuracy</h3>
+                    <canvas id="overthinkingChart"></canvas>
+                </div>
+                <div class="chart-container fade-in">
+                    <h3 class="chart-title">Token Efficiency by Model Family</h3>
+                    <canvas id="tokenEfficiencyChart"></canvas>
+                </div>
+                <div class="chart-container fade-in">
+                    <h3 class="chart-title">Instruction Following Distribution</h3>
+                    <canvas id="instructionChart"></canvas>
+                </div>
+                <div class="chart-container fade-in">
+                    <h3 class="chart-title">Top Models Performance</h3>
+                    <canvas id="distributionChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="section fade-in">
+        <div class="container">
+            <h2 class="section-title">
+                <i class="fas fa-lightbulb"></i> About BeyondBench
+            </h2>
+            <p class="section-description">
+                BeyondBench introduces a revolutionary approach to evaluating reasoning capabilities in language models
+                without relying on traditional static benchmarks. Our system dynamically generates novel problems across
+                44 distinct reasoning tasks with 117 variations, ensuring that models cannot memorize solutions and must
+                demonstrate true reasoning abilities.
+            </p>
+            <div class="key-insights">
+                <h3>🔍 Key Insights</h3>
+                <ul>
+                    <li><strong>Reasoning Gap:</strong> Even the best models show significant performance drops on harder reasoning tasks</li>
+                    <li><strong>Scaling Effects:</strong> Larger models generally perform better, but the relationship is not always linear</li>
+                    <li><strong>Instruction Following:</strong> High accuracy doesn't always correlate with instruction-following compliance</li>
+                    <li><strong>Token Efficiency:</strong> Some models achieve comparable accuracy with significantly fewer tokens</li>
+                    <li><strong>True Reasoning:</strong> Dynamic generation reveals genuine capabilities vs. memorization</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- Citation Section -->
+    <section id="citation" class="section">
+        <div class="container">
+            <h2 class="section-title">
+                <i class="fas fa-quote-left"></i> Citation
+            </h2>
+            <div class="citation-box">
+                <pre><code>@article{srivastava2024beyondbench,
+  title={BeyondBench: Benchmark-Free Evaluation of Reasoning in Language Models},
+  author={Srivastava, Gaurav and Hussain, Aafiya and Bi, Zhenyu and Roy, Swastik and Pitre, Priya and Lu, Meng and Ziyadi, Morteza and Wang, Xuan},
+  journal={arXiv preprint arXiv:xxxx.xxxxx},
+  year={2024}
+}</code></pre>
+                <button class="copy-citation-btn" onclick="copyCitation()">
+                    <i class="fas fa-copy"></i> Copy Citation
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 BeyondBench Team. All rights reserved.</p>
+            <p>
+                <a href="https://cs.vt.edu/">Virginia Tech</a> |
+                <a href="https://www.amazon.science/">Amazon AGI</a> |
+                <a href="mailto:gks@vt.edu">Contact</a>
+            </p>
+        </div>
+    </footer>
+
+    <!-- Modals -->
+    <div class="modal" id="comparisonModal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Model Comparison</h2>
+            <div id="comparisonContent">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="modelModal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div id="modelDetails">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Action Button -->
+    <div class="fab-container">
+        <button class="fab" id="fabBtn">
+            <i class="fas fa-plus"></i>
+        </button>
+        <div class="fab-menu" id="fabMenu">
+            <button class="fab-item" onclick="scrollToTop()">
+                <i class="fas fa-arrow-up"></i>
+                <span>Top</span>
+            </button>
+            <button class="fab-item" onclick="exportData()">
+                <i class="fas fa-download"></i>
+                <span>Export</span>
+            </button>
+            <button class="fab-item" onclick="shareResults()">
+                <i class="fas fa-share"></i>
+                <span>Share</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="data.js"></script>
+    <script src="script.js"></script>
+
+    <script>
+        // Copy citation functionality
+        function copyCitation() {
+            const citation = `@article{srivastava2024beyondbench,
+  title={BeyondBench: Benchmark-Free Evaluation of Reasoning in Language Models},
+  author={Srivastava, Gaurav and Hussain, Aafiya and Bi, Zhenyu and Roy, Swastik and Pitre, Priya and Lu, Meng and Ziyadi, Morteza and Wang, Xuan},
+  journal={arXiv preprint arXiv:xxxx.xxxxx},
+  year={2024}
+}`;
+
+            navigator.clipboard.writeText(citation).then(() => {
+                const btn = document.querySelector('.copy-citation-btn');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                btn.style.background = 'var(--success-color)';
+
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.style.background = '';
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+
+</html>
