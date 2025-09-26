@@ -1,0 +1,141 @@
+
+\begin{table}
+\centering
+\scriptsize
+\begin{adjustbox}{width=\textwidth}
+\begin{tabulary}{1.3\textwidth}{LCCCCCCCCCCCC}
+\toprule
+\textbf{Model (Param)} & \multicolumn{3}{c}{\textbf{Easy}} & \multicolumn{3}{c}{\textbf{Medium}} & \multicolumn{3}{c}{\textbf{Hard}} & \multicolumn{3}{c}{\textbf{Overall}} \\
+\cmidrule(lr){2-4} \cmidrule(lr){5-7} \cmidrule(lr){8-10} \cmidrule(lr){11-13}
+& \textbf{Acc (\%)} & \textbf{Inst (\%)} & \textbf{Tokens (Avg)} & \textbf{Acc (\%)} & \textbf{Inst (\%)} & \textbf{Tokens (Avg)} & \textbf{Acc (\%)} & \textbf{Inst (\%)} & \textbf{Tokens (Avg)} & \textbf{Acc (\%)} & \textbf{Inst (\%)} & \textbf{Tokens (Avg)} \\
+\midrule
+\rowcolor{gray!10}
+\multicolumn{13}{c}{\textbf{\textit{Qwen Family (Qwen3)}}} \\
+\midrule
+Qwen3 (0.6B) & 49.99 & 83.85 & 3162.80 & 20.16 & 92.00 & 15029.98 & 14.24 & 74.17 & 5542.79 & \cellcolor{gray!15} 28.13 & \cellcolor{gray!15} 83.34 & \cellcolor{gray!15} 7911.86 \\
+
+Qwen3 (1.7B) & 70.24 & 86.54 & 3157.20 & 42.54 & 92.00 & 10854.63 & 24.12 & 80.65 & 6089.76 & \cellcolor{gray!15} 45.63 & \cellcolor{gray!15} 86.40 & \cellcolor{gray!15} 6700.53 \\
+
+Qwen3 (4B) & 81.90 & 91.57 & 3091.20 & 59.22 & 92.00 & 11649.83 & 34.52 & 83.85 & 5811.69 & \cellcolor{gray!15} 58.55 & \cellcolor{gray!15} 89.14 & \cellcolor{gray!15} 6850.91 \\
+
+Qwen3 (8B) & 82.10 & 91.58 & 3027.80 & 59.99 & 92.00 & 8295.54 & 37.02 & 85.13 & 5786.42 & \cellcolor{gray!15} 59.70 & \cellcolor{gray!15} 89.57 & \cellcolor{gray!15} 5703.25 \\
+
+Qwen3 (14B) & 86.52 & 99.27 & 3607.60 & 69.78 & 92.00 & 6298.80 & 42.76 & 85.21 & 5468.71 & \cellcolor{gray!15} 66.35 & \cellcolor{gray!15} 92.16 & \cellcolor{gray!15} 5125.04 \\
+% Qwen/Qwen3-32B    32B    None    43.17%    85.87%    5484.68
+Qwen3 (32B) & 84.13 & 93.05 & 2845.90 & \textbf{76.18} & 92.00 & 5563.77 & 43.17 & 85.87 & 5484.68 & \cellcolor{gray!15} 67.83 & \cellcolor{gray!15} 90.31 & \cellcolor{gray!15} 4631.45 \\
+
+
+Qwen3 (30B-MOE) & 88.74 & 94.20 & 2415.13 & 74.69 & 92.00 & 6330.92 & \underline{43.33} & 87.28 & 5391.83 & \cellcolor{gray!15} 68.92 & \cellcolor{gray!15} 91.16 & \cellcolor{gray!15} 4712.63 \\
+
+
+Qwen3 (30B-MOE-i) & \textbf{91.64} & 99.46 & 647.17 & 73.75 & 92.00 & 3019.49 & \textbf{45.80} & 97.93 & 2519.92 & \cellcolor{gray!15} \textbf{70.40} & \cellcolor{gray!15} 96.46 & \cellcolor{gray!15} 2062.19 \\
+
+Qwen3 (4B-t) & 85.60 & 95.19 & 2552.09 & 61.73 & 92.00 & 4874.80 & 35.21 & 83.59 & 5931.45 & \cellcolor{gray!15} 60.85 & \cellcolor{gray!15} 90.26 & \cellcolor{gray!15} 4452.78 \\
+
+Qwen3 (30B-MOE-t) & \underline{90.74} & 96.85 & 2052.39 & \underline{75.32} & 92.00 & 6063.77 & 41.29 & 84.61 & 5573.57 & \cellcolor{gray!15} \underline{69.12} & \cellcolor{gray!15} 91.15 & \cellcolor{gray!15} 4563.24 \\
+\midrule
+
+\rowcolor{gray!10}
+\multicolumn{13}{c}{\textbf{\textit{Qwen Family (Qwen2.5)}}} \\
+\midrule
+Qwen2.5 (0.5B) & 21.31 & 77.57 & 432.30 & 5.73 & 92.00 & 7381.67 & 1.08 & 74.77 & 1742.56 & \cellcolor{gray!15} 9.37 & \cellcolor{gray!15} 81.45 & \cellcolor{gray!15} 3185.51 \\
+
+Qwen2.5 (1.5B) & 43.03 & 85.45 & 264.70 & 11.97 & 92.00 & 6014.44 & 3.41 & 88.16 & 1131.25 & \cellcolor{gray!15} 19.47 & \cellcolor{gray!15} 88.54 & \cellcolor{gray!15} 2470.13 \\
+
+Qwen2.5 (3B) & 45.75 & 92.35 & 331.30 & 20.57 & 92.00 & 2121.82 & 8.35 & 92.11 & 1085.38 & \cellcolor{gray!15} 24.89 & \cellcolor{gray!15} 92.15 & \cellcolor{gray!15} 1179.50 \\
+
+Qwen2.5 (7B) & 61.36 & 96.47 & 286.90 & 30.07 & 92.00 & 1135.23 & 16.65 & 91.65 & 938.58 & \cellcolor{gray!15} 36.03 & \cellcolor{gray!15} 93.37 & \cellcolor{gray!15} 786.90 \\
+
+Qwen2.5 (14B) & 63.74 & 97.83 & 260.20 & 37.66 & 91.76 & 777.44 & 22.81 & 98.41 & 786.78 & \cellcolor{gray!15} 41.40 & \cellcolor{gray!15} 96.00 & \cellcolor{gray!15} 608.14 \\
+
+Qwen2.5 (32B) & 72.90 & 99.26 & 260.90 & 45.04 & 91.24 & 650.59 & \underline{26.08} & 98.42 & 685.95 & \cellcolor{gray!15} 48.01 & \cellcolor{gray!15} 96.31 & \cellcolor{gray!15} 532.48 \\
+
+Qwen2.5 (72B) & \textbf{80.27} & 99.93 & 315.75 & \underline{45.94} & 92.00 & 739.62 & \textbf{33.60} & 99.55 & 875.11 & \cellcolor{gray!15} \textbf{53.27} & \cellcolor{gray!15} 97.16 & \cellcolor{gray!15} 643.49 \\
+
+Qwen2.5 (1.5B-m) & 51.43 & 94.04 & 397.10 & 27.98 & 92.00 & 1427.29 & 3.74 & 74.22 & 1288.07 & \cellcolor{gray!15} 27.72 & \cellcolor{gray!15} 86.75 & \cellcolor{gray!15} 1037.49 \\
+
+Qwen2.5 (7B-m) & 60.68 & 94.36 & 411.70 & 26.18 & 92.00 & 2044.62 & 8.27 & 85.41 & 1472.74 & \cellcolor{gray!15} 31.71 & \cellcolor{gray!15} 90.59 & \cellcolor{gray!15} 1309.69 \\
+
+Qwen2.5 (72B-m) & \underline{77.25} & 93.02 & 429.30 & \textbf{55.13} & 92.00 & 780.85 & 12.82 & 78.21 & 1358.64 & \cellcolor{gray!15} \underline{48.40} & \cellcolor{gray!15} 87.74 & \cellcolor{gray!15} 856.26 \\
+\midrule
+\rowcolor{gray!10}
+\multicolumn{13}{c}{\textbf{\textit{Gemma Family}}} \\
+\midrule
+Gemma (1B) & 23.61 & 67.21 & 870.85 & 16.19 & 92.00 & 1229.28 & 0.80 & 76.29 & 665.62 & \cellcolor{gray!15} 13.53 & \cellcolor{gray!15} 78.50 & \cellcolor{gray!15} 921.92 \\
+
+Gemma (4B) & 66.38 & 98.56 & 550.90 & 38.40 & 92.00 & 1072.62 & 11.18 & 85.76 & 1048.37 & \cellcolor{gray!15} 38.65 & \cellcolor{gray!15} 92.11 & \cellcolor{gray!15} 890.63 \\
+
+Gemma (12B) & \underline{75.51} & 96.85 & 504.14 & \underline{50.00} & 92.00 & 1337.32 & \underline{21.46} & 77.07 & 926.02 & \cellcolor{gray!15} \underline{48.99} & \cellcolor{gray!15} 88.64 & \cellcolor{gray!15} 922.49 \\
+
+Gemma (27B) & \textbf{78.82} & 97.46 & 415.96 & \textbf{58.80} & 92.00 & 1118.70 & \textbf{36.98} & 98.32 & 1069.75 & \cellcolor{gray!15} \textbf{58.20} & \cellcolor{gray!15} 95.93 & \cellcolor{gray!15} 868.14 \\
+\midrule
+\rowcolor{gray!10}
+\multicolumn{13}{c}{\textbf{\textit{Phi Family}}} \\
+\midrule
+Phi3-mini (3.8B) & 35.82 & 96.58 & 89.40 & 19.80 & 91.92 & 503.10 & 11.61 & 88.58 & 667.66 & \cellcolor{gray!15} 22.41 & \cellcolor{gray!15} 92.36 & \cellcolor{gray!15} 420.05 \\
+Phi3-med (14B-4k) & 43.47 & 89.87 & 189.30 & 21.67 & 91.64 & 397.91 & 14.47 & 96.82 & 539.25 & \cellcolor{gray!15} 26.54 & \cellcolor{gray!15} 92.78 & \cellcolor{gray!15} 375.49 \\
+Phi3-med (14B-128k) & 40.76 & 96.26 & 140 & 23.49 & 92.00 & 545.48 & 16.13 & 95.80 & 694.27 & \cellcolor{gray!15} 26.79 & \cellcolor{gray!15} 94.69 & \cellcolor{gray!15} 459.92 \\
+Phi4-mini (3.8B-i) & 54.55 & 95.02 & 292.10 & 24.85 & 90.80 & 1297.82 & 15.82 & 92.30 & 1178.99 & \cellcolor{gray!15} 31.74 & \cellcolor{gray!15} 92.71 & \cellcolor{gray!15} 922.97 \\
+Phi4-mini-reasoning (3.8B) & 70.16 & 89.56 & 3171.90 & 53.24 & 92.00 & 11615.07 & 25.94 & 79.55 & 6181.84 & \cellcolor{gray!15} 49.78 & \cellcolor{gray!15} 87.04 & \cellcolor{gray!15} 6989.60 \\
+Phi4 (14B) & \textbf{78.92} & 97.46 & 378.60 & 38.19 & 92.00 & 686.87 & \underline{28.23} & 97.18 & 1032.74 & \cellcolor{gray!15} 48.45 & \cellcolor{gray!15} 95.55 & \cellcolor{gray!15} 699.40 \\
+Phi4-reasoning (14B) & \underline{72.23} & 96.21 & 6066.20 & \textbf{61.37} & 92.00 & 8792.26 & \textbf{36.17} & 75.98 & 6687.98 & \cellcolor{gray!15} \textbf{56.59} & \cellcolor{gray!15} 88.06 & \cellcolor{gray!15} 7182.15 \\
+Phi4-reasoning+ (14B) & 69.54 & 88.89 & 6780.70 & \underline{55.00} & 92.00 & 6261.74 & 28.14 & 71.31 & 7002.66 & \cellcolor{gray!15} \underline{50.89} & \cellcolor{gray!15} 84.06 & \cellcolor{gray!15} 6681.7 \\
+\midrule
+\rowcolor{gray!10}
+\multicolumn{13}{c}{\textbf{\textit{Llama Family}}} \\
+\midrule
+Llama-3.2 (1B) & 16.25 & 47.15 & 336.30 & 5.37 & 92.00 & 6699.03 & 1.17 & 68.44 & 2028.62 & \cellcolor{gray!15} 7.60 & \cellcolor{gray!15} 69.20 & \cellcolor{gray!15} 3021.32 \\
+Llama-3.2 (3B) & 42.54 & 89.88 & 279.70 & 16.00 & 92.00 & 6467.50 & 4.66 & 76.20 & 1334.66 & \cellcolor{gray!15} 21.07 & \cellcolor{gray!15} 86.03 & \cellcolor{gray!15} 2693.95 \\
+Llama-3.1 (8B) & 48.84 & 85.66 & 366.40 & 15.22 & 92.00 & 7590.22 & 8.25 & 88.27 & 1912.41 & \cellcolor{gray!15} 24.10 & \cellcolor{gray!15} 88.64 & \cellcolor{gray!15} 3289.68 \\
+Llama-3.1 (70B) & \underline{75.43} & 98.12 & 251.20 & 31.07 & 92.00 & 3130.60 & 23.00 & 95.80 & 1181.75 & \cellcolor{gray!15} 43.17 & \cellcolor{gray!15} 95.31 & \cellcolor{gray!15} 1521.18 \\
+Llama-3.3 (70B) & 74.59 & 97.40 & 312.80 & \underline{46.71} & 92.00 & 709.45 & \underline{26.91} & 99.38 & 887.38 & \cellcolor{gray!15} \underline{49.40} & \cellcolor{gray!15} 96.26 & \cellcolor{gray!15} 636.54 \\
+%meta-llama/Llama-4-Scout-17B-16E-Instruct    120B-MOE    None    37.48%    49.60%    1214.75
+Llama4-scout & \textbf{79.05} & 92.61 & 321.93 & \textbf{52.38} & 86.20 & 731.44 & \textbf{27.48} & 49.60 & 1214.75 & \cellcolor{gray!15} \textbf{52.97} & \cellcolor{gray!15} 76.14 & \cellcolor{gray!15} 756.04 \\
+\midrule
+\rowcolor{gray!10}
+\multicolumn{13}{c}{\textbf{\textit{Mistral Family}}} \\
+\midrule
+Mistral (7B) & 27.66 & 96.26 & 207.10 & 10.03 & 92.00 & 635.92 & 4.34 & 91.23 & 1167.03 & \cellcolor{gray!15} 14.01 & \cellcolor{gray!15} 93.16 & \cellcolor{gray!15} 670.02 \\
+Ministral (8B) & \textbf{50.93} & 89.70 & 534.28 & \textbf{21.67} & 92.00 & 1160.51 & 8.92 & 94.74 & 872.20 & \cellcolor{gray!15} \underline{27.17} & \cellcolor{gray!15} 92.15 & \cellcolor{gray!15} 855.66 \\
+Mistral-nemo (12B) & 35.43 & 82.95 & 377 & 18.08 & 92.00 & 1266.19 & \underline{12.27} & 92.11 & 542.81 & \cellcolor{gray!15} 21.93 & \cellcolor{gray!15} 89.02 & \cellcolor{gray!15} 728.67 \\
+Mixtral-8x7b & 35.03 & 91.47 & 140.47 & 12.39 & 86.88 & 350.39 & 9.64 & 85.69 & 523.03 & \cellcolor{gray!15} 19.02 & \cellcolor{gray!15} 88.01 & \cellcolor{gray!15} 337.96 \\
+Mixtral-8x22b & \underline{50.06} & 79.17 & 296.42 & \underline{20.54} & 92.00 & 536 & \textbf{19.03} & 95.18 & 762.46 & \cellcolor{gray!15} \textbf{29.88} & \cellcolor{gray!15} 88.78 & \cellcolor{gray!15} 531.63 \\
+\midrule
+\rowcolor{gray!10}
+\multicolumn{13}{c}{\textbf{\textit{Others}}} \\
+\midrule
+Smollm3 (3B) & 69.01 & 84.60 & 2985.20 & 9.46 & 70.69 & 16320.71 & 19.86 & 75.09 & 6076.59 & \cellcolor{gray!15} 32.78 & \cellcolor{gray!15} 76.79 & \cellcolor{gray!15} 8460.83 \\
+Smollm2 (1.7B) & 16.69 & 68.98 & 213 & 0.52 & 8.64 & 65.71 & 6.73 & 87.89 & 1069.83 & \cellcolor{gray!15} 7.98 & \cellcolor{gray!15} 55.17 & \cellcolor{gray!15} 449.51 \\
+GPT-OSS (20B) & \underline{87.24} & 95.89 & 1185.34 & \underline{63.13} & 92.00 & 3674.40 & \underline{52.35} & 81.23 & 3877.50 & \cellcolor{gray!15} \underline{67.57} & \cellcolor{gray!15} 89.71 & \cellcolor{gray!15} 2912.41 \\
+GPT-OSS (120B) & \textbf{93.52} & 99.01 & 821.55 & \textbf{75.05} & 92.00 & 2205.27 & \textbf{59.64} & 77.80 & 2981.69 & \cellcolor{gray!15} \textbf{76.07} & \cellcolor{gray!15} 89.60 & \cellcolor{gray!15} 2002.84 \\
+\midrule
+\rowcolor{gray!10}
+\multicolumn{13}{c}{\textbf{\textit{OpenAI Family (Proprietary)}}} \\
+\midrule
+GPT5 $^*$ & \textbf{97.26} & 99.82 & 992.41 & \underline{81.60} & 92.00 & 2278.59 & \textbf{71.81} & 96.64 & 4525.92 & \cellcolor{gray!15} \textbf{83.56} & \cellcolor{gray!15} 96.15 & \cellcolor{gray!15} 2598.97 \\
+GPT5-mini $^*$ & 96.01 & 100.00 & 798.72 & 79.60 & 92.00 & 1640.01 & 69.41 & 90.70 & 3330.71 & \cellcolor{gray!15} 81.67 & \cellcolor{gray!15} 94.23 & \cellcolor{gray!15} 1923.15 \\
+GPT5-nano $^*$ & \underline{96.19} & 99.29 & 1377.00 & 80.00 & 91.20 & 2414.85 & \underline{69.92} & 90.25 & 7078.18 & \cellcolor{gray!15} \underline{82.04} & \cellcolor{gray!15} 93.58 & \cellcolor{gray!15} 3623.34 \\
+GPT4.1  & 92.08 & 100.00 & 409.38 & 72.80 & 92.00 & 3718.96 & 46.96 & 97.13 & 3681.23 & \cellcolor{gray!15} 70.61 & \cellcolor{gray!15} 96.38 & \cellcolor{gray!15} 2603.19 \\
+GPT4.1-mini  & 93.39 & 100.00 & 915.70 & 72.40 & 92.00 & 2549.95 & 41.53 & 95.35 & 3069.56 & \cellcolor{gray!15} 69.11 & \cellcolor{gray!15} 95.78 & \cellcolor{gray!15} 2178.40 \\
+GPT4.1-nano  & 80.30 & 98.21 & 1161.08 & 53.20 & 92.00 & 1254.45 & 23.16 & 98.64 & 1303.67 & \cellcolor{gray!15} 52.22 & \cellcolor{gray!15} 96.28 & \cellcolor{gray!15} 1239.73 \\
+GPT4o  & 87.92 & 100.00 & 256.84 & 54.40 & 92.00 & 536.46 & 28.71 & 97.78 & 582.04 & \cellcolor{gray!15} 57.01 & \cellcolor{gray!15} 96.59 & \cellcolor{gray!15} 458.45 \\
+GPT4o-mini  & 73.57 & 98.57 & 272.32 & 38.00 & 92.00 & 522.71 & 14.73 & 97.90 & 819.02 & \cellcolor{gray!15} 42.10 & \cellcolor{gray!15} 96.16 & \cellcolor{gray!15} 538.02 \\
+o4-mini $^*$ & 94.40 & 100.00 & 993.38 & \underline{81.60} & 92.00 & 1486.20 & 61.12 & 93.89 & 4514.36 & \cellcolor{gray!15} 79.04 & \cellcolor{gray!15} 95.30 & \cellcolor{gray!15} 2331.31 \\
+o3 $^*$ & \textbf{97.26} & 100.00 & 856.56 & \textbf{82.00} & 90.40 & 2891.81 & 61.81 & 94.49 & 5585.29 & \cellcolor{gray!15} 80.36 & \cellcolor{gray!15} 94.96 & \cellcolor{gray!15} 3111.22 \\
+o3-mini $^*$ & 93.99 & 99.64 & 1101.22 & 80.80 & 92.00 & 1525.04 & 57.59 & 96.40 & 5425.99 & \cellcolor{gray!15} 77.46 & \cellcolor{gray!15} 96.01 & \cellcolor{gray!15} 2684.08 \\
+\midrule 
+\rowcolor{gray!10}
+\multicolumn{13}{c}{\textbf{\textit{Gemini Family (Proprietary)}}} \\
+\midrule
+Gemini-2.5-pro & \underline{89.23} & 87.32 & 267.57 & \textbf{77.20} & 89.20 & 725.72 & \textbf{56.38} & 97.92 & 916.18 & \cellcolor{gray!15} \textbf{74.27} & \cellcolor{gray!15} 91.48 & \cellcolor{gray!15} 636.49 \\
+Gemini-2.5-flash  & \textbf{90.00} & 95.65 & 357.62 & \underline{70.00} & 76.00 & 617.25 & \underline{51.32} & 88.82 & 1097.35 & \cellcolor{gray!15} \underline{70.44} & \cellcolor{gray!15} 86.82 & \cellcolor{gray!15} 690.74 \\
+Gemini-2.5-flash-lite  & 86.01 & 100.00 & 587.71 & 50.00 & 92.00 & 11929.26 & 39.21 & 97.00 & 5825.56 & \cellcolor{gray!15} 58.41 & \cellcolor{gray!15} 96.33 & \cellcolor{gray!15} 6114.18 \\
+Gemini-2.0-flash  & 84.52 & 98.69 & 313.89 & 67.20 & 92.00 & 1044.79 & 31.24 & 88.94 & 1425.60 & \cellcolor{gray!15} 60.99 & \cellcolor{gray!15} 93.21 & \cellcolor{gray!15} 928.09 \\
+Gemini-2.0-flash-lite  & 82.02 & 98.81 & 286.12 & 57.60 & 92.00 & 1043.37 & 31.07 & 94.81 & 1840.31 & \cellcolor{gray!15} 56.90 & \cellcolor{gray!15} 95.21 & \cellcolor{gray!15} 1056.60 \\
+\bottomrule
+\end{tabulary}
+\end{adjustbox}
+\caption{\textbf{\our Leaderboard:} Evaluation results across three difficulty suites (Easy, Medium, Hard). Each suite reports Accuracy (Acc), Instruction-following (Inst) and average output Tokens; suffixes denote variant type: \texttt{-i} = instruct, \texttt{-t} = thinking, \texttt{-m} = math. The three \textbf{Overall} subcolumns show the arithmetic mean across Easy/Medium/Hard for Acc, Inst and Tokens respectively. Within each family, \textbf{bold} denotes the best variant and \underline{underlined} denotes the second-best. \textbf{Note:} Models marked as $^*$ has been allowed maximum reasoning effort/thinking tokens to use.}
+\label{main:beyondbench_leaderboard_updated}
+%\ah{Should we write "all non-propritary models are instruction tuned unless mentioned otherwise"}
+\end{table}

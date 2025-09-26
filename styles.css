@@ -248,6 +248,100 @@
     color: var(--text-primary);
 }
 
+/* Light theme - Modals */
+[data-theme="light"] .modal {
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="light"] .modal-content {
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    color: var(--text-primary);
+}
+
+[data-theme="light"] .modal-content h2,
+[data-theme="light"] .modal-content h3 {
+    color: var(--text-primary);
+}
+
+[data-theme="light"] .close {
+    color: var(--text-secondary);
+}
+
+[data-theme="light"] .close:hover {
+    color: var(--text-primary);
+}
+
+/* Light theme - Modal detail cards */
+[data-theme="light"] .detail-card {
+    background: rgba(248, 250, 252, 0.8);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .detail-card h3 {
+    color: var(--primary-color);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .metric-row {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    color: var(--text-primary);
+}
+
+[data-theme="light"] .modal-actions {
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Light theme - Comparison modal */
+[data-theme="light"] .comparison-card {
+    background: rgba(248, 250, 252, 0.9);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .comparison-card h3 {
+    color: var(--text-primary);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .comparison-metrics .label {
+    color: var(--text-secondary);
+}
+
+[data-theme="light"] .comparison-metrics .value {
+    color: var(--text-primary);
+}
+
+[data-theme="light"] .comparison-actions {
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Light theme - Filter inputs */
+[data-theme="light"] .filter-group select,
+[data-theme="light"] .filter-group input {
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    color: var(--text-primary);
+}
+
+[data-theme="light"] .filter-group select:focus,
+[data-theme="light"] .filter-group input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+[data-theme="light"] .filter-group select:hover,
+[data-theme="light"] .filter-group input:hover {
+    border-color: var(--primary-color);
+}
+
+/* Light theme - Filter labels */
+[data-theme="light"] .filter-label {
+    color: var(--text-primary);
+}
+
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
@@ -1201,17 +1295,34 @@ body {
 
 .filter-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(5, 1fr);
     gap: 1.5rem;
     margin-top: 1.5rem;
     align-items: start;
 }
 
-/* Special grid area for clear filters button */
+@media (max-width: 1400px) {
+    .filter-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 900px) {
+    .filter-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Clear filters button positioning - keep it inline */
 .filter-group.clear-filters-group {
-    grid-column: 1 / -1;
-    justify-self: center;
-    margin-top: 1rem;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    min-height: 85px;
+}
+
+.filter-group.clear-filters-group .btn {
+    margin-top: 1.5rem;
 }
 
 .filter-group {

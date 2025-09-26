@@ -59,10 +59,11 @@ function generateAuthorInfo() {
     }
 
     // Generate correspondence
-    const correspondingAuthor = paperInfo.authors.find(author => author.corresponding);
+    const correspondingAuthors = paperInfo.authors.filter(author => author.corresponding);
     let correspondenceHTML = '';
-    if (correspondingAuthor) {
-        correspondenceHTML = `<div class="correspondence"><strong>*Correspondence:</strong> ${correspondingAuthor.email}</div>`;
+    if (correspondingAuthors.length > 0) {
+        const emails = correspondingAuthors.map(author => author.email).join(', ');
+        correspondenceHTML = `<div class="correspondence"><strong>*Correspondence:</strong> ${emails}</div>`;
     }
 
     authorsContainer.innerHTML = authorsHTML;
@@ -113,12 +114,11 @@ function initFilters() {
     const maxAccuracy = document.getElementById('maxAccuracy');
     const familyFilter = document.getElementById('familyFilter');
     const sizeFilter = document.getElementById('sizeFilter');
-    const efficiencyFilter = document.getElementById('efficiencyFilter');
     const quantizationFilter = document.getElementById('quantizationFilter');
     const clearFilters = document.getElementById('clearFilters');
 
     // Add event listeners
-    [minAccuracy, maxAccuracy, familyFilter, sizeFilter, efficiencyFilter, quantizationFilter].forEach(filter => {
+    [minAccuracy, maxAccuracy, familyFilter, sizeFilter, quantizationFilter].forEach(filter => {
         if (filter) {
             filter.addEventListener('change', applyFilters);
             filter.addEventListener('input', applyFilters);
@@ -129,9 +129,8 @@ function initFilters() {
         clearFilters.addEventListener('click', () => {
             if (minAccuracy) minAccuracy.value = '';
             if (maxAccuracy) maxAccuracy.value = '';
-            if (familyFilter) familyFilter.selectedIndex = -1;
+            if (familyFilter) familyFilter.selectedIndex = 0;
             if (sizeFilter) sizeFilter.value = '';
-            if (efficiencyFilter) efficiencyFilter.value = '';
             if (quantizationFilter) quantizationFilter.value = '';
             applyFilters();
         });
@@ -158,9 +157,8 @@ function applyFilters() {
     const searchTerm = document.getElementById('searchInput')?.value.toLowerCase() || '';
     const minAcc = parseFloat(document.getElementById('minAccuracy')?.value) || 0;
     const maxAcc = parseFloat(document.getElementById('maxAccuracy')?.value) || 100;
-    const familySelections = Array.from(document.getElementById('familyFilter')?.selectedOptions || []).map(opt => opt.value);
+    const familyFilter = document.getElementById('familyFilter')?.value || '';
     const sizeFilter = document.getElementById('sizeFilter')?.value || '';
-    const minEfficiency = parseFloat(document.getElementById('efficiencyFilter')?.value) || 0;
     const quantization = document.getElementById('quantizationFilter')?.value || '';
 
     filteredData = rankedModelData.filter(model => {
@@ -175,9 +173,9 @@ function applyFilters() {
         }
 
         // Family filter
-        if (familySelections.length > 0) {
+        if (familyFilter) {
             const family = model.model.split('/')[0];
-            if (!familySelections.includes(family)) {
+            if (family !== familyFilter) {
                 return false;
             }
         }
@@ -188,11 +186,6 @@ function applyFilters() {
             if (!matchesSize(paramSize, sizeFilter)) {
                 return false;
             }
-        }
-
-        // Efficiency filter
-        if (model.efficiency < minEfficiency) {
-            return false;
         }
 
         // Quantization filter
@@ -209,7 +202,22 @@ function applyFilters() {
 
 // Get parameter size category
 function getParameterSize(params) {
-    if (params === 'Unknown') return 'unknown';
+    if (params === 'Unknown' || params === '' || !params) return 'unknown';
+
+    // Handle MOE models
+    if (params.includes('MOE') || params.includes('x')) {
+        const match = params.match(/(\d+(?:\.\d+)?)(?:B|x)/);
+        if (match) {
+            const size = parseFloat(match[1]);
+            if (!isNaN(size)) {
+                if (size < 3) return 'small';
+                if (size <= 20) return 'medium';
+                if (size <= 100) return 'large';
+                return 'xlarge';
+            }
+        }
+    }
+
     const size = parseFloat(params.replace(/[^0-9.]/g, ''));
     if (isNaN(size)) return 'unknown';
     if (size < 3) return 'small';
@@ -220,6 +228,10 @@ function getParameterSize(params) {
 
 // Check if size matches filter
 function matchesSize(paramSize, filter) {
+    if (filter === 'small') return paramSize === 'small';
+    if (filter === 'medium') return paramSize === 'medium';
+    if (filter === 'large') return paramSize === 'large';
+    if (filter === 'xlarge') return paramSize === 'xlarge';
     return paramSize === filter;
 }
 
@@ -230,33 +242,21 @@ function renderTable(data) {
 
     tableBody.innerHTML = '';
 
-    data.forEach((model, index) => {
+    data.forEach((model) => {
         const row = document.createElement('tr');
-        // For now, use overall data for all difficulty levels as placeholder
-        const easy_acc = Math.min(model.accuracy * 1.4, 100).toFixed(2);
-        const easy_inst = Math.min(model.instruction + 5, 100).toFixed(1);
-        const easy_tokens = (model.tokens * 0.4).toFixed(0);
-
-        const medium_acc = (model.accuracy * 0.8).toFixed(2);
-        const medium_inst = Math.min(model.instruction + 2, 100).toFixed(1);
-        const medium_tokens = (model.tokens * 1.2).toFixed(0);
-
-        const hard_acc = (model.accuracy * 0.5).toFixed(2);
-        const hard_inst = Math.max(model.instruction - 10, 0).toFixed(1);
-        const hard_tokens = (model.tokens * 1.8).toFixed(0);
 
         row.innerHTML = `
             <td><span class="rank rank-${model.rank <= 3 ? model.rank : ''}">#${model.rank}</span></td>
-            <td class="model-name" title="${model.model}">${model.model.split('/').pop()} (${model.params})</td>
-            <td>${easy_acc}%</td>
-            <td>${easy_inst}%</td>
-            <td>${easy_tokens}</td>
-            <td>${medium_acc}%</td>
-            <td>${medium_inst}%</td>
-            <td>${medium_tokens}</td>
-            <td>${hard_acc}%</td>
-            <td>${hard_inst}%</td>
-            <td>${hard_tokens}</td>
+            <td class="model-name" title="${model.model}">${model.model.split('/').pop()}${model.params ? ` (${model.params})` : ''}</td>
+            <td>${model.easy_acc.toFixed(2)}%</td>
+            <td>${model.easy_inst.toFixed(1)}%</td>
+            <td>${model.easy_tokens.toFixed(0)}</td>
+            <td>${model.medium_acc.toFixed(2)}%</td>
+            <td>${model.medium_inst.toFixed(1)}%</td>
+            <td>${model.medium_tokens.toFixed(0)}</td>
+            <td>${model.hard_acc.toFixed(2)}%</td>
+            <td>${model.hard_inst.toFixed(1)}%</td>
+            <td>${model.hard_tokens.toFixed(0)}</td>
             <td class="overall-col"><strong>${model.accuracy.toFixed(2)}%</strong></td>
             <td class="overall-col"><strong>${model.instruction.toFixed(1)}%</strong></td>
             <td class="overall-col"><strong>${model.tokens.toFixed(0)}</strong></td>
@@ -284,16 +284,73 @@ function sortTable(column, ascending = null) {
     currentSort = { column, ascending };
 
     filteredData.sort((a, b) => {
-        let aVal = a[column];
-        let bVal = b[column];
+        let aVal, bVal;
 
-        // Handle special cases
-        if (column === 'model') {
-            aVal = aVal.toLowerCase();
-            bVal = bVal.toLowerCase();
-        } else if (column === 'params') {
-            aVal = parseFloat(aVal.replace(/[^0-9.]/g, '')) || 0;
-            bVal = parseFloat(bVal.replace(/[^0-9.]/g, '')) || 0;
+        // Map column names to actual data properties
+        switch(column) {
+            case 'easy_acc':
+                aVal = a.easy_acc;
+                bVal = b.easy_acc;
+                break;
+            case 'easy_inst':
+                aVal = a.easy_inst;
+                bVal = b.easy_inst;
+                break;
+            case 'easy_tokens':
+                aVal = a.easy_tokens;
+                bVal = b.easy_tokens;
+                break;
+            case 'medium_acc':
+                aVal = a.medium_acc;
+                bVal = b.medium_acc;
+                break;
+            case 'medium_inst':
+                aVal = a.medium_inst;
+                bVal = b.medium_inst;
+                break;
+            case 'medium_tokens':
+                aVal = a.medium_tokens;
+                bVal = b.medium_tokens;
+                break;
+            case 'hard_acc':
+                aVal = a.hard_acc;
+                bVal = b.hard_acc;
+                break;
+            case 'hard_inst':
+                aVal = a.hard_inst;
+                bVal = b.hard_inst;
+                break;
+            case 'hard_tokens':
+                aVal = a.hard_tokens;
+                bVal = b.hard_tokens;
+                break;
+            case 'overall_acc':
+                aVal = a.accuracy;
+                bVal = b.accuracy;
+                break;
+            case 'overall_inst':
+                aVal = a.instruction;
+                bVal = b.instruction;
+                break;
+            case 'overall_tokens':
+                aVal = a.tokens;
+                bVal = b.tokens;
+                break;
+            case 'model':
+                aVal = a.model.toLowerCase();
+                bVal = b.model.toLowerCase();
+                break;
+            case 'params':
+                aVal = parseFloat(a.params.replace(/[^0-9.]/g, '')) || 0;
+                bVal = parseFloat(b.params.replace(/[^0-9.]/g, '')) || 0;
+                break;
+            case 'rank':
+                aVal = a.rank;
+                bVal = b.rank;
+                break;
+            default:
+                aVal = a[column];
+                bVal = b[column];
         }
 
         if (typeof aVal === 'string') {
