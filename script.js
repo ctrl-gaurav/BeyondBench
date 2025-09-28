@@ -242,8 +242,10 @@ function renderTable(data) {
 
     tableBody.innerHTML = '';
 
-    data.forEach((model) => {
+    data.forEach((model, index) => {
         const row = document.createElement('tr');
+        row.classList.add('fade-in-up');
+        row.style.animationDelay = (index * 15) + 'ms';
 
         row.innerHTML = `
             <td><span class="rank rank-${model.rank <= 3 ? model.rank : ''}">#${model.rank}</span></td>
