@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-bb-dark-500 text-gray-100 font-sans antialiased;
+    min-height: 100vh;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-bb-dark-400;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-bb-dark-50 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-600;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-bb-dark-300/60 backdrop-blur-xl border border-bb-dark-50/30 rounded-xl;
+  }
+  .glass-card-hover {
+    @apply glass-card hover:border-bb-accent/30 transition-all duration-300;
+  }
+  .neon-text {
+    text-shadow: 0 0 10px rgba(0, 230, 118, 0.5), 0 0 20px rgba(0, 230, 118, 0.3);
+  }
+  .neon-border {
+    box-shadow: 0 0 10px rgba(0, 230, 118, 0.15), inset 0 0 10px rgba(0, 230, 118, 0.05);
+  }
+  .grid-bg {
+    background-image:
+      linear-gradient(rgba(0, 230, 118, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 230, 118, 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+}
+
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 8s ease infinite;
+}
+
+.glow-green {
+  box-shadow: 0 0 20px rgba(0, 230, 118, 0.2), 0 0 40px rgba(0, 230, 118, 0.1);
+}

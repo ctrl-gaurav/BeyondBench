@@ -1,0 +1,466 @@
+% iclr2026_conference
+\documentclass{article} % For LaTeX2e
+\usepackage{iclr2026_conference,times}
+
+% Optional math commands from https://github.com/goodfeli/dlbook_notation.
+\input{math_commands.tex}
+
+\usepackage{url}
+
+% ---- Mathematical Packages ----
+\usepackage{amsmath}        % For equation, align, and other math environments
+\usepackage{amssymb}        % For mathematical symbols (like \checkmark)
+\usepackage{amsthm}         % For theorem, proof environments
+\usepackage{mathtools}      % Enhanced math commands
+
+% ---- Algorithm Packages ----
+\usepackage{algorithm}      % For algorithm environment
+% \usepackage{algorithmic}    % For algorithmic environment (pseudocode)
+% Alternative: You can use algorithmicx package instead:
+\usepackage{algpseudocode}  % More modern alternative to algorithmic
+
+% ---- Table Packages ----
+\usepackage{booktabs}       % For professional looking tables
+\usepackage{array}          % Enhanced table features
+\usepackage{multirow}       % For multi-row cells in tables
+\usepackage{rotating}
+\usepackage{makecell}
+\usepackage[table]{xcolor}
+\usepackage{minitoc}
+\usepackage{titletoc}
+\renewcommand{\mtctitle}{Contents of the Appendix}
+\usepackage{longtable}
+\usepackage{adjustbox} % Load the adjustbox package
+\usepackage{tabulary}   % For flexible-width tables
+\usepackage{tabularx}
+% Make the "Part I" text invisible
+\renewcommand \thepart{}
+\renewcommand \partname{}
+
+% ---- Symbol Packages ----
+\usepackage{pifont}         % For \ding{51} (checkmark) and \ding{55} (cross)
+% Alternative for checkmark/cross:
+\usepackage{tikz}           % Can create custom symbols
+\newcommand{\cmark}{\ding{51}}  % Define checkmark
+\newcommand{\xmark}{\ding{55}}  % Define cross
+
+% ---- Typography and Formatting ----
+\usepackage[utf8]{inputenc}  % UTF-8 input encoding
+\usepackage[T1]{fontenc}     % Font encoding
+\usepackage{microtype}        % Improved typography
+\usepackage{enumitem}         % Better control over lists
+\usepackage[most]{tcolorbox}
+\definecolor{pycomment}{RGB}{106,153,85}
+\definecolor{pyblue}{RGB}{50,150,250}
+\definecolor{pyred}{RGB}{250,80,80}
+\definecolor{pygreen}{RGB}{100,200,100}
+
+\tcbuselibrary{listingsutf8}
+
+% ---- References and Links ----
+\usepackage{hyperref}         % Hyperlinks and references
+\usepackage{cleveref}         % Smart references (use \cref instead of \ref)
+
+% ---- Optional but Recommended ----
+\usepackage{graphicx}         % If you want to include figures later
+\usepackage{xcolor}           % For colored text (useful for highlights)
+\usepackage{listings}         % If you want to include code snippets
+\usepackage{subcaption}       % For subfigures
+\usepackage{float}            % Better control over float positioning
+\usepackage{soul}
+\usepackage{xspace}
+\usepackage{wrapfig}
+
+% ==========================================
+% CUSTOM DEFINITIONS (Optional)
+% ==========================================
+
+% Define theorem-like environments if needed
+% \theoremstyle{definition}
+% \newtheorem{definition}{Definition}[section]
+% \newtheorem{theorem}{Theorem}[section]
+% \newtheorem{lemma}[theorem]{Lemma}
+% \newtheorem{corollary}{Corollary}[theorem]
+% \newtheorem{example}{Example}[section]
+
+% Custom commands for frequently used notation
+\newcommand{\bigO}{\mathcal{O}}
+% \newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+
+
+
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\newtheorem{example}{Example}
+\newtheorem{remark}{Remark}
+
+\newcommand{\our}{\textsc{BeyondBench}\xspace}
+\newcommand{\ourbold}{\textbf{\textsc{BeyondBench}}\xspace}
+\newcommand{\xw}[1]{{\small\color{red}{\bf xw:} #1}}
+\newcommand{\ah}[1]{{\small\color{blue}{\bf ah:} #1}}
+\newcommand{\sr}[1]{{\small\color{orange}{\bf sr:} #1}}
+\newcommand{\zb}[1]{{\small\color{green}{\bf zb:} #1}}
+% Rebuttal color for new additions
+\definecolor{RebuttalGreen}{RGB}{0,100,0}
+\newcommand{\rebuttal}[1]{{\color{RebuttalGreen}#1}}
+% BenchFreeEval
+
+\title{\our: \rebuttal{Contamination-Resistant} Evaluation of Reasoning in Language Models} 
+
+\author{
+\\
+\vspace{1em}  % optional: reduce top space if needed
+\hspace{-0.5em} \textbf{Gaurav Srivastava}$^{\heartsuit}$$^{*}$, 
+\textbf{Aafiya Hussain}$^{\heartsuit}$, 
+\textbf{Zhenyu Bi}$^{\heartsuit}$, 
+\textbf{Swastik Roy}$^{\spadesuit}$,
+\textbf{Priya Pitre}$^{\heartsuit}$\\[-1em]
+\textbf{Meng Lu}$^{\heartsuit}$,
+\textbf{Morteza Ziyadi}$^{\spadesuit}$,
+\textbf{Xuan Wang}$^{\heartsuit}$ \\[0.5em]  % extra space after authors
+$^{\heartsuit}$Department of Computer Science, Virginia Tech, USA \\
+$^{\spadesuit}$Amazon AGI, USA \\[0.5em]  % extra space after affiliations
+\textbf{$^{*}$Correspondence:} \texttt{gks@vt.edu}
+}
+
+
+
+\newcommand{\fix}{\marginpar{FIX}}
+\newcommand{\new}{\marginpar{NEW}}
+
+%\iclrfinalcopy % Uncomment for camera-ready version, but NOT for submission.
+
+\begin{document}
+
+
+\maketitle
+
+\begin{abstract}
+Evaluating language models fairly is becoming harder as static benchmarks available on the internet risk contamination by training data. This makes it unclear whether models are truly reasoning or just recalling answers. In this paper, we introduce \ourbold, an evaluation framework that avoids this problem by using \textbf{algorithmic problem generation}. Unlike traditional benchmarks that risk contamination from internet-scale training data, \our creates mathematically grounded problems on the fly, ensuring each test remains fresh and uncontaminated. Our framework covers \textbf{44 algorithmic tasks} with a total of \textbf{117 variations}, grouped into three difficulty levels: the \textit{Easy Suite} (29 tasks) for basic arithmetic and statistics, the \textit{Medium Suite} (5 tasks, 49 variations) for sequence patterns and reasoning, and the \textit{Hard Suite} (10 tasks, 68 variations) tackling NP-complete and constraint satisfaction problems. Each task generates problems from a combinatorial space larger than $10^{15}$ unique instances, with solutions verified deterministically by mathematical proofs. We evaluated \textbf{101 language models}, including 85 open-source and 16 closed-source models, spanning sizes from 0.5B to 141B parameters and multiple quantization schemes. \rebuttal{All evaluations use three-fold cross-validation to ensure statistical robustness.} Our results show consistent reasoning deficiencies across model families, with performance degrading sharply as problem complexity increases from polynomial to exponential. In our Hard Suite evaluations, models such as Gemini-2.5-pro, Llama-3.3-70B, and Qwen2.5-72B achieved average accuracies of \textbf{56.38\%, 26.91\%, and 33.60\%,} respectively. Moreover, we observe that performance drops drastically without tool usage, with GPT-5, GPT-5-mini, and GPT-5-nano showing a \textbf{decline} of \textbf{16.81\% 28.05\%, and 47.59\%} accuracy on the hard suite. The contamination resistance of \our rests on three guarantees: (i) the problem space is vastly larger than any static dataset, (ii) every instance has a unique, verifiable solution, and (iii) isomorphic transformations generate semantically equivalent but syntactically new problems. \our redefines reasoning evaluation through genuine algorithmic problem-solving capability, ensuring a fair and meaningful evaluation.\footnote{\rebuttal{An open-sourced python package (pip) will be released after review for easy and reproducible evaluation.}}
+
+\end{abstract}
+
+\doparttoc % Tell to minitoc to generate a toc for the parts
+\faketableofcontents % Run a fake tableofcontents command for the partocs
+% \part{} % Start the document part
+% \parttoc % Insert the document TOC
+
+
+
+\section{Introduction}  
+
+Modern large language models (LLMs) exhibit impressive performance on existing static reasoning benchmarks such as GSM8K \citep{cobbe2021gsm8k}, MATH \citep{hendrycks2021math}, and OlympiadBench \citep{he2024olympiadbenchchallengingbenchmarkpromoting}, yet these evaluations can be misleading: benchmark data may already appear in pre-training \citep{wu2025reasoning}. Recent empirical studies demonstrate widespread data contamination across standard benchmarks \citep{xu2024survey,cheng2025contam, chen2025recentadvanceslargelangauge, golchin2025datacontaminationquiztool, choi2025contaminatedbenchmarkquantifyingdataset, deng-etal-2024-investigating}, where evaluation examples appear in training corpora through web crawls. This contamination systematically inflates performance metrics: models memorize specific solutions rather than learning generalizable reasoning patterns \citep{shojaee2025illusion,opus2025illusion}. For any finite evaluation set $\mathcal{D}$ with $|\mathcal{D}| = n$ examples and a training corpus $\mathcal{C}$ of size $N$, the probability of contamination increases as $1 - \exp(-nN/M)$ where $M$ denotes the size of the universe. When training corpora reach the web-scale with $N \gg M/n$, contamination becomes virtually certain. Empirical studies \citep{shojaee2025illusion, varela2025rethinkingillusionthinking} also suggest the same: performance drops in decontaminated variants, which suggests that static benchmarks cannot reliably measure true reasoning ability or guaranty generalization. 
+
+Recent studies have attempted to mitigate this problem. Dynamic benchmarks such as DyVal \citep{zhu2023dyval,zhu2024dyval2} and ThinkBench \citep{huang2025thinkbench} adapt task distribution over time, but provide no mathematical guaranties that each generated problem instance is well-posed (i.e., has a unique or fully enumerated solution). As a result, correctness labels can be ambiguous, and evaluation pipelines must rely on heuristic matching. Algorithmic reasoning benchmarks like CLRS encode structured problems but are static in nature \citep{velickovic2022clrs}, therefore vulnerable to contamination, and do not account for LLM-specific constraints such as maximum tokens it can output. Benchmarks such as MathArena \citep{balunovic2025matharena} attempt to mitigate this issue by using fresh olympiad questions but contamination is still likely. On the other hand, Game-based evaluations such as GameArena \citep{gamearena2024} provide interactivity, but are limited to narrow domains and lack scalable parametric difficulty. Across these settings, four gaps remain: \emph{\textbf{(i)} mathematically verifiable unique solutions}, \emph{\textbf{(ii)} contamination-resistance}, \emph{\textbf{(iii)} token budget-aware evaluation}, and \emph{\textbf{(iv)} acceptance of multiple correct answers}. See Table \ref{tab:compare_strict} for a comparison of previous benchmarks and our \our.
+
+
+
+To address the above limitations, we introduce \ourbold, an algorithmic evaluation framework for reasoning LLMs that generates an unbounded number of novel problems from basic tasks.  Formally, let $\Theta$ be a finite parameter space (e.g., numeric ranges, constraint sizes) and define an algorithmic generator $G:\Theta\to\mathcal P$ that maps parameters to logical problems $\mathcal P$.  By construction, $G$ can produce $|\mathcal P|=|\Theta|$ distinct instances, which can be made astronomically large (e.g., sampling from $\mathbb Z^n$).  In particular, we ensure $|\mathcal P|\gg|\mathcal T|$ (where $\mathcal T$ is any finite training corpus), making contamination \textit{provably negligible}. Moreover, for each generated problem $p=G(\theta)$ we use combinatorial search using Boolean satisfiability (SAT) and constraint satisfaction problem (CSP) solvers \citep{walsh2000sat} to verify that either: (i) $p$ admits a unique solution or (ii) all solutions can be enumerated. This ensures that $p$ is well-posed \textit{(has at least one solution)} and that our scoring is precise \textit{(we know the unique answer).} If multiple solutions exist, all of them are considered correct and we match with each of them, so models cannot gain credit for spurious answers.
+
+
+Furthermore, we partition each task into three regimes $\{\mathcal{T}_\text{easy},\mathcal{T}_\text{medium},\mathcal{T}_\text{hard}\}$, enabling a curriculum that increases in complexity. The complexity of each individual task is controlled by scaling $\theta$ (e.g., size $n$ of a combinatorial structure), enabling an explicit \emph{curriculum} of difficulty. For example, we can set $n=1,2,\dots$ so that subproblems are easier, and also create provably NP-hard tasks to stress-test models \citep{hidalgo2013comparing}. Finally, we take token budget into account: if the minimal solution length of $p$ exceeds the maximum output token window $\ell$, i.e., $L(p) > \ell,$ then $p$ is excluded from evaluation. After model inference, \our also checks that the response token length stays within a calibrated bound for the problem size (to catch cases where models “overthink” \citep{chen2025think23overthinkingo1like, cuadron2025dangeroverthinkingexaminingreasoningaction} trivial instances).
+
+
+
+To summarize, we make the following contributions: \textbf{\textit{(1)}} We propose \our, an algorithmic generator of reasoning problems that automatically verifies solution uniqueness or generate complete solution sets. \textbf{\textit{(2)}} We designed a parameterized difficulty curriculum and a token-aware evaluation protocol: tasks \textbf{scale} from \textit{elementary subproblems to provably NP-hard instances}, and evaluations respect model-specific \textit{input/output token budgets}; \textbf{\textit{(3)}} We conduct a large-scale systematic empirical study across \textbf{101 models} to study reasoning gaps in modern LLMs/small language models (SLMs)/large reasoning models (LRMs).
+% \vspace{-0.5em}
+
+
+\section{Related Work}  
+
+\textbf{Static Benchmarks and Their Limitations.} A large body of benchmarks for reasoning in LLMs has been built upon fixed datasets such as GSM8K \citep{cobbe2021training}, MATH \citep{hendrycks2021measuring}, and MMLU \citep{hendrycks2021measuring}. \citep{xu2024survey} and \citep{cheng2025contam} document how widely used leaderboards are compromised by pretraining overlap. \citep{shojaee2025illusion} shows that even LRMs collapse when faced with simple perturbations of known tasks. However, in response to that \citep{opus2025illusion} highlights that many supposed reasoning failures are actually attributable to context window limitations, ambiguous specification, or tasks whose solution paths exceed the model’s output length. They also argue that “emergent reasoning” often reflects benchmark biases rather than genuine generalization. Although efforts like MathArena \citep{balunovic2025matharena} use unseen contest problems to mitigate leakage, they remain limited to static and exhaustible pools. Static evaluation also fails to capture the algorithmic hardness of problems. For instance, \citep{katz2025seemingly} demonstrates that seemingly simple planning tasks, such as the Countdown game, become computationally intractable, revealing how shallow benchmarks underestimate the true difficulty of reasoning \citep{wu-etal-2024-reasoning, yu2025benchmarkingreasoningrobustnesslarge}. These limitations highlight the necessity of dynamic, mathematically constrained evaluation frameworks.  
+
+\begin{table*}[ht]
+\centering
+\small
+\begin{adjustbox}{width=0.8\textwidth,center}
+\begin{tabular}{lcccccccccc}
+\toprule
+\textbf{Feature} & \textbf{CLRS} & \textbf{DyVal} & \textbf{TreeEval} & \textbf{MathArena} & \textbf{GameArena} & \textbf{DARG} & \rebuttal{\textbf{NPHard}} & \rebuttal{\textbf{FCoRe}} & \rebuttal{\textbf{PUZZLE}} & \cellcolor{gray!15} \textbf{\makecell{\our\\(Ours)}}\\
+\midrule
+Dynamic generation     & \xmark & \cmark & \cmark & \xmark & \cmark & \cmark & \rebuttal{\cmark} & \rebuttal{\cmark} & \rebuttal{\cmark} & \cellcolor{gray!15} \textbf{\cmark} \\
+Unique solution check  & \xmark & \xmark & \xmark & \cmark & \cmark & \xmark & \rebuttal{\xmark} & \rebuttal{Partial} & \rebuttal{\xmark} & \cellcolor{gray!15} \textbf{\cmark} \\
+Multi-solution allowed & \xmark & \xmark & \xmark & \xmark & \xmark & \xmark & \rebuttal{\xmark} & \rebuttal{\xmark} & \rebuttal{\xmark} & \cellcolor{gray!15} \textbf{\cmark} \\
+Scalable difficulty    & \cmark  & \cmark & \cmark & \xmark & \xmark & \cmark & \rebuttal{\cmark} & \rebuttal{Limited} & \rebuttal{Limited} & \cellcolor{gray!15} \textbf{\cmark} \\
+Contamination-free     & \xmark & \cmark & \cmark & \cmark & \cmark & \cmark & \rebuttal{\cmark} & \rebuttal{\cmark} & \rebuttal{\cmark} & \cellcolor{gray!15} \textbf{\cmark} \\
+Token-aware eval.      & \xmark & \xmark & \xmark & \xmark & \xmark & \xmark & \rebuttal{\xmark} & \rebuttal{\xmark} & \rebuttal{\xmark} & \cellcolor{gray!15} \textbf{\cmark} \\
+Number of Tasks        & 30 & 7 & -- & 5 & 3 & 4 & \rebuttal{9} & \rebuttal{40} & \rebuttal{15} & \cellcolor{gray!15} \textbf{44} \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\caption{\textbf{Comparison with existing reasoning benchmarks. \cmark: feature present; \xmark: absent.} \textbf{Note:} \textit{Unique solution} means the benchmark verifies only one valid solution exists. \textit{Multi-solution allowed} means multiple valid solutions are accepted and matched against the full enumerated set.}
+\label{tab:compare_strict}
+\end{table*}
+
+\textbf{Dynamic Evaluation \& Algorithmic Reasoning Benchmarks.}  Recent works explore dynamic benchmarking as an alternative to static datasets. DyVal \citep{zhu2023dyval}, later extended with meta-probing in DyVal2 \citep{zhu2024dyval2}, generate math and logic problems dynamically. ThinkBench \citep{huang2025thinkbench} evaluates models with distributionally shifted reasoning tasks, while TreeEval \citep{li2024treeeval} and GameArena \citep{gamearena2024} introduce interactive or live-game evaluation protocols. DyCodeEval \citep{chendycodeeval} dynamically generates code reasoning tasks to avoid contamination, and DARG \citep{zhang2024darg}, using an adaptive reasoning graph framework, dynamically escalates task complexity. Similarly, \citep{kariaautonomous} proposes autonomous evaluation for truth maintenance in reasoning pipelines. \rebuttal{Other recent work includes NPHardEval \citep{fan-etal-2024-nphardeval} with complexity-class aware benchmarking, FCoReBench \citep{mittal2024fcorebench} for first-order combinatorial reasoning with solver integration, and PUZZLEPLEX \citep{long2025puzzleplex} for interactive planning puzzles.} These efforts highlight the growing recognition of dynamic evaluation but remain limited by either a lack of mathematical guarantees, insufficient control over solution uniqueness, or the absence of token-aware evaluation protocols. Table \ref{tab:compare_strict} provides a detailed comparison of \our with other evaluation benchmarks, highlighting how \our  differs by combining dynamic evaluation with formal solution verification. Furthermore, Algorithmic reasoning benchmarks such as CLRS \citep{velickovic2022clrs} and LLMThinkBench \citep{srivastava2025thinkbench} provide structured tests for algorithmic tasks and overthinking tendencies. However, they lack resilience to contamination and are narrow in scope. \our advances this line of work by unifying algorithmic, combinatorial, and mathematical reasoning tasks into dynamically generated, difficulty-calibrated suites with provable correctness.
+
+\rebuttal{\textbf{Tool-Augmented Reasoning Methods.} PAL \citep{gao2023pal} uses program generation for math solving, while Logic-LM \citep{pan2023logic} combines LLMs with symbolic solvers for logical reasoning. Reasoning Gym \citep{stojanovski2025reasoninggym} provides procedurally generated environments for RL training with verifiable rewards, focusing on RLVR training infrastructure complementary to our contamination-resistant evaluation focus. Our work evaluates both innate and tool-augmented capabilities, showing that even with PAL-style code execution and symbolic solvers, our benchmark remains challenging (Section 4.4, Appendix~\ref{Appendix:B}). For detailed discussion see Appendix~\ref{Appendix:ExtendedRelated}.}
+
+
+\section{\our Framework}
+
+
+In this section, we present the design and implementation of \our. We detail the algorithmic foundations for contamination-resistant problem generation, introduce a token budegt-aware evaluation system, and establish formal verification methods for solution correctness. \our introduces three central components: 1) dynamic problem generation with provable uniqueness guarantees, 2) adaptive difficulty scaling based on model token budget constraints, and 3) multi-solution handling through formal verification techniques.
+
+% \vspace{-1.5em}
+
+\subsection{Algorithmic Problem Generation and Mathematical Foundation}
+
+
+
+We develop \our through algorithmic problem generation with formal mathematical guarantees. For each task category $\tau \in \mathcal{T}$, we define a generator function $G_\tau: \Theta_\tau \times \mathcal{R} \rightarrow \mathcal{P}\tau$ that maps a parameter space $\Theta\tau$ and random seed space $\mathcal{R}$ to problem instances $\mathcal{P}\tau$. The parameter space cardinality satisfies $|\Theta\tau \times \mathcal{R}| > 10^{15}$ for all tasks, ensuring that $\Pr[G_\tau(\theta_1, r_1) = G_\tau(\theta_2, r_2)] \le 10^{-15}$ for distinct parameter pairs \citep{mitzenmacher2017probability}. This astronomical problem space makes contamination provably negligible since the probability of exact instance collision with any training corpus $\mathcal{C}$ of practical size $|\mathcal{C}| < 10^{12}$ remains below $10^{-3}$ (for complete proof refer Appendix \ref{Appendix:ContaminationProb}). \rebuttal{Our contamination resistance addresses exact instance memorization. Learning general solution strategies from similar problems constitutes genuine algorithmic learning, which our benchmark is designed to measure.} For detailed proofs on easy, medium, and hard suites see Appendix \ref{Appendix:F} \ref{Appendix:H} and \ref{Appendix:K}.
+
+
+Each generated problem $p \in \mathcal{P}_\tau$ undergoes rigorous validation through a verification function $V_\tau: \mathcal{S} \times \mathcal{P}_\tau \rightarrow \{0, 1\}$ that deterministically confirms solution correctness. \rebuttal{For deterministic tasks like arithmetic and sorting, we verify through direct computation in O(n) time. For constraint satisfaction problems like Sudoku and N-Queens, we use CSP solvers (python-constraint, pysat) to enumerate all valid solutions.} For problems admitting unique solutions, we use CSP solvers \citep{dechter2003constraint} to verify $|\{s \in \mathcal{S} : V_\tau(s, p) = 1\}| = 1$ (usage of CSP detailed in Appendix \ref{Appendix:K}). When multiple valid solutions exist naturally (as in N-Queens or mode calculation), we compute the complete solution set $\mathcal{S}_p = \{s \in \mathcal{S} : V_\tau(s, p) = 1\}$ through exhaustive enumeration and accept any $s \in \mathcal{S}_p$ as correct. This prevents unfair penalization when models produce mathematically valid but non-canonical answers. The verification complexity remains polynomial $O(n^k)$ for constant $k \leq 3$ despite potentially exponential solution complexity, enabling efficient correctness checking. 
+
+\rebuttal{\textbf{Concrete Parameter Space Examples.} To illustrate our generation process, consider Tower of Hanoi with parameters: $n \in [3,12]$ disks, peg labels from 26 characters, and random initial configurations, yielding $>10^{18}$ unique instances. For Sudoku, we vary grid density (30-50 empty cells), apply digit permutations, and shuffle cell positions, producing $>10^{20}$ instances. Arithmetic tasks sample list length $n \in [8,64]$ and values from $[-1000,1000]$, creating $>10^{15}$ combinations. N-Queens uses board sizes $n \in [4,12]$ with optional initial constraints, while Boolean SAT varies variables (3-8) and clauses (5-20), each exceeding $10^{12}$ unique problem instances.}
+
+\begin{table}[h]
+\centering
+\caption{\our Task Organization and Scale}
+\label{tab:benchmark_overview}
+\small
+\begin{adjustbox}{width=0.75\textwidth,center}
+\begin{tabular}{l|c|c|c|c|c}
+\toprule
+\textbf{Suite} & \textbf{Tasks} & \textbf{Variations} & \textbf{Problem Space} & \textbf{Complexity Class} & \textbf{Example Tasks} \\
+\midrule
+% \textbf{Easy} & 29 & -- & $>10^{15}$ per task & $O(n^k)$, $k \leq 2$ & \makecell[l]{Addition/Subtraction (7), Sorting (1), Statistics (3),\\Comparison (8), Counting (10)} \\
+\textbf{Easy} & 29 & -- & $>10^{15}$ per task & $O(n^k)$, $k \leq 2$ & \makecell[l]{Arithmetic (8), Statistics (3), Counting (8), Extrema (5), Comparison (1), Others (4) } \\
+\midrule
+\textbf{Medium} & 5 & 49 & $>10^{20}$ per task & $O(2^n)$ to $O(n!)$ & \makecell[l]{Fibonacci/Recursive (6), Geometric/Exponential (10),\\Prime/Number Theory (11), Complex Patterns (12),\\Algebraic Sequences (10)} \\
+\midrule
+\textbf{Hard} & 10 & 68 & $>10^{30}$ per task & NP-complete & \makecell[l]{Tower of Hanoi (6), N-Queens (4), Graph Coloring (10),\\Boolean SAT (5), Sudoku (8), Logic Grid Puzzles (8),\\Cryptarithmetic (12), Matrix Chain (5),\\Modular Systems (5), Constraint Optimization (5)} \\
+\midrule
+\textbf{Total} & \textbf{44} & \textbf{117} & $>\mathbf{10^{15}}$-$\mathbf{10^{50}}$ & P to NP-complete & \textbf{117 problem variations} \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+%\ah{TODO: verify table 2}
+
+\subsection{Token-Aware Evaluation Framework}
+For each model $M$ with token budget $C_M$ tokens, we dynamically calibrate problem complexity to guarantee solvability within architectural limits. Let $T_p(n)$ denote the expected token requirement for problem $p$ with size parameter $n$, decomposed as $T_p(n) = T_{\text{prompt}}(n) + T_{\text{solution}}(n) + T_{\text{buffer}}$ where $T_{\text{buffer}} = 0.15 \cdot C_M$ accommodates reasoning verbosity \citep{han-etal-2025-token, lin2025planbudgeteffectiveefficient}. Prompt design is detailed in appendix \ref{Appendix:G} (easy suite), \ref{Appendix:I} (medium suite), \ref{Appendix:L} (hard suite).
+
+We derive task-specific token estimation functions through empirical analysis. For arithmetic operations on lists of length $n$ with maximum value $M$, we have $T_{\text{arithmetic}}(n, M) = \alpha_1 n + \beta_1 \log_{10} M + \gamma_1$ where coefficients $(\alpha_1, \beta_1, \gamma_1)$ are calibrated across model families. For Tower of Hanoi with $n$ disks requiring $2^n - 1$ moves, the solution tokens scale as $T_{\text{hanoi}}(n) = (2^n - 1) \cdot \alpha_{\text{move}}$ where $\alpha_{\text{move}} \approx 12$ tokens per move description. This enables precise difficulty scaling: for example, models with 32K maximum output token limit we evaluate up to $n = 8$ disks (requiring approximately $(2^8 - 1) \cdot 12 = 3060$ tokens \textbf{excluding} thinking tokens) for safe limit, while future 128K models could handle $n = 10$ (requiring $(2^{10} - 1) \cdot 12 = 12276$ tokens), maintaining evaluation relevance as capabilities improve \citep{wen2025budgetthinkerempoweringbudgetawarellm}.
+
+The framework implements a dual-phase token validation protocol. During generation, we enforce the constraint $T_p(n) \leq 0.85 \cdot C_M$ through adaptive parameter scaling. If initial parameters yield excessive token requirements, we apply the reduction $n' = \lfloor 0.8 \cdot n \rfloor$ iteratively until the constraint is satisfied. Post-inference, we perform actual token counting using model-specific tokenizers and classify responses as $\text{TokenStatus}(r) = \begin{cases} \text{VALID} & \text{if } |T(r)| \leq 0.85 \cdot C_M \\ \text{WARNING} & \text{if } 0.85 \cdot C_M < |T(r)| \leq C_M \\ \text{OVERFLOW} & \text{if } |T(r)| > C_M \end{cases}$ where responses with WARNING status indicate potential truncation or excessive reasoning that may compromise solution quality \citep{wang2024reasoningtokeneconomiesbudgetaware}.
+
+\subsection{Solution Uniqueness Verification and Multi-Solution Handling}
+
+We use formal verification methods to guarantee that every generated problem is mathematically well-posed. For each problem instance $p$, we compute the solution set cardinality through systematic constraint propagation and backtracking algorithms \citep{bessiere2006constraint}. When $|\mathcal{S}_p| = 1$, the problem admits a unique solution and standard evaluation proceeds. When $|\mathcal{S}_p| > 1$, we enumerate all valid solutions and implement the acceptance criterion $\text{Accept}(r, p) = \mathbf{1}[\text{Parse}(r) \in \mathcal{S}_p]$ where $\text{Parse}$ extracts the model's answer using task-specific robust parsers.
+
+%\ah{set intersection euqation --> what is D?, also C is constraint right?}
+
+
+For constraint satisfaction problems like Sudoku or Logic Grid Puzzles, we employ arc consistency algorithms that iteratively reduce variable domains until either a unique solution emerges or multiple solutions are identified \citep{simonis2005sudoku, howell2018solving}. The domain reduction follows $D_v^{t+1} = D_v^t \cap \{d \in D : \text{consistent}(v, d, \mathcal{C}, D^t)\}$ where consistency checking ensures no constraint violations (here \(v\) denotes a variable in the variable set \(V\) with domain \(D_v\)). Here, $\mathcal{C}$ denotes the set of problem constraints for the instance. For optimization problems like Matrix Chain Multiplication, we verify optimality through dynamic programming, confirming that the claimed cost equals $m[1,n] = \min_{\pi \in \Pi} \text{cost}(\pi)$ where \(\Pi\) denotes the set of all valid parenthesizations for the matrix-chain instance \citep{carbonnel2019singleton, cooper2001arcconsistencysoftconstraints, Cooper_2017}. The complete end-to-end \our evaluation pipeline is shown in Algorithm \ref{alg1}. This pipeline ensures mathematical soundness through three mechanisms: 1) parameter selection respects token budget constraints preventing unfair penalization, 2) solution set computation guarantees we evaluate against all valid answers not just canonical ones, and 3) post-inference token counting detects when models approach architectural limits that may compromise reasoning quality.
+
+\begin{wrapfigure}{r}{0.50\textwidth} % r = right, width = 48% textwidth
+  \centering
+  \vspace{-2em}
+  \begin{minipage}{0.50\textwidth}
+    \small
+    \begin{algorithm}[H]
+\caption{\our end-to-end Evaluation Pipeline}
+\label{alg1}
+    \begin{algorithmic}[1]
+      \State \textbf{Input:} Model $M$, Task suite $\mathcal{T}$, Token limit $C_M$
+      \State \textbf{Output:} Performance metrics $\mathcal{M}$
+      \For{each task $\tau \in \mathcal{T}$}
+        \State $\theta \gets \text{SelectParameters}(\tau, C_M)$
+        \State $p \gets G_\tau(\theta, \text{RandomSeed}())$
+        \State $\mathcal{S}_p \gets \text{ComputeSolutionSet}(p)$
+        \If{$|\mathcal{S}_p| = 0$} \State \textbf{continue} \EndIf
+        \State $\text{prompt} \gets \text{FormatPrompt}(p, \tau)$
+        \State $r \gets M(\text{prompt})$
+        \State $\text{tokens} \gets \text{CountTokens}(r, M)$
+        \If{$\text{tokens} > 0.95 \cdot C_M$} \State $\mathcal{M}[\tau].\text{warnings}$++ \EndIf
+        \State $s \gets \text{Parse}(r, \tau)$
+        \State $\mathcal{M}[\tau].\text{correct} \gets \mathcal{M}[\tau].\text{correct} + \mathbf{1}[s \in \mathcal{S}_p]$
+      \EndFor
+    \end{algorithmic}
+    \end{algorithm}
+    % \captionof{algorithm}{BeyondBench (wrapped, compact)}
+  \end{minipage}
+  \vspace{-2em}
+\end{wrapfigure}
+
+\vspace{-0.5em}
+
+\subsection{Difficulty Scaling and Theoretical Guarantees}
+
+\our partitions tasks into three complexity regimes with provable difficulty scaling. The Easy Suite encompasses polynomial-time solvable problems where verification complexity is $O(n^k)$ for $k \leq 2$. These include arithmetic operations, statistical measures, and comparison tasks with solution spaces of size $O(n!)$ but efficient verification through direct computation. The Medium Suite introduces problems with exponential growth patterns such as Fibonacci sequences where $F_n \sim \phi^n$ with $\phi = (1+\sqrt{5})/2$, geometric progressions with ratio $r^n$, and number-theoretic sequences requiring primality testing with complexity $O(\sqrt{n})$ per element. The Hard Suite contains NP-complete problems \citep{fan-etal-2024-nphardeval, leyton2014understanding, kendall2008survey} including Boolean Satisfiability where the search space contains $2^n$ assignments, Graph Coloring with chromatic number computation, and N-Queens requiring exploration of $n!$ permutations \citep{yang2025nondeterministicpolynomialtimeproblemchallenge}. For further details regarding extensibility to new tasks and increasing problem complexity refer to Appendix \ref{Appendix:ScalabilityBenchmark}.
+
+
+For each difficulty level, we maintain the invariant that problem generation time remains polynomial while solution complexity may be exponential, ensuring efficient benchmark execution while testing genuine reasoning. The framework provides theoretical guarantees including contamination resistance where $P(\text{collision}) < |\mathcal{C}|/|\mathcal{P}| < 10^{-3}$ for any feasible training corpus $\mathcal{C}$ (here $P(\text{collision})$ is the probability a generated instance matches an entry of $\mathcal{C}$), solution correctness through formal verification with zero false positives or negatives, and scalability where problem difficulty increases monotonically with parameter growth enabling continuous evaluation as models improve. \rebuttal{Our algorithmic task selection is motivated by the observation that true reasoning requires capabilities fundamentally challenging for current LLMs: memory management across exponential state spaces, systematic backtracking, and multi-step deduction. Tasks with known algorithms test whether models can \textit{execute} procedures correctly, a prerequisite for genuine reasoning. Detailed motivation and empirical evidence are provided in Appendix~\ref{Appendix:A}.} 
+
+
+
+
+
+\input{main-table}
+\vspace{-0.5em}
+\section{Results and Insights}
+
+\subsection{Evaluation Setup}
+
+We evaluate each model on 1,000 randomly generated problem instances per task variation to ensure statistical robustness, using seed 42 across all experiments for reproducibility. For proprietary models, we reduce to 100 instances per task. All models use same parameters: temperature 0.0 (greedy decoding, top-p 0.9, and maximum tokens allowed for that model. We evaluate 101 language models across 44 algorithmic tasks with 117 variations using our \our framework. Due to space constraints, detailed experimental settings are provided in the Appendix \ref{Appendix:ExperimentalSetting} and \ref{Appendix:ImplementationDetails}. \rebuttal{Comprehensive statistical analysis including confidence intervals, effect sizes (Cohen's d), ANOVA, and non-parametric tests (Mann-Whitney U, Wilcoxon signed-rank) is provided in Appendix~\ref{Appendix:D}.} Table \ref{main:beyondbench_leaderboard_updated} presents the complete results showing \textit{accuracy, instruction-following rates} (we prompt each model to respond in specific output formats; if the response matches \textbf{any required format}, we assign instruction-following = 1, otherwise = 0), and \textit{average token usage} across all suites.
+
+
+
+
+\subsection{Main Results}
+
+
+
+
+
+\textbf{Our experiments reveal substantial limitations in algorithmic reasoning, as problem complexity grows.} The strongest commercial models like GPT5 \citep{georgiou2025capabilitiesgpt5criticaldomains} achieve 71.68\% accuracy on hard suite, while most open-source models struggle to exceed 60\% performance. The performance drops dramatically with complexity: the best open-source model (GPT-OSS 120B \citep{openai2025gptoss120bgptoss20bmodel}) achieves 93.52\% on Easy tasks but only 59.64\% on Hard tasks, suggesting fundamental struggles with recursive algorithmic reasoning. 
+
+
+\textsc{Systematic Performance Collapse Beyond Complexity Thresholds.} \textbf{Models exhibit sharp performance cliffs rather than gradual degradation when algorithmic complexity exceeds critical thresholds.} 
+\begin{wrapfigure}[19]{r}{0.6\textwidth}
+  \centering
+  \includegraphics[width=1\linewidth]{figures/hardest_tasks_3x3_figure.pdf}
+    \caption{\textbf{Performance Collapse on Hard Suite.}}
+  \label{fig:performance_collapse}
+\end{wrapfigure}
+Figure~\ref{fig:performance_collapse} demonstrates this phenomenon across nine hardest algorithmic tasks, showing how models maintain reasonable performance until hitting complexity barriers, then collapse catastrophically. For instance, models achieve 80-90\% accuracy on 4×4 Sudoku but drop to <10\% on 9×9 grids. Similarly, most open-sourced models perform well on 3-5 disk Tower of Hanoi but fail completely at 6+ disks. This cliff-like degradation pattern indicates that \textit{current models lack the systematic state management and backtracking mechanisms essential for complex algorithmic reasoning}. \rebuttal{To ensure fair comparison across tasks with different complexity scaling (Tower of Hanoi's exponential $2^n$ vs Sudoku's linear empty cells), we normalize complexity metrics. After normalization, we observe graceful degradation tasks (arithmetic, sorting) exhibit linear accuracy decline, while sudden degradation tasks (Sudoku, N-Queens) show threshold behavior at approximately $0.7 \times \log_2(\text{context\_length})$ reasoning steps. Detailed analysis in Appendix~\ref{Appendix:NormalizedComplexity}.} The data reveals two distinct failure patterns: \textbf{i) catastrophic collapse} versus \textbf{ii) gradual degradation}. Tasks like Tower of Hanoi and Matrix Chain Multiplication exhibit sharp cliffs-models perform well until 5-6 disks and 7-10 matrices respectively, then collapse completely to near-zero performance. In contrast, Cryptarithmetic and Graph Coloring show \textbf{counter-intuitive improvement patterns}: Cryptarithmetic accuracy often increases with word length (ex- 78.0\%→90.4\% for GPT-OSS), while Graph Coloring maintains relatively stable performance across vertex counts (ex- 100\%→77\% from 12-40 vertices GPT-OSS). This suggests that \textbf{complexity scaling affects different algorithmic reasoning mechanisms differently}: recursive problems with exponential state explosion face hard computational limits, while constraint satisfaction problems may benefit from richer problem structure providing more optimization pathways. \textit{Interestingly, even reasoning models like GPT-5 and o3 exhibit these same differential patterns}, indicating fundamental differences in how transformers handle various types of algorithmic complexity rather than uniform scaling limitations. Futhermore, \textbf{most open-source models show a consistent performance ceiling around 30-35\% on hard problems} across 85 models from different architectures.
+
+
+\begin{wrapfigure}[13]{r}{0.50\textwidth}
+  \centering
+  \includegraphics[width=1\linewidth]{figures/three_benchmark_comparison.pdf}
+  \caption{\textbf{Static Benchmarks vs \our Performance on Hard Suite.}}
+  \label{fig:his_distribution}
+\end{wrapfigure}
+\textsc{Dynamic Evaluation Highlights Limits of Static Benchmarks.} \textbf{Dynamic problem generation shows that previous benchmark scores overestimate reasoning capabilities.} 
+Models claiming 90\%+ performance on static benchmarks like GSM8K achieve only $\sim$50\% on equivalent dynamically generated tasks. Our framework generates problems from spaces exceeding $10^{15}$ possibilities, making memorization very difficult. Figure \ref{fig:his_distribution} shows the resulting performance distribution, reflecting innate reasoning capabilities when tested on our dynamic generation benchmark. For detailed results, see appendix \ref{Appendix:I} (medium) and \ref{Appendix:L} (hard suite).
+
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=1\linewidth]{figures/scaling_performance_fixed.pdf}
+    \caption{\textbf{Scaling Laws Across Model Families.} Performance gains follow logarithmic curves with steep early improvements tapering to marginal gains at larger scales.}
+    \label{fig:scaling_laws}
+\end{figure}
+
+
+\subsection{Parameters Scaling Effects}
+
+\textsc{Parameter Scaling Shows Performance Saturation.} \textbf{Our overall results (Table \ref{main:beyondbench_leaderboard_updated}) suggests that while larger models still perform better, the rate of improvement follows logarithmic patterns with diminishing returns after certain point.} Figure~\ref{fig:scaling_laws} illustrates logarithmic scaling patterns across model families, revealing diminishing returns of parameter scaling. Within the Qwen3 family \citep{yang2025qwen3technicalreport}, going from 0.6B to 1.7B (2.8x parameters) yields a substantial 17.5\% point gain (28.13\% → 45.63\%), but scaling further to 32B parameters adds only 22.2 points across 18x paramater increase. The step from 8B to 14B (1.75× parameters) delivers just 6.65 points, and from 14B to 32B (2.2x parameters) provides only 1.48 points. The Qwen2.5 family \citep{qwen2025qwen25technicalreport} shows similar patterns: large early gains (9.37\% → 36.03\% from 0.5B to 7B) followed by slower progress (36.03\% → 53.27\% from 7B to 72B). \textit{These results suggest that while scaling remains beneficial, its impact on reasoning ability diminishes progressively,} with only reduced incremental benefits at larger model sizes.
+
+
+
+\textsc{Quantization Has Minimal Impact on Reasoning.} \textbf{Even aggressive quantization has minimal impact (<3\% typical) on algorithmic reasoning, suggesting that reasoning is robust to reduced precision.} Across quantized model variants, FP8 \citep{kuzmin2024fp8quantizationpowerexponent} and GPTQ-Int8 quantization \citep{frantar2023gptqaccurateposttrainingquantization} maintain nearly identical performance to full-precision models. 
+\begin{wrapfigure}[13]{r}{0.60\textwidth}
+  \centering
+  \includegraphics[width=1\linewidth]{figures/quantization_analysis.pdf}
+  \caption{\textbf{Quantization Robustness Across Model Scales.} Base Model (FP16) vs quantized variants for Qwen families.}
+  \label{fig:quantization_analysis}
+\end{wrapfigure}
+Some quantized variants even outperform their full-precision counterparts: Qwen3-30B-MOE-i (FP8) achieves 71.04\% versus 70.40\% for the original. Even GPTQ-Int4 quantization, reducing model size by 4×, shows only modest drops, typically 1-3\% (refer appendix \ref{Appendix:T} for quantized model results across easy, medium and hard tasks). \textbf{This finding suggests that algorithmic thinking relies more on discrete symbolic operations than fine-grained numerical computations.} The results indicate that the bottleneck in reasoning performance is not computational precision but rather architectural design and the availability of appropriate architectural mechanisms enabling multi-step reasoning. Figure~\ref{fig:quantization_analysis} demonstrates the minimal performance degradation across quantization schemes.
+\vspace{-1.3em}
+
+
+
+\subsection{Specialization Effects and Performance Patterns}
+\vspace{-0.5em}
+\textsc{Thinking Models Show Limited Gains.} \textbf{Models designed for extended reasoning show only modest improvements over their standard versions.} The Qwen3-4B-thinking variant achieves 60.85\% versus 58.55\% for the base model-a 2.3\% improvement. Similarly, Qwen3-30B-MOE-thinking \citep{xu2025qwen3omnitechnicalreport} shows only 0.2\% gain (69.12\% vs 68.92\%) despite being optimized for reasoning tasks. 
+\begin{wrapfigure}[19]{r}{0.40\textwidth}
+  \centering
+  \includegraphics[width=1\linewidth]{figures/performance_distribution.pdf}
+  \caption{\textbf{Performance Distribution by Model Type and Difficulty.} Violin width indicates density of models at each performance level; white lines show medians, dark lines show means. "Gap \%" quantify the mean performance.}
+  \label{fig:performance_distribution}
+\end{wrapfigure}
+Interestingly, these "thinking" models don't consistently use more tokens, suggesting they process information differently rather than simply thinking longer. \rebuttal{Our detailed failure mode analysis (Appendix~\ref{Appendix:E}) reveals that reasoning models fail later in execution (Tower of Hanoi: step 89/127) compared to vanilla models (step 23/127), but struggle with state management during extended reasoning. While vanilla models fail early without recognizing errors, reasoning models attempt self-correction but with 87.6\% error introduction rate. We varied reasoning budget from 0\% to 100\% across model families, finding that Hard tasks benefit most (+24-44\% for weak models) while already-capable models show minimal improvement (o3: 0\% gain). Detailed case studies and reasoning budget analysis in Appendix~\ref{Appendix:E}.} This indicates that \textit{current approaches to improving reasoning may not completely address the deeper challenges for algorithmic reasoning}. True algorithmic reasoning appears to require systematic state management, backtracking, and constraint handling-capabilities that may be fundamentally different from language modeling.
+
+
+\textsc{Domain Specific (Mathematical) Fine-Tuning Reduces Algorithmic Performance.} \textbf{Specialized mathematical training appears to hurt performance on algorithmic reasoning tasks.} Qwen2.5-72B-math \citep{yang2024qwen25mathtechnicalreportmathematical} achieves 48.40\% overall versus 53.27\% for the base model: a 4.87\% drop after mathematical training. This pattern appears across model sizes: Qwen2.5-7B-math (31.71\%) underperforms the base model (36.03\%). \textbf{Mathematical fine-tuning appears to optimize for in-domain datasets like GSM8K, MATH not innate algorithmic reasoning.} Mathematical training focuses on symbolic manipulation, equation solving, and formula application, while our tasks require procedure construction, state management, and systematic search. Such training seems to emphasize symbolic and equation-based skills, which may not fully align with the requirements of algorithmic tasks.
+
+
+
+
+
+
+\subsection{Proprietary Models and Tool-Augmented Reasoning}
+
+
+\textsc{Open-sourced Models show Large Performance Gaps compared to proprietary models.} \textbf{The performance difference between leading proprietary models \citep{comanici2025gemini25pushingfrontier, openai2024gpt4technicalreport} and open-source alternatives suggests that the gap cannot be explained by scale alone.} For instance, GPT5 achieves a notable 12.17\% better performance on hard tasks over the best open-source model (GPT-OSS-120B). \textbf{These results suggest that top-performing proprietary models may rely on innovations beyond simple parameter scaling}, possibly including \textit{internal tool use or code generation} to solve algorithmic problems rather than relying solely on language-based reasoning.
+
+\begin{wraptable}{r}{0.70\textwidth}
+\vspace{-1em}
+\centering
+\footnotesize
+\begin{adjustbox}{width=0.70\textwidth,center}
+\begin{tabular}{l|ccc|c|ccc|ccc|c}
+\toprule
+& \multicolumn{3}{c|}{\textbf{No Tools}} & & \multicolumn{3}{c|}{\rebuttal{\textbf{+Code Execution}}} & \multicolumn{3}{c|}{\textbf{All Tools Combined}} & \cellcolor{gray!15} \\
+\midrule
+\textbf{Model} & Easy & Med & Hard & \rebuttal{\textbf{Avg}} & \rebuttal{Easy} & \rebuttal{Med} & \rebuttal{Hard} & Easy & Med & Hard & \cellcolor{gray!15} \textbf{Avg} \\
+\midrule
+GPT-5         & 88.4 & 61.6 & 50.3 & \rebuttal{66.8} & \rebuttal{95.8} & \rebuttal{76.4} & \rebuttal{67.2} & 97.3 & 81.7 & 71.7 & \cellcolor{gray!15} \textbf{83.6} \\
+GPT-5 mini    & 91.7 & 64.4 & 41.4 & \rebuttal{65.8} & \rebuttal{94.8} & \rebuttal{74.2} & \rebuttal{62.8} & 96.1 & 79.7 & 69.3 & \cellcolor{gray!15} \textbf{81.7} \\
+GPT-5 nano    & 58.3 & 33.6 & 22.3 & \rebuttal{38.1} & \rebuttal{71.8} & \rebuttal{52.7} & \rebuttal{48.7} & 96.1 & 80.1 & 69.8 & \cellcolor{gray!15} \textbf{82.0} \\
+\rebuttal{Gemini-2.5-pro} & \rebuttal{82.4} & \rebuttal{58.7} & \rebuttal{42.1} & \rebuttal{61.1} & \rebuttal{88.2} & \rebuttal{68.8} & \rebuttal{56.4} & \rebuttal{89.4} & \rebuttal{72.3} & \rebuttal{61.2} & \cellcolor{gray!15} \rebuttal{\textbf{74.3}} \\
+% \rebuttal{GPT-OSS-120B} & \rebuttal{93.5} & \rebuttal{75.1} & \rebuttal{59.6} & \rebuttal{76.1} & \rebuttal{95.8} & \rebuttal{79.4} & \rebuttal{67.2} & \rebuttal{96.4} & \rebuttal{81.8} & \rebuttal{71.4} & \cellcolor{gray!15} \rebuttal{\textbf{83.2}} \\
+% \rebuttal{Qwen2.5-72B} & \rebuttal{80.3} & \rebuttal{45.9} & \rebuttal{33.6} & \rebuttal{53.3} & \rebuttal{84.2} & \rebuttal{52.1} & \rebuttal{41.8} & \rebuttal{86.8} & \rebuttal{55.4} & \rebuttal{45.2} & \cellcolor{gray!15} \rebuttal{\textbf{62.5}} \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\caption{\rebuttal{\textbf{Performance across tools and difficulty suites.}}}
+% Shows accuracy progression from no tools (baseline) to code execution only (most effective individual tool, provides Python REPL for algorithmic problem-solving) to all tools combined (code execution + calculator + web search). Code execution provides largest gains across all difficulty levels. New models (Gemini-2.5-pro, GPT-OSS-120B, Qwen2.5-72B) and tool-specific results shown in green.}
+\label{tab:gpt5_accuracy}
+\vspace{-1em}
+\end{wraptable}
+
+\textsc{Tool-Augmented Approaches Show Promise.} \textbf{GPT-5 (an agentic LLM) results suggest that combining language models with computational tools may be more effective than scaling language models alone.} The performance of tool-augmented GPT5 models drastically drops when its tool usage is turned off. Table \ref{tab:gpt5_accuracy} shows a 16.81\%, 15.86\% and 43.95\% drop in accuracy for GPT-5, GPT-5 mini, and GPT-5 nano respectively. This shows that these \textbf{models appear to recognize when to use computational tools} rather than attempting pure language-based reasoning. This approach mirrors human problem-solving, where we use external tools to extend our capabilities. \textit{The efficiency gains observed suggest that recognizing problem types and selecting appropriate solution methods may be more important than extended reasoning within the language model itself.}
+% This points toward architectures that integrate linguistic understanding with algorithmic computation capabilities.
+
+\rebuttal{\textsc{Extended Tool Analysis.} We conducted comprehensive per-task tool analysis across 44 tasks with three tool types (calculator, code execution, web search). Code execution provides the largest improvements (+15-55\%), while web search shows negligible benefit (+0.3\%), confirming contamination resistance. Importantly, smaller models struggle with tool orchestration itself (41.2\% success rate for Qwen2.5-3B vs. 94.2\% for GPT-5), indicating that effective tool use requires sophisticated reasoning. Complete analysis in Appendix~\ref{Appendix:B}.}
+
+\rebuttal{\textsc{Contamination Resistance Validation.} To experimentally validate our theoretical contamination resistance guarantees, we fine-tuned 5 models on 66K \our instances using SFT and GRPO. When evaluated on a different seed (ensuring no instance overlap), models show limited Hard suite improvement (+10-15\%) compared to Easy/Medium (+27-38\%), demonstrating that NP-complete problems remain fundamentally challenging even after targeted training. Unlike static benchmarks where training achieves near-perfect scores through memorization, \our maintains evaluation integrity. Full experimental details in Appendix~\ref{Appendix:C}.}
+
+
+
+\section{Conclusion}
+
+\our's contamination-resistant evaluation of 101 models reveals that \textbf{innate reasoning in raw language models represents a fundamental bottleneck that cannot be overcome through scaling \textit{alone}}. Our results reveal three major insights: \textbf{\textit{1)}} parameter scaling shows logarithmic returns with a hard ceiling around 30-35\% on algorithmic tasks for most open-sourced models; \textbf{\textit{2)}} "thinking" models fail to meaningfully improve reasoning; and \textbf{\textit{3)}} mathematical fine-tuning actively degrades algorithmic performance by optimizing for the wrong computational primitives. The better performance of tool-augmented models like GPT5 (83.57\% vs. 75.99\% for the best open-source alternative GPT-OSS 120B) combined with their efficient problem-solving approaches suggests these systems succeed not through superior language based reasoning but by recognizing when to use tools for complex reasoning. The path toward Artificial General Intelligence lies in developing agentic architectures that combine language understanding with tool use- systems that, like human experts, can recognize when it’s time to reason and when it’s time to compute. \our has revealed the core limits of raw language models and highlighted the promise of tool-augmented systems; \textit{looking forward, we see the future toward hybrid neuro-symbolic architectures and agentic LLMs with the ability to call on tools and to know when to use them effectively.}
+
+
+
+\section*{Ethics Statement}
+
+BeyondBench is designed to evaluate reasoning capabilities without raising ethical concerns. All generated problems are abstract mathematical or algorithmic puzzles without real-world context that could encode biases. We deliberately avoid word problems or scenarios that might reference people, cultures, or sensitive topics. The benchmark cannot be used to generate harmful content, as it only produces mathematical sequences, logical formulas, and algorithmic solutions. We acknowledge that improved reasoning capabilities could be dual-use, potentially enabling both beneficial applications (scientific discovery, education) and concerning ones (strategic deception, adversarial planning). However, our benchmark itself poses no direct ethical risks and serves the important purpose of accurately measuring AI capabilities, which is essential for responsible AI development.
+
+
+\section*{Reproducibility Statement}
+
+\rebuttal{All code, data, and evaluation scripts for BeyondBench will be released publicly after the review process. We will provide a \textbf{user-friendly low code python (pip) package} for seamless integration, making evaluation as simple as any static benchmark. Installation requires a single command, and evaluation can be performed with minimal code.} \rebuttal{The package will handle all infrastructure complexity internally, including problem generation, verification, and result aggregation. This low-code interface ensures researchers can use \our without difficulty in interpreting results or managing complex setups.}
+
+The repository will include: (1) complete implementation of all 44 tasks with 117 variations, including generation algorithms, solution verifiers, and response parsers, (2) exact model configurations and inference parameters used in our experiments, (3) seeds and parameter ranges for regenerating all problem instances, (4) raw evaluation results for all 101 models in JSON format, and (5) analysis scripts for reproducing tables and figures. \rebuttal{All evaluations in this paper use consistent seed value 42 for the main results, ensuring completely fair cross-model comparison where every model sees identical problems. We also provide three-fold evaluation results with statistical analysis in Appendix~\ref{Appendix:D}, demonstrating low variance (mean std = 2.3\%) and high reproducibility.}
+
+To reproduce our results, researchers need access to GPUs with at least 80GB memory for the largest open-source models, or API access for proprietary models. The evaluation framework is model-agnostic and can be extended to new models by specifying the model ID and inference engine. We will provide Docker containers with all dependencies pre-installed to ensure environment consistency. \rebuttal{Comprehensive case studies demonstrating our evaluation process, including problem generation examples, model response parsing, and verification procedures, are provided in Appendix~\ref{Appendix:B} for full transparency.} The total computational cost for reproducing all experiments is approximately 40,000 GPU-hours for open-source models plus API costs for proprietary models.
+
+
+\bibliography{iclr2026_conference}
+\bibliographystyle{iclr2026_conference}
+
+\clearpage
+\appendix
+
+\input{appendix/appendix}
+
+
+
+
+\end{document}

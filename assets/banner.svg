@@ -1,0 +1,475 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 400" width="1280" height="400">
+<defs>
+
+  <!-- BACKGROUNDS -->
+  <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%"   stop-color="#020a06"/>
+    <stop offset="100%" stop-color="#041208"/>
+  </linearGradient>
+
+  <!-- NEBULA CLOUDS -->
+  <radialGradient id="neb0" cx="50%" cy="42%" r="40%">
+    <stop offset="0%"   stop-color="#00E676" stop-opacity="0.12"/>
+    <stop offset="50%"  stop-color="#00E676" stop-opacity="0.04"/>
+    <stop offset="100%" stop-color="#00E676" stop-opacity="0"/>
+  </radialGradient>
+  <radialGradient id="neb1" cx="50%" cy="48%" r="25%">
+    <stop offset="0%"   stop-color="#00BFA5" stop-opacity="0.10"/>
+    <stop offset="100%" stop-color="#00BFA5" stop-opacity="0"/>
+  </radialGradient>
+  <radialGradient id="nebL" cx="8%" cy="55%" r="24%">
+    <stop offset="0%"   stop-color="#00E676" stop-opacity="0.07"/>
+    <stop offset="100%" stop-color="transparent" stop-opacity="0"/>
+  </radialGradient>
+  <radialGradient id="nebR" cx="92%" cy="52%" r="22%">
+    <stop offset="0%"   stop-color="#00BFA5" stop-opacity="0.06"/>
+    <stop offset="100%" stop-color="transparent" stop-opacity="0"/>
+  </radialGradient>
+
+  <!-- GRID GRADIENTS -->
+  <linearGradient id="gV" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%"   stop-color="#00E676" stop-opacity="0"/>
+    <stop offset="50%"  stop-color="#00E676" stop-opacity="0.03"/>
+    <stop offset="78%"  stop-color="#00E676" stop-opacity="0.14"/>
+    <stop offset="100%" stop-color="#00E676" stop-opacity="0.28"/>
+  </linearGradient>
+  <linearGradient id="gH" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="55%"  stop-color="#00BFA5" stop-opacity="0"/>
+    <stop offset="78%"  stop-color="#00BFA5" stop-opacity="0.08"/>
+    <stop offset="100%" stop-color="#00BFA5" stop-opacity="0.22"/>
+  </linearGradient>
+  <linearGradient id="horizGlow" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%"   stop-color="#00E676" stop-opacity="0"/>
+    <stop offset="25%"  stop-color="#00E676" stop-opacity="0.10"/>
+    <stop offset="50%"  stop-color="#A5D6A7" stop-opacity="0.20"/>
+    <stop offset="75%"  stop-color="#00E676" stop-opacity="0.10"/>
+    <stop offset="100%" stop-color="#00E676" stop-opacity="0"/>
+  </linearGradient>
+
+  <!-- SCAN-LINE -->
+  <linearGradient id="scanLine" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%"   stop-color="#00E676" stop-opacity="0"/>
+    <stop offset="40%"  stop-color="#00E676" stop-opacity="0.45"/>
+    <stop offset="50%"  stop-color="#E8F5E9" stop-opacity="0.85"/>
+    <stop offset="60%"  stop-color="#00E676" stop-opacity="0.45"/>
+    <stop offset="100%" stop-color="#00E676" stop-opacity="0"/>
+  </linearGradient>
+
+  <!-- ORB -->
+  <radialGradient id="orbFill" cx="46%" cy="40%" r="50%">
+    <stop offset="0%"   stop-color="#E8F5E9" stop-opacity="0.9"/>
+    <stop offset="15%"  stop-color="#A5D6A7"/>
+    <stop offset="35%"  stop-color="#00E676"/>
+    <stop offset="60%"  stop-color="#1B5E20" stop-opacity="0.7"/>
+    <stop offset="100%" stop-color="#020a06" stop-opacity="0"/>
+  </radialGradient>
+  <radialGradient id="orbAtmo" cx="50%" cy="50%" r="50%">
+    <stop offset="0%"   stop-color="#00E676" stop-opacity="0.30"/>
+    <stop offset="45%"  stop-color="#00E676" stop-opacity="0.06"/>
+    <stop offset="100%" stop-color="#00E676" stop-opacity="0"/>
+  </radialGradient>
+
+  <!-- TITLE COLORS -->
+  <linearGradient id="beyondFill" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%"   stop-color="#ffffff"/>
+    <stop offset="100%" stop-color="#C8E6C9"/>
+  </linearGradient>
+  <linearGradient id="benchFill" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0%"   stop-color="#00E676"/>
+    <stop offset="100%" stop-color="#00BFA5"/>
+  </linearGradient>
+  <linearGradient id="neonEdge" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%"   stop-color="#00E676"/>
+    <stop offset="50%"  stop-color="#00BFA5"/>
+    <stop offset="100%" stop-color="#69F0AE"/>
+  </linearGradient>
+
+  <!-- LIGHT-RAY -->
+  <linearGradient id="ray" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%"   stop-color="#fff" stop-opacity="0"/>
+    <stop offset="47%"  stop-color="#fff" stop-opacity="0"/>
+    <stop offset="50%"  stop-color="#fff" stop-opacity="0.45"/>
+    <stop offset="53%"  stop-color="#fff" stop-opacity="0"/>
+    <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+  </linearGradient>
+
+  <!-- CIRCUIT TRACES -->
+  <linearGradient id="traceA" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%" stop-color="#00E676" stop-opacity="0.4"/>
+    <stop offset="100%" stop-color="#00E676" stop-opacity="0.08"/>
+  </linearGradient>
+  <linearGradient id="traceB" x1="1" y1="0" x2="0" y2="0">
+    <stop offset="0%" stop-color="#00E676" stop-opacity="0.4"/>
+    <stop offset="100%" stop-color="#00E676" stop-opacity="0.08"/>
+  </linearGradient>
+  <linearGradient id="traceC" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%" stop-color="#69F0AE" stop-opacity="0.32"/>
+    <stop offset="100%" stop-color="#69F0AE" stop-opacity="0.06"/>
+  </linearGradient>
+  <linearGradient id="traceD" x1="1" y1="0" x2="0" y2="0">
+    <stop offset="0%" stop-color="#69F0AE" stop-opacity="0.32"/>
+    <stop offset="100%" stop-color="#69F0AE" stop-opacity="0.06"/>
+  </linearGradient>
+
+  <!-- HEX RING -->
+  <linearGradient id="hexStroke" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0%" stop-color="#00E676"/>
+    <stop offset="100%" stop-color="#00BFA5"/>
+  </linearGradient>
+
+  <!-- BOTTOM EDGE -->
+  <linearGradient id="bottomEdge" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%"   stop-color="#00E676" stop-opacity="0"/>
+    <stop offset="30%"  stop-color="#00E676" stop-opacity="0.45"/>
+    <stop offset="50%"  stop-color="#00BFA5" stop-opacity="0.85"/>
+    <stop offset="70%"  stop-color="#00E676" stop-opacity="0.45"/>
+    <stop offset="100%" stop-color="#00E676" stop-opacity="0"/>
+  </linearGradient>
+
+  <!-- DATA STREAM gradient -->
+  <linearGradient id="dataStream" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%"   stop-color="#00E676" stop-opacity="0.6"/>
+    <stop offset="100%" stop-color="#00E676" stop-opacity="0"/>
+  </linearGradient>
+
+  <!-- FILTERS -->
+  <filter id="bloom" x="-50%" y="-50%" width="200%" height="200%">
+    <feGaussianBlur in="SourceGraphic" stdDeviation="8"/>
+  </filter>
+  <filter id="titleNeon" x="-20%" y="-30%" width="140%" height="160%">
+    <feGaussianBlur in="SourceAlpha" stdDeviation="5" result="b"/>
+    <feFlood flood-color="#00E676" flood-opacity="0.45" result="c"/>
+    <feComposite in="c" in2="b" operator="in" result="s"/>
+    <feMerge><feMergeNode in="s"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <filter id="dotBloom" x="-100%" y="-100%" width="300%" height="300%">
+    <feGaussianBlur in="SourceGraphic" stdDeviation="2"/>
+  </filter>
+  <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
+    <feGaussianBlur in="SourceGraphic" stdDeviation="1.8"/>
+  </filter>
+
+  <!-- CLIP -->
+  <clipPath id="main"><rect width="1280" height="400"/></clipPath>
+  <clipPath id="titleBox"><rect x="220" y="90" width="840" height="150"/></clipPath>
+
+</defs>
+
+<!-- STYLES -->
+<style>
+  @keyframes starDriftA { 0%{transform:translateX(0)} 100%{transform:translateX(-40px)} }
+  @keyframes starDriftB { 0%{transform:translateX(0)} 100%{transform:translateX(25px)}  }
+  @keyframes starDriftC { 0%{transform:translateX(0)} 100%{transform:translateX(-18px)} }
+  .sA{animation:starDriftA 30s linear infinite}
+  .sB{animation:starDriftB 45s linear infinite}
+  .sC{animation:starDriftC 60s linear infinite}
+
+  @keyframes tw1{0%,100%{opacity:.1}  50%{opacity:.9}}
+  @keyframes tw2{0%,100%{opacity:.2}  50%{opacity:.7}}
+  @keyframes tw3{0%,100%{opacity:.05} 50%{opacity:.5}}
+  .t1{animation:tw1 2s   ease-in-out infinite}
+  .t2{animation:tw2 3s   ease-in-out infinite}
+  .t3{animation:tw3 1.7s ease-in-out infinite}
+
+  @keyframes scanDown{
+    0%  {transform:translateY(-80px);opacity:0}
+    12% {opacity:1}
+    88% {opacity:1}
+    100%{transform:translateY(420px);opacity:0}
+  }
+  .scanDown{animation:scanDown 4s ease-in-out infinite}
+
+  @keyframes orbPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+  .orbPulse{animation:orbPulse 3.2s ease-in-out infinite;transform-origin:640px 160px}
+  @keyframes orbGlowPulse{0%,100%{opacity:.45}50%{opacity:.78}}
+  .orbGP{animation:orbGlowPulse 3.2s ease-in-out infinite}
+
+  @keyframes arcSpin1{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+  @keyframes arcSpin2{from{transform:rotate(0deg)}to{transform:rotate(-360deg)}}
+  .arc1{animation:arcSpin1 8s  linear infinite;transform-origin:640px 160px}
+  .arc2{animation:arcSpin2 12s linear infinite;transform-origin:640px 160px}
+  .arc3{animation:arcSpin1 18s linear infinite;transform-origin:640px 160px}
+
+  @keyframes raySweep{0%{transform:translateX(-500px)}100%{transform:translateX(500px)}}
+  .raySweep{animation:raySweep 3.5s ease-in-out infinite}
+
+  @keyframes subBreath{0%,100%{opacity:.40;letter-spacing:4px}50%{opacity:.65;letter-spacing:3px}}
+  .subBreath{animation:subBreath 4s ease-in-out infinite}
+
+  @keyframes hexSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+  .hexSpin{animation:hexSpin 20s linear infinite;transform-origin:640px 160px}
+
+  @keyframes nodePulse{0%,100%{r:2;opacity:.30}50%{r:3.2;opacity:.65}}
+  .nP{animation:nodePulse 2.5s ease-in-out infinite}
+
+  @keyframes dataFall{0%{transform:translateY(-20px);opacity:0}20%{opacity:.5}80%{opacity:.5}100%{transform:translateY(40px);opacity:0}}
+  .dataFall{animation:dataFall 2s linear infinite}
+
+  @keyframes matrixRain{0%{transform:translateY(-400px)}100%{transform:translateY(400px)}}
+</style>
+
+<!-- LAYER 0 - background -->
+<rect width="1280" height="400" fill="url(#bg)"/>
+
+<!-- LAYER 1 - nebula -->
+<rect width="1280" height="400" fill="url(#neb0)"/>
+<rect width="1280" height="400" fill="url(#neb1)"/>
+<rect width="1280" height="400" fill="url(#nebL)"/>
+<rect width="1280" height="400" fill="url(#nebR)"/>
+
+<!-- LAYER 2 - star fields -->
+<g class="sC">
+  <circle class="t3" cx="38"   cy="28"  r=".65" fill="#E8F5E9" style="animation-delay:.4s"/>
+  <circle class="t3" cx="142"  cy="104" r=".55" fill="#E8F5E9" style="animation-delay:1.0s"/>
+  <circle class="t3" cx="305"  cy="18"  r=".7"  fill="#E8F5E9" style="animation-delay:.7s"/>
+  <circle class="t3" cx="478"  cy="80"  r=".5"  fill="#E8F5E9" style="animation-delay:1.9s"/>
+  <circle class="t3" cx="672"  cy="14"  r=".6"  fill="#E8F5E9" style="animation-delay:.3s"/>
+  <circle class="t3" cx="811"  cy="72"  r=".55" fill="#E8F5E9" style="animation-delay:1.4s"/>
+  <circle class="t3" cx="988"  cy="24"  r=".65" fill="#E8F5E9" style="animation-delay:.8s"/>
+  <circle class="t3" cx="1138" cy="96"  r=".5"  fill="#E8F5E9" style="animation-delay:1.7s"/>
+  <circle class="t3" cx="1228" cy="38"  r=".6"  fill="#E8F5E9" style="animation-delay:.15s"/>
+  <circle class="t3" cx="82"   cy="176" r=".45" fill="#E8F5E9" style="animation-delay:1.3s"/>
+  <circle class="t3" cx="1052" cy="144" r=".55" fill="#E8F5E9" style="animation-delay:.6s"/>
+  <circle class="t3" cx="560"  cy="152" r=".5"  fill="#E8F5E9" style="animation-delay:2.1s"/>
+</g>
+<g class="sB">
+  <circle class="t2" cx="72"   cy="64"  r=".9"  fill="#C8E6C9" style="animation-delay:.5s"/>
+  <circle class="t2" cx="215"  cy="150" r=".85" fill="#C8E6C9" style="animation-delay:1.2s"/>
+  <circle class="t2" cx="392"  cy="50"  r="1.0" fill="#C8E6C9" style="animation-delay:.1s"/>
+  <circle class="t2" cx="542"  cy="128" r=".75" fill="#C8E6C9" style="animation-delay:1.6s"/>
+  <circle class="t2" cx="728"  cy="38"  r=".9"  fill="#C8E6C9" style="animation-delay:.75s"/>
+  <circle class="t2" cx="902"  cy="110" r=".85" fill="#C8E6C9" style="animation-delay:2.0s"/>
+  <circle class="t2" cx="1068" cy="56"  r=".95" fill="#C8E6C9" style="animation-delay:.3s"/>
+  <circle class="t2" cx="1198" cy="130" r=".8"  fill="#C8E6C9" style="animation-delay:.95s"/>
+  <circle class="t2" cx="175"  cy="84"  r=".9"  fill="#00E676" style="animation-delay:1.1s"/>
+  <circle class="t2" cx="1105" cy="104" r=".85" fill="#69F0AE" style="animation-delay:.65s"/>
+</g>
+<g class="sA">
+  <circle class="t1" cx="115"  cy="116" r="1.3" fill="#E8F5E9" style="animation-delay:.2s"/>
+  <circle class="t1" cx="255"  cy="34"  r="1.2" fill="#E8F5E9" style="animation-delay:.85s"/>
+  <circle class="t1" cx="1158" cy="80"  r="1.4" fill="#E8F5E9" style="animation-delay:.4s"/>
+  <circle class="t1" cx="1018" cy="30"  r="1.15" fill="#E8F5E9" style="animation-delay:1.5s"/>
+  <circle class="t1" cx="330"  cy="140" r="1.0" fill="#69F0AE" style="animation-delay:1.8s"/>
+  <circle class="t1" cx="948"  cy="76"  r="1.1" fill="#00E676" style="animation-delay:.5s"/>
+</g>
+
+<!-- LAYER 3 - perspective grid -->
+<g clip-path="url(#main)">
+  <path d="M640,200 L-2,400   L62,400  Z" fill="url(#gV)" opacity=".65"/>
+  <path d="M640,200 L62,400   L142,400 Z" fill="url(#gV)" opacity=".65"/>
+  <path d="M640,200 L142,400  L222,400 Z" fill="url(#gV)" opacity=".65"/>
+  <path d="M640,200 L222,400  L302,400 Z" fill="url(#gV)" opacity=".65"/>
+  <path d="M640,200 L302,400  L382,400 Z" fill="url(#gV)" opacity=".65"/>
+  <path d="M640,200 L382,400  L462,400 Z" fill="url(#gV)" opacity=".65"/>
+  <path d="M640,200 L462,400  L542,400 Z" fill="url(#gV)" opacity=".65"/>
+  <path d="M640,200 L542,400  L622,400 Z" fill="url(#gV)" opacity=".65"/>
+  <path d="M640,200 L622,400  L660,400 Z" fill="url(#gV)" opacity=".65"/>
+  <path d="M640,200 L660,400  L740,400 Z" fill="url(#gV)" opacity=".65"/>
+  <path d="M640,200 L740,400  L820,400 Z" fill="url(#gV)" opacity=".65"/>
+  <path d="M640,200 L820,400  L900,400 Z" fill="url(#gV)" opacity=".65"/>
+  <path d="M640,200 L900,400  L980,400 Z" fill="url(#gV)" opacity=".65"/>
+  <path d="M640,200 L980,400  L1060,400 Z" fill="url(#gV)" opacity=".65"/>
+  <path d="M640,200 L1060,400 L1140,400 Z" fill="url(#gV)" opacity=".65"/>
+  <path d="M640,200 L1140,400 L1220,400 Z" fill="url(#gV)" opacity=".65"/>
+  <path d="M640,200 L1220,400 L1282,400 Z" fill="url(#gV)" opacity=".65"/>
+
+  <line x1="640" y1="200" x2="-2"    y2="400" stroke="url(#gV)" stroke-width=".5"/>
+  <line x1="640" y1="200" x2="142"   y2="400" stroke="url(#gV)" stroke-width=".5"/>
+  <line x1="640" y1="200" x2="302"   y2="400" stroke="url(#gV)" stroke-width=".5"/>
+  <line x1="640" y1="200" x2="462"   y2="400" stroke="url(#gV)" stroke-width=".5"/>
+  <line x1="640" y1="200" x2="640"   y2="400" stroke="url(#gV)" stroke-width=".5"/>
+  <line x1="640" y1="200" x2="820"   y2="400" stroke="url(#gV)" stroke-width=".5"/>
+  <line x1="640" y1="200" x2="980"   y2="400" stroke="url(#gV)" stroke-width=".5"/>
+  <line x1="640" y1="200" x2="1140"  y2="400" stroke="url(#gV)" stroke-width=".5"/>
+  <line x1="640" y1="200" x2="1282"  y2="400" stroke="url(#gV)" stroke-width=".5"/>
+
+  <line x1="588" y1="216" x2="692"  y2="216" stroke="url(#gH)" stroke-width=".4"/>
+  <line x1="530" y1="234" x2="750"  y2="234" stroke="url(#gH)" stroke-width=".45"/>
+  <line x1="448" y1="256" x2="832"  y2="256" stroke="url(#gH)" stroke-width=".5"/>
+  <line x1="330" y1="284" x2="950"  y2="284" stroke="url(#gH)" stroke-width=".55"/>
+  <line x1="168" y1="316" x2="1112" y2="316" stroke="url(#gH)" stroke-width=".6"/>
+  <line x1="0"   y1="356" x2="1280" y2="356" stroke="url(#gH)" stroke-width=".65"/>
+
+  <rect x="0" y="196" width="1280" height="8" fill="url(#horizGlow)" opacity=".65"/>
+
+  <g class="scanDown">
+    <line x1="0" y1="280" x2="1280" y2="280" stroke="url(#scanLine)" stroke-width="2" opacity=".8"/>
+  </g>
+</g>
+
+<!-- LAYER 4 - matrix rain data streams (left side) -->
+<g opacity=".12">
+  <text font-family="monospace" font-size="10" fill="#00E676">
+    <tspan x="60" y="30" class="dataFall" style="animation-delay:0s">01001</tspan>
+    <tspan x="120" y="60" class="dataFall" style="animation-delay:.4s">11010</tspan>
+    <tspan x="180" y="20" class="dataFall" style="animation-delay:.8s">00110</tspan>
+    <tspan x="1060" y="40" class="dataFall" style="animation-delay:.2s">10011</tspan>
+    <tspan x="1120" y="70" class="dataFall" style="animation-delay:.6s">01101</tspan>
+    <tspan x="1180" y="30" class="dataFall" style="animation-delay:1.0s">11001</tspan>
+  </text>
+</g>
+
+<!-- LAYER 5 - circuit traces -->
+<path d="M480,180  L380,180  L380,256 L260,256" fill="none" stroke="url(#traceA)" stroke-width=".9"/>
+<path d="M380,180  L320,180  L320,120 L200,120" fill="none" stroke="url(#traceC)" stroke-width=".8"/>
+<path d="M260,256 L170,256 L170,320 L80,320"   fill="none" stroke="url(#traceA)" stroke-width=".7"/>
+<path d="M800,180  L900,180  L900,256 L1020,256" fill="none" stroke="url(#traceB)" stroke-width=".9"/>
+<path d="M900,180  L960,180  L960,120 L1080,120" fill="none" stroke="url(#traceD)" stroke-width=".8"/>
+<path d="M1020,256 L1110,256 L1110,320 L1200,320" fill="none" stroke="url(#traceB)" stroke-width=".7"/>
+
+<!-- node dots -->
+<circle class="nP" cx="260" cy="256" r="2"   fill="#00E676" style="animation-delay:0s"/>
+<circle class="nP" cx="200" cy="120" r="2"   fill="#69F0AE" style="animation-delay:.6s"/>
+<circle class="nP" cx="80"  cy="320" r="1.8" fill="#00E676" style="animation-delay:1.2s"/>
+<circle class="nP" cx="1020" cy="256" r="2"  fill="#00E676" style="animation-delay:.3s"/>
+<circle class="nP" cx="1080" cy="120" r="2"  fill="#69F0AE" style="animation-delay:.9s"/>
+<circle class="nP" cx="1200" cy="320" r="1.8" fill="#00E676" style="animation-delay:1.5s"/>
+
+<!-- travelling pulse dots -->
+<circle r="2.8" fill="#00E676" filter="url(#dotBloom)" opacity=".9">
+  <animateMotion dur="2.6s" repeatCount="indefinite">
+    <mpath href="#pL1"/>
+  </animateMotion>
+</circle>
+<path id="pL1" d="M480,180 L380,180 L380,256 L260,256" fill="none"/>
+
+<circle r="2.2" fill="#00E676" filter="url(#dotBloom)" opacity=".6">
+  <animateMotion dur="2.6s" begin="1.3s" repeatCount="indefinite">
+    <mpath href="#pL1"/>
+  </animateMotion>
+</circle>
+
+<circle r="2.4" fill="#69F0AE" filter="url(#dotBloom)" opacity=".8">
+  <animateMotion dur="3.2s" repeatCount="indefinite">
+    <mpath href="#pL2"/>
+  </animateMotion>
+</circle>
+<path id="pL2" d="M380,180 L320,180 L320,120 L200,120" fill="none"/>
+
+<circle r="2.0" fill="#00E676" filter="url(#dotBloom)" opacity=".7">
+  <animateMotion dur="3.8s" repeatCount="indefinite">
+    <mpath href="#pL3"/>
+  </animateMotion>
+</circle>
+<path id="pL3" d="M260,256 L170,256 L170,320 L80,320" fill="none"/>
+
+<circle r="2.8" fill="#00E676" filter="url(#dotBloom)" opacity=".9">
+  <animateMotion dur="2.6s" repeatCount="indefinite">
+    <mpath href="#pR1"/>
+  </animateMotion>
+</circle>
+<path id="pR1" d="M800,180 L900,180 L900,256 L1020,256" fill="none"/>
+
+<circle r="2.2" fill="#00E676" filter="url(#dotBloom)" opacity=".6">
+  <animateMotion dur="2.6s" begin="1.3s" repeatCount="indefinite">
+    <mpath href="#pR1"/>
+  </animateMotion>
+</circle>
+
+<circle r="2.4" fill="#69F0AE" filter="url(#dotBloom)" opacity=".8">
+  <animateMotion dur="3.2s" repeatCount="indefinite">
+    <mpath href="#pR2"/>
+  </animateMotion>
+</circle>
+<path id="pR2" d="M900,180 L960,180 L960,120 L1080,120" fill="none"/>
+
+<circle r="2.0" fill="#00E676" filter="url(#dotBloom)" opacity=".7">
+  <animateMotion dur="3.8s" repeatCount="indefinite">
+    <mpath href="#pR3"/>
+  </animateMotion>
+</circle>
+<path id="pR3" d="M1020,256 L1110,256 L1110,320 L1200,320" fill="none"/>
+
+<!-- LAYER 6 - orb -->
+<circle class="orbGP" cx="640" cy="160" r="72" fill="url(#orbAtmo)" filter="url(#bloom)"/>
+
+<g class="arc1">
+  <ellipse cx="640" cy="160" rx="44" ry="11" fill="none" stroke="#00E676" stroke-width=".7" opacity=".28"
+           stroke-dasharray="80 52"/>
+</g>
+<g class="arc2">
+  <ellipse cx="640" cy="160" rx="40" ry="23" fill="none" stroke="#69F0AE" stroke-width=".6" opacity=".22"
+           stroke-dasharray="65 70" transform="rotate(35 640 160)"/>
+</g>
+<g class="arc3">
+  <ellipse cx="640" cy="160" rx="13" ry="42" fill="none" stroke="#00BFA5" stroke-width=".55" opacity=".18"
+           stroke-dasharray="50 75" transform="rotate(-20 640 160)"/>
+</g>
+
+<g class="orbPulse">
+  <circle cx="640" cy="160" r="34" fill="url(#orbFill)"/>
+  <circle cx="640" cy="160" r="34" fill="none" stroke="#00E676" stroke-width=".5" opacity=".18"/>
+  <ellipse cx="631" cy="142" rx="8" ry="4.5" fill="#E8F5E9" opacity=".14" filter="url(#softGlow)"/>
+</g>
+
+<!-- LAYER 7 - hex glyph -->
+<g class="hexSpin">
+  <polygon points="696,160 668,252 612,252 584,160 612,68 668,68"
+           fill="none" stroke="url(#hexStroke)" stroke-width=".7"
+           stroke-dasharray="22 18" opacity=".18"/>
+</g>
+<g style="animation:arcSpin2 14s linear infinite;transform-origin:640px 160px">
+  <polygon points="674,160 658,215 622,215 606,160 622,105 658,105"
+           fill="none" stroke="#00E676" stroke-width=".55"
+           stroke-dasharray="14 22" opacity=".14"/>
+</g>
+
+<!-- LAYER 8 - TITLE "BeyondBench" -->
+<!-- deep bloom -->
+<text x="640" y="210" text-anchor="middle"
+      font-family="'Segoe UI',Inter,'Helvetica Neue',Arial,sans-serif"
+      font-size="108" font-weight="800" letter-spacing="-1"
+      fill="#00E676" opacity=".30" filter="url(#bloom)">BeyondBench</text>
+
+<!-- "Beyond" -->
+<text x="635" y="210" text-anchor="end"
+      font-family="'Segoe UI',Inter,'Helvetica Neue',Arial,sans-serif"
+      font-size="108" font-weight="800" letter-spacing="-1"
+      fill="url(#beyondFill)" filter="url(#titleNeon)">Beyond</text>
+<!-- "Bench" -->
+<text x="645" y="210" text-anchor="start"
+      font-family="'Segoe UI',Inter,'Helvetica Neue',Arial,sans-serif"
+      font-size="108" font-weight="800" letter-spacing="-1"
+      fill="url(#benchFill)" filter="url(#titleNeon)">Bench</text>
+
+<!-- light-ray sweep -->
+<g clip-path="url(#titleBox)">
+  <rect class="raySweep" x="220" y="90" width="840" height="150" fill="url(#ray)" opacity=".7"/>
+</g>
+
+<!-- neon outlines -->
+<text x="635" y="210" text-anchor="end"
+      font-family="'Segoe UI',Inter,'Helvetica Neue',Arial,sans-serif"
+      font-size="108" font-weight="800" letter-spacing="-1"
+      fill="none" stroke="url(#neonEdge)" stroke-width=".6" opacity=".45">Beyond</text>
+<text x="645" y="210" text-anchor="start"
+      font-family="'Segoe UI',Inter,'Helvetica Neue',Arial,sans-serif"
+      font-size="108" font-weight="800" letter-spacing="-1"
+      fill="none" stroke="url(#neonEdge)" stroke-width=".6" opacity=".45">Bench</text>
+
+<!-- LAYER 9 - subtitle -->
+<text class="subBreath" x="640" y="268" text-anchor="middle"
+      font-family="'Segoe UI',Inter,'Helvetica Neue',Arial,sans-serif"
+      font-size="22" font-weight="300" fill="#66BB6A" letter-spacing="4">
+  Contamination-Resistant Evaluation of Reasoning in Language Models
+</text>
+
+<!-- LAYER 10 - stat badges -->
+<g opacity=".7">
+  <!-- 44 Tasks -->
+  <rect x="370" y="290" width="90" height="28" rx="14" fill="none" stroke="#00E676" stroke-width=".6" opacity=".4"/>
+  <text x="415" y="309" text-anchor="middle" font-family="'Segoe UI',Inter,sans-serif" font-size="13" font-weight="600" fill="#00E676">44 Tasks</text>
+  <!-- 117 Variations -->
+  <rect x="480" y="290" width="120" height="28" rx="14" fill="none" stroke="#00BFA5" stroke-width=".6" opacity=".4"/>
+  <text x="540" y="309" text-anchor="middle" font-family="'Segoe UI',Inter,sans-serif" font-size="13" font-weight="600" fill="#00BFA5">117 Variations</text>
+  <!-- 101+ Models -->
+  <rect x="620" y="290" width="110" height="28" rx="14" fill="none" stroke="#69F0AE" stroke-width=".6" opacity=".4"/>
+  <text x="675" y="309" text-anchor="middle" font-family="'Segoe UI',Inter,sans-serif" font-size="13" font-weight="600" fill="#69F0AE">101+ Models</text>
+  <!-- ICLR 2026 -->
+  <rect x="750" y="290" width="110" height="28" rx="14" fill="#00E676" fill-opacity=".12" stroke="#00E676" stroke-width=".6" opacity=".5"/>
+  <text x="805" y="309" text-anchor="middle" font-family="'Segoe UI',Inter,sans-serif" font-size="13" font-weight="700" fill="#A5D6A7">ICLR 2026</text>
+</g>
+
+<!-- LAYER 11 - bottom edge -->
+<line x1="0" y1="399.6" x2="1280" y2="399.6" stroke="url(#bottomEdge)" stroke-width="1.1" opacity=".7"/>
+</svg>
