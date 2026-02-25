@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "beyondbench"
 version = "0.0.1"
 description = "BeyondBench: Contamination-Resistant Evaluation of Reasoning in Language Models"
-readme = "README.md"
+readme = "README_PYPI.md"
 license = {text = "MIT"}
 authors = [
     {name = "Gaurav Srivastava", email = "gks@vt.edu"},

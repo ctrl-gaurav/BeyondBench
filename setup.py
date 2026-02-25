@@ -99,7 +99,7 @@ setup(
     name="beyondbench",
     version="0.0.1",
     description="BeyondBench: Contamination-Resistant Evaluation of Reasoning in Language Models",
-    long_description=read_file("README.md"),
+    long_description=read_file("README_PYPI.md"),
     long_description_content_type="text/markdown",
     author="Gaurav Srivastava",
     author_email="gks@vt.edu",
