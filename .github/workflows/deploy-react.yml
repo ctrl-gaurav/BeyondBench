@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'react_website/**'
+      - 'main_website/**'
   workflow_dispatch:
 
 permissions:
@@ -29,11 +29,11 @@ jobs:
           node-version: 20
 
       - name: Install dependencies
-        working-directory: react_website
+        working-directory: main_website
         run: npm install
 
       - name: Build
-        working-directory: react_website
+        working-directory: main_website
         run: npm run build
 
       - name: Setup Pages
@@ -42,7 +42,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: react_website/dist
+          path: main_website/dist
 
   deploy:
     environment:

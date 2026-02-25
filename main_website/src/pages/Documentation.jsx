@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { BookOpen, Terminal, Code, Settings, Layers, Cpu, Package, FileText, ChevronRight, Hexagon, Copy, Check, Zap, Database, GitBranch, Shield, BarChart3, Wrench, Globe, AlertTriangle, Lightbulb } from 'lucide-react'
+import { useTheme } from '../context/ThemeContext'
 
 function CodeBlock({ code, language = 'bash' }) {
   const [copied, setCopied] = useState(false)
+  const { isDark } = useTheme()
   function handleCopy() {
     navigator.clipboard.writeText(code)
     setCopied(true)
@@ -10,13 +12,17 @@ function CodeBlock({ code, language = 'bash' }) {
   }
   return (
     <div className="relative group my-3">
-      <div className="flex items-center justify-between px-4 py-2 bg-bb-dark-600/80 rounded-t-lg border border-bb-dark-50/20 border-b-0">
-        <span className="text-[10px] text-gray-600 uppercase tracking-wider font-mono">{language}</span>
-        <button onClick={handleCopy} className="text-gray-600 hover:text-bb-accent transition-colors">
-          {copied ? <Check className="w-3.5 h-3.5 text-bb-accent" /> : <Copy className="w-3.5 h-3.5" />}
+      <div className={`flex items-center justify-between px-4 py-2 rounded-t-lg border border-b-0 ${
+        isDark ? 'bg-bb-dark-600/80 border-bb-dark-50/20' : 'bg-gray-100 border-gray-200'
+      }`}>
+        <span className={`text-[10px] uppercase tracking-wider font-mono ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>{language}</span>
+        <button onClick={handleCopy} className={`transition-colors ${isDark ? 'text-gray-600 hover:text-bb-accent' : 'text-gray-400 hover:text-bb-accent-dark'}`}>
+          {copied ? <Check className={`w-3.5 h-3.5 ${isDark ? 'text-bb-accent' : 'text-bb-accent-dark'}`} /> : <Copy className="w-3.5 h-3.5" />}
         </button>
       </div>
-      <pre className="bg-bb-dark-500/80 border border-bb-dark-50/20 rounded-b-lg p-4 overflow-x-auto text-sm font-mono text-gray-300 leading-relaxed">
+      <pre className={`rounded-b-lg p-4 overflow-x-auto text-sm font-mono leading-relaxed border ${
+        isDark ? 'bg-bb-dark-500/80 border-bb-dark-50/20 text-gray-300' : 'bg-gray-50 border-gray-200 text-gray-700'
+      }`}>
         <code>{code}</code>
       </pre>
     </div>
@@ -24,41 +30,44 @@ function CodeBlock({ code, language = 'bash' }) {
 }
 
 function Section({ id, icon: Icon, title, children }) {
+  const { isDark } = useTheme()
   return (
     <section id={id} className="mb-12 scroll-mt-24">
       <div className="flex items-center gap-3 mb-4">
-        <div className="w-8 h-8 rounded-lg bg-bb-accent/10 flex items-center justify-center">
-          <Icon className="w-4 h-4 text-bb-accent" />
+        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isDark ? 'bg-bb-accent/10' : 'bg-bb-accent-dark/10'}`}>
+          <Icon className={`w-4 h-4 ${isDark ? 'text-bb-accent' : 'text-bb-accent-dark'}`} />
         </div>
-        <h2 className="text-xl font-bold text-white">{title}</h2>
+        <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{title}</h2>
       </div>
-      <div className="text-gray-400 leading-relaxed text-sm space-y-4">{children}</div>
+      <div className={`leading-relaxed text-sm space-y-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{children}</div>
     </section>
   )
 }
 
 function SubSection({ title, children }) {
+  const { isDark } = useTheme()
   return (
     <div className="mt-6">
-      <h3 className="text-base font-semibold text-gray-200 mb-3">{title}</h3>
-      <div className="text-gray-400 text-sm space-y-3">{children}</div>
+      <h3 className={`text-base font-semibold mb-3 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{title}</h3>
+      <div className={`text-sm space-y-3 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{children}</div>
     </div>
   )
 }
 
 function Callout({ type = 'info', children }) {
+  const { isDark } = useTheme()
   const styles = {
-    info: 'border-bb-accent/40 bg-bb-accent/5',
+    info: isDark ? 'border-bb-accent/40 bg-bb-accent/5' : 'border-bb-accent-dark/40 bg-bb-accent-dark/5',
     warning: 'border-yellow-500/40 bg-yellow-500/5',
     tip: 'border-green-400/40 bg-green-400/5',
   }
   const icons = {
-    info: <Shield className="w-4 h-4 text-bb-accent shrink-0 mt-0.5" />,
+    info: <Shield className={`w-4 h-4 shrink-0 mt-0.5 ${isDark ? 'text-bb-accent' : 'text-bb-accent-dark'}`} />,
     warning: <AlertTriangle className="w-4 h-4 text-yellow-500 shrink-0 mt-0.5" />,
     tip: <Lightbulb className="w-4 h-4 text-green-400 shrink-0 mt-0.5" />,
   }
   return (
-    <div className={`border-l-2 ${styles[type]} rounded-r-lg p-3 flex gap-2 text-xs text-gray-400`}>
+    <div className={`border-l-2 ${styles[type]} rounded-r-lg p-3 flex gap-2 text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
       {icons[type]}
       <div>{children}</div>
     </div>
@@ -88,52 +97,59 @@ const NAV_ITEMS = [
 
 export default function Documentation() {
   const [activeSection, setActiveSection] = useState('overview')
+  const { isDark } = useTheme()
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex gap-8">
-        {/* Sidebar */}
-        <nav className="hidden lg:block w-56 shrink-0">
-          <div className="sticky top-24">
-            <div className="flex items-center gap-2 mb-6">
-              <Hexagon className="w-5 h-5 text-bb-accent" />
-              <span className="text-sm font-bold text-gray-300">Documentation</span>
-            </div>
-            <ul className="space-y-1 max-h-[calc(100vh-8rem)] overflow-y-auto">
-              {NAV_ITEMS.map(item => (
-                <li key={item.id}>
-                  <a
-                    href={`#${item.id}`}
-                    onClick={() => setActiveSection(item.id)}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                      activeSection === item.id
-                        ? 'bg-bb-accent/10 text-bb-accent'
-                        : 'text-gray-500 hover:text-gray-300 hover:bg-bb-dark-300/30'
-                    }`}
-                  >
-                    <item.icon className="w-3.5 h-3.5" />
-                    {item.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </nav>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:pl-64">
+      {/* Sidebar - fixed full-height panel */}
+      <nav className={`hidden lg:flex flex-col fixed left-0 top-16 bottom-0 w-56 z-40 border-r px-4 pt-8 pb-6 overflow-y-auto ${
+        isDark
+          ? 'bg-bb-dark-500/90 backdrop-blur-xl border-bb-dark-50/20'
+          : 'bg-white/90 backdrop-blur-xl border-bb-light-300/50'
+      }`}>
+        <div className="flex items-center gap-2 mb-6">
+          <Hexagon className={`w-5 h-5 ${isDark ? 'text-bb-accent' : 'text-bb-accent-dark'}`} />
+          <span className={`text-sm font-bold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Documentation</span>
+        </div>
+        <ul className="space-y-1 flex-1">
+          {NAV_ITEMS.map(item => (
+            <li key={item.id}>
+              <button
+                onClick={() => {
+                  setActiveSection(item.id)
+                  const el = document.getElementById(item.id)
+                  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }}
+                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all text-left ${
+                  activeSection === item.id
+                    ? isDark ? 'bg-bb-accent/10 text-bb-accent' : 'bg-bb-accent-dark/10 text-bb-accent-dark'
+                    : isDark ? 'text-gray-500 hover:text-gray-300 hover:bg-bb-dark-300/30' : 'text-gray-500 hover:text-gray-700 hover:bg-bb-light-200'
+                }`}
+              >
+                <item.icon className="w-3.5 h-3.5 shrink-0" />
+                {item.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </nav>
 
-        {/* Content */}
-        <div className="flex-1 min-w-0">
+      {/* Content */}
+      <div className="min-w-0">
           {/* Header */}
           <div className="glass-card p-6 mb-8">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-bb-accent/20 to-bb-teal/20 flex items-center justify-center">
-                <BookOpen className="w-5 h-5 text-bb-accent" />
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                isDark ? 'bg-gradient-to-br from-bb-accent/20 to-bb-teal/20' : 'bg-gradient-to-br from-bb-accent-dark/15 to-bb-teal/15'
+              }`}>
+                <BookOpen className={`w-5 h-5 ${isDark ? 'text-bb-accent' : 'text-bb-accent-dark'}`} />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-white">BeyondBench Documentation</h1>
-                <p className="text-xs text-gray-500">v0.0.1 &bull; pip install beyondbench</p>
+                <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>BeyondBench Documentation</h1>
+                <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>v0.0.1 &bull; pip install beyondbench</p>
               </div>
             </div>
-            <p className="text-sm text-gray-400 leading-relaxed">
+            <p className={`text-sm leading-relaxed ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
               Complete documentation for the BeyondBench evaluation framework. BeyondBench provides benchmark-free evaluation of reasoning capabilities in language models using dynamic algorithmic problem generation across 44 tasks, 117 variations, and over 10^15 unique instances.
             </p>
           </div>
@@ -1318,7 +1334,6 @@ beyondbench evaluate --model-id gpt-4o --api-provider openai \\
 }`} />
           </Section>
         </div>
-      </div>
     </div>
   )
 }
