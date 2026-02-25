@@ -25,10 +25,10 @@
 
 | Date | Update |
 |------|--------|
-| **Sep 2025** | Paper accepted at **ICLR 2026** |
-| **Sep 2025** | Interactive leaderboard website launched |
-| **Feb 2025** | v0.0.1 released &mdash; 44 tasks, 117 variations, 101+ models |
-| **Feb 2025** | Paper submitted: [arXiv:2509.24210](https://arxiv.org/abs/2509.24210) |
+| **Feb 2026** | v0.0.1 released &mdash; 44 tasks, 117 variations, 101+ models |
+| **Jan 2026** | Paper accepted at **ICLR 2026** |
+| **Jan 2026** | Interactive leaderboard website launched |
+| **Sep 2025** | Paper submitted: [arXiv:2509.24210](https://arxiv.org/abs/2509.24210) |
 
 ---
 
