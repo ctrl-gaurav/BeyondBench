@@ -29,7 +29,11 @@ class CountMultiplesTask(BaseTask):
             # Add some multiples of k
             multiples_count = random.randint(list_size // 3, 2 * list_size // 3)
             for _ in range(multiples_count):
-                multiple = random.randint(max(1, self.min_val // k), self.max_val // k) * k
+                low_k = max(1, self.min_val // k) if self.min_val >= 0 else self.min_val // k
+                high_k = self.max_val // k
+                if high_k < low_k:
+                    high_k = low_k
+                multiple = random.randint(low_k, high_k) * k
                 if self.min_val <= multiple <= self.max_val:
                     numbers.append(multiple)
 

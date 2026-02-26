@@ -594,21 +594,12 @@ Now solve the given problem systematically using dynamic programming and provide
     
     def _is_reasonable_matrix_result(self, number: int, problem: Dict[str, Any]) -> bool:
         """Check if the number is reasonable for matrix chain multiplication"""
-        # Basic sanity checks - matrix chain multiplication should produce substantial results
-        if number < 100:  # Too small for meaningful matrix multiplication
+        # Basic sanity checks
+        if number < 0:
             return False
         if number > 10**12:  # Unreasonably large
             return False
-            
-        # Additional checks based on problem characteristics
-        matrix_count = problem.get('matrix_count', 0)
-        if matrix_count >= 5 and number < 1000:  # Even medium problems should have larger results
-            return False
-        if matrix_count >= 10 and number < 10000:  # Large problems should have substantial results
-            return False
-        if matrix_count >= 20 and number < 100000:  # Very large problems should have very substantial results
-            return False
-            
+
         return True
     
     def _fallback_number_extraction(self, response: str, problem: Dict[str, Any]) -> Optional[int]:

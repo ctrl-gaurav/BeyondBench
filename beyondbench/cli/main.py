@@ -11,14 +11,20 @@ import sys
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 import json
+from importlib.metadata import version as _pkg_version, PackageNotFoundError
 
 from ..utils.logging_utils import setup_logging, get_logger
 from ..models.model_handler import ModelHandler
 from ..core.evaluation_engine import EvaluationEngine
 
+try:
+    _VERSION = _pkg_version("beyondbench")
+except PackageNotFoundError:
+    from .. import __version__ as _VERSION
+
 
 @click.group()
-@click.version_option(version="0.0.1", prog_name="beyondbench")
+@click.version_option(version=_VERSION, prog_name="beyondbench")
 def main():
     """🔥 beyondbench: BeyondBench Evaluation Package
 
@@ -53,7 +59,7 @@ def main():
 # Generation Parameters
 @click.option('--temperature', type=float, default=0.7, help='Sampling temperature')
 @click.option('--top-p', type=float, default=0.9, help='Nucleus sampling parameter')
-@click.option('--max-tokens', type=int, default=512, help='Maximum tokens to generate')
+@click.option('--max-tokens', type=int, default=32768, help='Maximum tokens to generate (default: 32768, falls back to 8192 on error)')
 @click.option('--seed', type=int, help='Random seed for reproducibility')
 
 # API-Specific Parameters
@@ -140,10 +146,10 @@ def evaluate(**kwargs):
         # Print results summary
         print_results_summary(results)
 
-        # Save final results
+        # Save final results (evaluation_engine already saves, but this ensures CLI output dir has them)
         results_file = output_dir / "final_results.json"
         with open(results_file, 'w', encoding='utf-8') as f:
-            json.dump(results, f, indent=2, ensure_ascii=False)
+            json.dump(results, f, indent=2, ensure_ascii=False, default=str)
 
         logger.info(f"✅ Evaluation completed successfully! Results saved to {output_dir}")
 
@@ -210,7 +216,7 @@ def run_config(config_file: str):
 
 def print_banner():
     """Print stylized banner."""
-    banner = """
+    banner = f"""
 ██████╗ ██████╗       ███████╗██╗   ██╗ █████╗ ██╗
 ██╔══██╗██╔══██╗      ██╔════╝██║   ██║██╔══██╗██║
 ██████╔╝██████╔╝█████╗█████╗  ██║   ██║███████║██║
@@ -218,7 +224,7 @@ def print_banner():
 ██████╔╝██████╔╝      ███████╗ ╚████╔╝ ██║  ██║███████╗
 ╚═════╝ ╚═════╝       ╚══════╝  ╚═══╝  ╚═╝  ╚═╝╚══════╝
 
-🔥 BeyondBench Evaluation Framework v0.0.1
+🔥 BeyondBench Evaluation Framework v{_VERSION}
 📊 Comprehensive LLM Reasoning Evaluation
 """
     click.echo(click.style(banner, fg='cyan', bold=True))
@@ -335,8 +341,22 @@ def print_results_summary(results: Dict[str, Any]):
                         accuracy = 0
                         success_rate = 0
                 elif isinstance(task_result, dict):
-                    accuracy = task_result.get('summary', {}).get('avg_accuracy', 0)
-                    success_rate = task_result.get('summary', {}).get('success_rate', 0)
+                    if 'summary' in task_result:
+                        accuracy = task_result['summary'].get('avg_accuracy', 0)
+                        success_rate = task_result['summary'].get('success_rate', 0)
+                    elif 'overall_accuracy' in task_result:
+                        # Handle tasks with custom run_evaluation (e.g., RobustTowerHanoiTask)
+                        accuracy = task_result.get('overall_accuracy', 0)
+                        fold_results = task_result.get('fold_results', [])
+                        if fold_results:
+                            total = sum(f.get('total_count', 0) for f in fold_results)
+                            correct = sum(f.get('correct_count', 0) for f in fold_results)
+                            success_rate = correct / total if total > 0 else 0
+                        else:
+                            success_rate = 0
+                    else:
+                        accuracy = 0
+                        success_rate = 0
                 else:
                     accuracy = 0
                     success_rate = 0

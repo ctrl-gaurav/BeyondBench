@@ -159,8 +159,12 @@ class TaskRegistry:
         Returns:
             Task class or None if not found
         """
-        # For now, return a placeholder implementation
-        # In full implementation, this would dynamically import task classes
+        # Return the actual imported task class if available
+        if task_name in self._tasks:
+            return self._tasks[task_name]
+
+        # Fallback to placeholder for tasks not yet imported
+        self.logger.warning(f"⚠️  Task '{task_name}' not found in imported classes, using placeholder")
         return self._create_placeholder_task(task_name)
 
     def _create_placeholder_task(self, task_name: str) -> Optional[Type[BaseTask]]:

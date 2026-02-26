@@ -35,7 +35,8 @@ try:
     from .local_maxima_count_task import LocalMaximaCountTask
 
 except ImportError as e:
-    print(f"Warning: Failed to import some easy task classes: {e}")
+    import logging
+    logging.debug(f"Failed to import some easy task classes: {e}")
 
 __all__ = [
     # Original tasks

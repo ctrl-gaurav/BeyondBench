@@ -56,7 +56,7 @@
   </linearGradient>
 
   <!-- ORB -->
-  <radialGradient id="orbFill" cx="46%" cy="40%" r="50%">
+  <radialGradient id="orbFill" cx="46%" cy="38%" r="50%">
     <stop offset="0%"   stop-color="#E8F5E9" stop-opacity="0.9"/>
     <stop offset="15%"  stop-color="#A5D6A7"/>
     <stop offset="35%"  stop-color="#00E676"/>
@@ -180,15 +180,15 @@
   .scanDown{animation:scanDown 4s ease-in-out infinite}
 
   @keyframes orbPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
-  .orbPulse{animation:orbPulse 3.2s ease-in-out infinite;transform-origin:640px 160px}
+  .orbPulse{animation:orbPulse 3.2s ease-in-out infinite;transform-origin:640px 85px}
   @keyframes orbGlowPulse{0%,100%{opacity:.45}50%{opacity:.78}}
   .orbGP{animation:orbGlowPulse 3.2s ease-in-out infinite}
 
   @keyframes arcSpin1{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
   @keyframes arcSpin2{from{transform:rotate(0deg)}to{transform:rotate(-360deg)}}
-  .arc1{animation:arcSpin1 8s  linear infinite;transform-origin:640px 160px}
-  .arc2{animation:arcSpin2 12s linear infinite;transform-origin:640px 160px}
-  .arc3{animation:arcSpin1 18s linear infinite;transform-origin:640px 160px}
+  .arc1{animation:arcSpin1 8s  linear infinite;transform-origin:640px 85px}
+  .arc2{animation:arcSpin2 12s linear infinite;transform-origin:640px 85px}
+  .arc3{animation:arcSpin1 18s linear infinite;transform-origin:640px 85px}
 
   @keyframes raySweep{0%{transform:translateX(-500px)}100%{transform:translateX(500px)}}
   .raySweep{animation:raySweep 3.5s ease-in-out infinite}
@@ -197,7 +197,7 @@
   .subBreath{animation:subBreath 4s ease-in-out infinite}
 
   @keyframes hexSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-  .hexSpin{animation:hexSpin 20s linear infinite;transform-origin:640px 160px}
+  .hexSpin{animation:hexSpin 20s linear infinite;transform-origin:640px 85px}
 
   @keyframes nodePulse{0%,100%{r:2;opacity:.30}50%{r:3.2;opacity:.65}}
   .nP{animation:nodePulse 2.5s ease-in-out infinite}
@@ -381,35 +381,35 @@
 <path id="pR3" d="M1020,256 L1110,256 L1110,320 L1200,320" fill="none"/>
 
 <!-- LAYER 6 - orb -->
-<circle class="orbGP" cx="640" cy="160" r="72" fill="url(#orbAtmo)" filter="url(#bloom)"/>
+<circle class="orbGP" cx="640" cy="85" r="72" fill="url(#orbAtmo)" filter="url(#bloom)"/>
 
 <g class="arc1">
-  <ellipse cx="640" cy="160" rx="44" ry="11" fill="none" stroke="#00E676" stroke-width=".7" opacity=".28"
+  <ellipse cx="640" cy="85" rx="44" ry="11" fill="none" stroke="#00E676" stroke-width=".7" opacity=".28"
            stroke-dasharray="80 52"/>
 </g>
 <g class="arc2">
-  <ellipse cx="640" cy="160" rx="40" ry="23" fill="none" stroke="#69F0AE" stroke-width=".6" opacity=".22"
-           stroke-dasharray="65 70" transform="rotate(35 640 160)"/>
+  <ellipse cx="640" cy="85" rx="40" ry="23" fill="none" stroke="#69F0AE" stroke-width=".6" opacity=".22"
+           stroke-dasharray="65 70" transform="rotate(35 640 85)"/>
 </g>
 <g class="arc3">
-  <ellipse cx="640" cy="160" rx="13" ry="42" fill="none" stroke="#00BFA5" stroke-width=".55" opacity=".18"
-           stroke-dasharray="50 75" transform="rotate(-20 640 160)"/>
+  <ellipse cx="640" cy="85" rx="13" ry="42" fill="none" stroke="#00BFA5" stroke-width=".55" opacity=".18"
+           stroke-dasharray="50 75" transform="rotate(-20 640 85)"/>
 </g>
 
 <g class="orbPulse">
-  <circle cx="640" cy="160" r="34" fill="url(#orbFill)"/>
-  <circle cx="640" cy="160" r="34" fill="none" stroke="#00E676" stroke-width=".5" opacity=".18"/>
-  <ellipse cx="631" cy="142" rx="8" ry="4.5" fill="#E8F5E9" opacity=".14" filter="url(#softGlow)"/>
+  <circle cx="640" cy="85" r="34" fill="url(#orbFill)"/>
+  <circle cx="640" cy="85" r="34" fill="none" stroke="#00E676" stroke-width=".5" opacity=".18"/>
+  <ellipse cx="631" cy="67" rx="8" ry="4.5" fill="#E8F5E9" opacity=".14" filter="url(#softGlow)"/>
 </g>
 
 <!-- LAYER 7 - hex glyph -->
 <g class="hexSpin">
-  <polygon points="696,160 668,252 612,252 584,160 612,68 668,68"
+  <polygon points="696,85 668,177 612,177 584,85 612,-7 668,-7"
            fill="none" stroke="url(#hexStroke)" stroke-width=".7"
            stroke-dasharray="22 18" opacity=".18"/>
 </g>
-<g style="animation:arcSpin2 14s linear infinite;transform-origin:640px 160px">
-  <polygon points="674,160 658,215 622,215 606,160 622,105 658,105"
+<g style="animation:arcSpin2 14s linear infinite;transform-origin:640px 85px">
+  <polygon points="674,85 658,140 622,140 606,85 622,30 658,30"
            fill="none" stroke="#00E676" stroke-width=".55"
            stroke-dasharray="14 22" opacity=".14"/>
 </g>

@@ -40,9 +40,6 @@ pip install beyondbench[all-apis]
 # vLLM support (requires CUDA)
 pip install beyondbench[vllm]
 
-# Transformers (HuggingFace) support
-pip install beyondbench[transformers]
-
 # Full installation (everything)
 pip install beyondbench[full]
 ```
@@ -92,7 +89,7 @@ beyondbench evaluate [OPTIONS]
 
 | Option | Description |
 |--------|-------------|
-| `--backend BACKEND` | Local backend: `vllm` (default, fast) or `transformers` |
+| `--backend BACKEND` | Backend: `vllm` (default, fast), `transformers`, `openai`, or `gemini`. For API models, prefer `--api-provider` |
 | `--api-provider PROVIDER` | API backend: `openai`, `gemini`, or `anthropic` |
 | `--api-key KEY` | API key (or set via environment variable) |
 
@@ -107,18 +104,18 @@ beyondbench evaluate [OPTIONS]
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `--datapoints N` | 50 | Number of data points per task |
-| `--temperature T` | 0.1 | Sampling temperature |
+| `--datapoints N` | 100 | Number of data points per task |
+| `--temperature T` | 0.7 | Sampling temperature |
 | `--top-p P` | 0.9 | Top-p (nucleus) sampling |
-| `--max-tokens N` | 32768 | Maximum tokens to generate |
-| `--seed SEED` | 42 | Random seed for reproducibility |
-| `--num-folds N` | 1 | Number of evaluation folds |
+| `--max-tokens N` | 32768 | Maximum tokens to generate (falls back to 8192 on error) |
+| `--seed SEED` | None | Random seed for reproducibility |
+| `--folds N` | 1 | Number of evaluation folds |
 
 #### Output Options
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `--output-dir DIR` | `./results` | Output directory for results |
+| `--output-dir DIR` | `./beyondbench_results` | Output directory for results |
 | `--store-details` | False | Store detailed per-example results |
 
 #### Model-Specific Options
@@ -135,15 +132,29 @@ beyondbench evaluate [OPTIONS]
 | `--tensor-parallel-size N` | 1 | Number of GPUs for tensor parallelism |
 | `--gpu-memory-utilization F` | 0.96 | GPU memory utilization (0.0-1.0) |
 | `--trust-remote-code` | False | Trust remote code from HuggingFace |
+| `--cuda-device DEVICE` | `cuda:0` | CUDA device for local models |
+
+#### Additional Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--list-sizes TEXT` | `8,16,32` | Comma-separated list sizes for scalable tasks |
+| `--range-min N` | -100 | Minimum value for number generation |
+| `--range-max N` | 100 | Maximum value for number generation |
+| `--batch-size N` | 1 | Batch size for local model inference |
+| `--max-retries N` | 3 | Maximum retries for failed operations |
+| `--timeout N` | 300 | Timeout for individual operations (seconds) |
+| `--log-level LEVEL` | INFO | Logging level: `DEBUG`, `INFO`, `WARNING`, `ERROR` |
 
 ### List Tasks Command
 
 ```bash
-beyondbench list-tasks [--suite SUITE]
+beyondbench list-tasks [--suite SUITE] [--format FORMAT]
 ```
 
 Options:
 - `--suite`: Filter by suite (`easy`, `medium`, `hard`, `all`)
+- `--format`: Output format (`table`, `json`, `yaml`)
 
 ---
 
@@ -266,12 +277,10 @@ model = ModelHandler(
 engine = EvaluationEngine(
     model_handler=model,
     output_dir="./results",
-    datapoints=100,
-    temperature=0.1,
-    max_tokens=32768
+    store_details=True
 )
 
-results = engine.run_evaluation(suite="easy")
+results = engine.run_evaluation(suite="easy", datapoints=100, temperature=0.1, max_tokens=32768)
 print(f"Average Accuracy: {results['summary']['avg_accuracy']:.2%}")
 ```
 
@@ -338,8 +347,9 @@ print(f"Average Accuracy: {results['summary']['avg_accuracy']:.2%}")
 print(f"Total Tokens: {results['summary']['total_tokens']}")
 
 # Per-task metrics
-for task_name, metrics in results['tasks'].items():
-    print(f"{task_name}: {metrics['accuracy']:.2%}")
+for task_name, metrics in results['task_results'].items():
+    if isinstance(metrics, dict) and 'summary' in metrics:
+        print(f"{task_name}: {metrics['summary'].get('avg_accuracy', 0):.2%}")
 ```
 
 ---
@@ -355,11 +365,12 @@ beyondbench evaluate --model-id gpt-4o --api-provider openai --suite easy
 ```
 
 Tasks:
-- **Arithmetic**: sum, multiplication, subtraction, division, absolute_difference
-- **Statistics**: mean, median, mode, variance, std_dev
-- **Counting**: odd_count, even_count, count_negative, count_positive, count_unique, count_prime
-- **Extrema**: find_maximum, find_minimum, second_maximum, second_minimum, range
-- **Ordering**: sorting, index_of_maximum, index_of_minimum
+- **Arithmetic**: sum, multiplication, subtraction, division, absolute_difference, alternating_sum
+- **Statistics**: mean, median, mode, range
+- **Counting**: odd_count, even_count, count_negative, count_unique, count_multiples, count_perfect_squares, count_palindromic, count_greater_than_previous
+- **Extrema**: find_maximum, find_minimum, second_maximum, index_of_maximum, local_maxima_count
+- **Ordering**: sorting
+- **Sequences**: longest_increasing_subsequence, sum_of_digits, sum_of_max_indices
 - **Difference**: max_adjacent_difference
 - **Comparison**: comparison
 
@@ -387,13 +398,13 @@ beyondbench evaluate --model-id gpt-4o --api-provider openai --suite hard
 ```
 
 Tasks:
-- **tower_of_hanoi** (6 variations): Classic, bidirectional, cyclic
+- **tower_hanoi** (6 variations): Classic, bidirectional, cyclic
 - **n_queens** (4 variations): Standard, modified constraints
 - **graph_coloring** (10 variations): Various graph types
 - **boolean_sat** (5 variations): 2-SAT, 3-SAT, Horn clauses
-- **sudoku** (8 variations): Standard, diagonal, irregular
+- **sudoku_solving** (8 variations): Standard, diagonal, irregular
 - **cryptarithmetic** (12 variations): Various equation types
-- **matrix_chain** (5 variations): Multiplication ordering
+- **matrix_chain_multiplication** (5 variations): Multiplication ordering
 - **modular_systems** (5 variations): Chinese remainder theorem
 - **constraint_optimization** (5 variations): Knapsack, scheduling
 - **logic_grid_puzzles** (8 variations): Einstein puzzles, zebra
@@ -435,7 +446,7 @@ beyondbench evaluate \
     --model-id gpt-4o \
     --api-provider openai \
     --suite easy \
-    --num-folds 3
+    --folds 3
 ```
 
 ### Custom Data Points
@@ -544,29 +555,30 @@ Results are saved in JSON format:
 ```json
 {
   "summary": {
-    "model_id": "gpt-4o",
-    "suite": "easy",
+    "total_duration": 123.4,
     "total_tasks": 29,
-    "avg_accuracy": 0.923,
+    "completed_tasks": 29,
+    "failed_tasks": 0,
+    "total_evaluations": 87,
+    "successful_evaluations": 80,
+    "success_rate": 0.92,
+    "avg_accuracy": 0.85,
+    "avg_success_rate": 0.95,
     "total_tokens": 150432,
-    "evaluation_time": "12m 34s"
+    "evaluations_per_second": 0.71
   },
-  "tasks": {
-    "sum": {
-      "accuracy": 0.98,
-      "instruction_followed": 0.99,
-      "avg_tokens": 45.2
-    },
-    "sorting": {
-      "accuracy": 0.95,
-      "instruction_followed": 0.97,
-      "avg_tokens": 123.8
-    }
+  "task_results": {
+    "sum": { "summary": { "avg_accuracy": 0.98, "success_rate": 1.0 } },
+    "sorting": { "summary": { "avg_accuracy": 0.95, "success_rate": 0.97 } }
   },
-  "metadata": {
-    "timestamp": "2025-02-05T10:30:00Z",
-    "seed": 42,
-    "datapoints": 100
+  "model_info": {
+    "model_id": "gpt-4o",
+    "backend": "openai"
+  },
+  "evaluation_config": {
+    "suite": "multiple",
+    "tasks": ["sum", "sorting"],
+    "output_dir": "./beyondbench_results"
   }
 }
 ```

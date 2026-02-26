@@ -21,10 +21,14 @@ class SecondMaximumTask(BaseTask):
             random.seed(self.seed)
 
         data = []
+        pool = range(self.min_val, self.max_val + 1)
         for _ in range(self.num_samples):
             # Generate list ensuring we have at least 2 unique values
             while True:
-                numbers = random.sample(range(self.min_val, self.max_val + 1), list_size)
+                if list_size > len(pool):
+                    numbers = [random.randint(self.min_val, self.max_val) for _ in range(list_size)]
+                else:
+                    numbers = random.sample(pool, list_size)
                 if len(set(numbers)) >= 2:  # Ensure at least 2 unique values
                     break
             data.append(numbers)

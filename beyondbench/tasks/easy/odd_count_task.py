@@ -16,8 +16,7 @@ class OddCountTask(BaseTask):
         if self.seed is not None:
             random.seed(self.seed)
             
-        # You can adapt this from your generate_numbers_list function
-        return [random.sample(range(self.min_val, self.max_val + 1), list_size) 
+        return [[random.randint(self.min_val, self.max_val) for _ in range(list_size)]
                 for _ in range(self.num_samples)]
     
     def create_prompt(self, data_point):

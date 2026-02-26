@@ -83,21 +83,19 @@ import sys
 from pathlib import Path
 import argparse
 
-# Import local utilities (copied from LLMThinkBench)
+# Import local utilities
+from ...core.base_task import BaseTask
+from ...models.model_handler import ModelHandler
+from ...utils.logging_utils import setup_logging
+from ...utils.report_generator import generate_final_report
+from ...utils.shared_utils import values_are_close, round_if_close_to_int, is_valid_number
+from ...utils.parsing import parse_sequence_result
+
 try:
-    from ...core.base_task import BaseTask
-    from ...models.model_handler import ModelHandler
-    from ...utils.logging_utils import setup_logging
-    from ...utils.report_generator import generate_final_report
     from vllm import LLM, SamplingParams
-    from ...utils.shared_utils import values_are_close, round_if_close_to_int, is_valid_number
-    
-    # Import the centralized parser
-    from ...utils.parsing import parse_sequence_result
-    
-except ImportError as e:
-    logging.warning(f"Could not import required modules: {e}")
-    logging.info("Please ensure utils folder contains required files from LLMThinkBench")
+except ImportError:
+    LLM = None
+    SamplingParams = None
 
 class ComplexPatternTask(BaseTask):
     """Implementation of complex pattern recognition task"""
@@ -455,16 +453,13 @@ For example: If the sequence is 1, 4, 9, 16, 25, ? then the next term is \\boxed
         """Evaluate model response for complex pattern completion"""
         ground_truth = data_point['next_term']
         
-        # Use the centralized parser instead of local parsing logic
-        parsed_answer = self.parser.parse_sequence_answer(
-            response, 
-            sequence_type="complex_pattern",
-            expected_type="auto"
-        )
-        
+        # Use centralized parsing
+        from ...utils.parsing import parse_sequence_result
+        parsed_answer = parse_sequence_result(response)
+
         instruction_followed = parsed_answer is not None
         accuracy = 0
-        
+
         if instruction_followed and parsed_answer is not None:
             try:
                 # Use robust tolerance-based comparison for all numeric values
@@ -472,10 +467,7 @@ For example: If the sequence is 1, 4, 9, 16, 25, ? then the next term is \\boxed
             except Exception as e:
                 logging.debug(f"Comparison error: {e}")
                 accuracy = 0
-        
-        # Get debug info from parser if available
-        debug_info = self.parser.get_parsing_debug_info() if hasattr(self.parser, 'get_parsing_debug_info') else []
-        
+
         result = {
             "sequence_type": data_point['sequence_type'],
             "shown_sequence": data_point['shown_sequence'],
@@ -485,10 +477,6 @@ For example: If the sequence is 1, 4, 9, 16, 25, ? then the next term is \\boxed
             "instruction_followed": instruction_followed,
             "sequence_description": data_point['description']
         }
-        
-        # Add debug info if available
-        if debug_info:
-            result["parsing_debug"] = debug_info
         
         return result
     

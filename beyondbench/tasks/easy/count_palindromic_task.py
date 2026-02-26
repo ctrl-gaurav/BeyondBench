@@ -46,12 +46,19 @@ class CountPalindromicTask(BaseTask):
 
             # Fill remaining with non-palindromic numbers
             remaining = list_size - len(numbers)
+            low = max(10, self.min_val)
+            high = max(low, self.max_val)
             for _ in range(remaining):
-                while True:
-                    num = random.randint(max(10, self.min_val), self.max_val)
+                attempts = 0
+                while attempts < 1000:
+                    num = random.randint(low, high)
+                    attempts += 1
                     if str(num) != str(num)[::-1]:  # Not palindromic
                         numbers.append(num)
                         break
+                else:
+                    # Fallback: just use a non-palindromic number
+                    numbers.append(10)
 
             random.shuffle(numbers)
             data.append(numbers)

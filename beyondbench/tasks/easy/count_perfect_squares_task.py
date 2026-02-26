@@ -37,11 +37,16 @@ class CountPerfectSquaresTask(BaseTask):
             # Fill remaining with non-perfect squares
             remaining = list_size - len(numbers)
             for _ in range(remaining):
-                while True:
+                attempts = 0
+                while attempts < 1000:
                     num = random.randint(self.min_val, self.max_val)
-                    if int(math.sqrt(num))**2 != num:  # Not a perfect square
+                    attempts += 1
+                    if num < 0 or int(math.sqrt(num))**2 != num:  # Not a perfect square
                         numbers.append(num)
                         break
+                else:
+                    # Fallback: use a known non-perfect-square
+                    numbers.append(2)
 
             random.shuffle(numbers)
             data.append(numbers)

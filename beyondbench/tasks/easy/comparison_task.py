@@ -26,13 +26,13 @@ class ComparisonTask(BaseTask):
         # Generate "greater than" samples
         for _ in range(samples_per_type + (1 if remaining > 0 else 0)):
             a = random.randint(self.min_val, self.max_val)
-            b = random.randint(self.min_val, a - 1) if a > self.min_val else a - 1
+            b = random.randint(self.min_val, a - 1) if a > self.min_val else max(self.min_val, a - 1)
             data.append({"num1": a, "num2": b, "relation": ">", "answer": "greater than"})
-        
+
         # Generate "less than" samples
         for _ in range(samples_per_type + (1 if remaining > 1 else 0)):
             a = random.randint(self.min_val, self.max_val)
-            b = random.randint(a + 1, self.max_val) if a < self.max_val else a + 1
+            b = random.randint(a + 1, self.max_val) if a < self.max_val else min(self.max_val, a + 1)
             data.append({"num1": a, "num2": b, "relation": "<", "answer": "less than"})
         
         # Generate "equal to" samples
@@ -55,13 +55,46 @@ class ComparisonTask(BaseTask):
     
     def parse_comparison_answer(self, response):
         """Extract comparison answer from boxed response"""
-        # Find boxed answer
-        match = re.search(r'\\boxed{([^{}]+)}', response.replace('\n', ' '))
-        if not match:
+        clean_response = response.replace('\n', ' ')
+
+        # Try multiple boxed patterns - handle nested braces like \text{...}
+        boxed_patterns = [
+            # Standard boxed with nested braces (e.g., \boxed{\text{greater than}})
+            r'\\boxed\{\\text\{([^}]+)\}\}',
+            r'\\boxed\{\\textbf\{([^}]+)\}\}',
+            r'\\boxed\{\\mathrm\{([^}]+)\}\}',
+            # Standard boxed without nested braces
+            r'\\boxed\{([^{}]+)\}',
+            # Boxed with any nested content - greedy match between outer braces
+            r'\\boxed\{(.+?)\}(?:\s|$|\.|,)',
+        ]
+
+        answer = None
+        for pattern in boxed_patterns:
+            match = re.search(pattern, clean_response, re.IGNORECASE)
+            if match:
+                answer = match.group(1).strip()
+                # Clean LaTeX commands from the extracted answer
+                answer = re.sub(r'\\text\{([^}]*)\}', r'\1', answer)
+                answer = re.sub(r'\\textbf\{([^}]*)\}', r'\1', answer)
+                answer = re.sub(r'\\mathrm\{([^}]*)\}', r'\1', answer)
+                answer = re.sub(r'\\[a-zA-Z]+', '', answer).strip()
+                break
+
+        if not answer:
+            # Fallback: look for comparison keywords in the last sentence
+            last_sentences = clean_response.split('.')[-3:]
+            text = ' '.join(last_sentences).lower()
+            if 'greater than' in text:
+                return 'greater than'
+            elif 'less than' in text:
+                return 'less than'
+            elif 'equal to' in text:
+                return 'equal to'
             return None
-        
-        answer = match.group(1).strip().lower()
-        
+
+        answer = answer.lower()
+
         # Normalize variations of answers
         if any(term in answer for term in ['greater', '>', 'more', 'larger', 'bigger']):
             return 'greater than'
@@ -69,7 +102,7 @@ class ComparisonTask(BaseTask):
             return 'less than'
         elif any(term in answer for term in ['equal', '=', 'same']):
             return 'equal to'
-        
+
         return None
     
     def evaluate_response(self, response, data_point):

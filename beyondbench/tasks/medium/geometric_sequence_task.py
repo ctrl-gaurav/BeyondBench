@@ -81,19 +81,19 @@ import sys
 from pathlib import Path
 import argparse
 
-# Import local utilities (copied from LLMThinkBench)
+# Import local utilities
+from ...core.base_task import BaseTask
+from ...models.model_handler import ModelHandler
+from ...utils.logging_utils import setup_logging
+from ...utils.report_generator import generate_final_report
+from ...utils.shared_utils import values_are_close, round_if_close_to_int, is_valid_number
+from ...utils.parsing import parse_sequence_result
+
 try:
-    from ...core.base_task import BaseTask
-    from ...models.model_handler import ModelHandler
-    from ...utils.logging_utils import setup_logging
-    from ...utils.report_generator import generate_final_report
     from vllm import LLM, SamplingParams
-    from ...utils.shared_utils import values_are_close, round_if_close_to_int, is_valid_number
-    # FIXED: Import the centralized parser
-    from ...utils.parsing import parse_sequence_result
-except ImportError as e:
-    logging.warning(f"Could not import required modules: {e}")
-    logging.info("Please ensure utils folder contains required files from LLMThinkBench")
+except ImportError:
+    LLM = None
+    SamplingParams = None
 
 class GeometricSequenceTask(BaseTask):
     """Implementation of geometric and exponential sequence completion task with comprehensive fixes"""
@@ -445,11 +445,9 @@ For example: If the sequence is 2, 6, 18, 54, ? then the next term is \\boxed{{1
         """Evaluate model response for geometric sequence completion"""
         ground_truth = data_point['next_term']
         
-        # FIXED: Use the centralized parser instead of local implementation
-        parsed_answer = self.answer_parser.parse_sequence_answer(
-            response, 
-            sequence_type="geometric"
-        )
+        # Use centralized parsing
+        from ...utils.parsing import parse_sequence_result
+        parsed_answer = parse_sequence_result(response)
         
         instruction_followed = parsed_answer is not None
         accuracy = 0

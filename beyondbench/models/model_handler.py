@@ -148,7 +148,11 @@ class ModelHandler:
             raise ValueError(f"Unsupported API provider: {self.api_provider}")
 
     def _setup_local_model(self, **kwargs):
-        """Setup local model using VLLM or transformers"""
+        """Setup local model using VLLM or transformers.
+
+        By default, tries vLLM first for optimal performance. If vLLM is not
+        available or fails to initialize, automatically falls back to transformers.
+        """
         # Use self.backend which was already set in __init__
         engine = self.backend
 
@@ -170,12 +174,18 @@ class ModelHandler:
                     trust_remote_code=kwargs.get('trust_remote_code', False)
                 )
                 logging.info(f"✅ Successfully initialized VLLM model '{self.model_id}'")
+                return
             except ImportError:
-                raise RuntimeError("VLLM not installed. Run: pip install vllm")
+                logging.warning("⚠️ vLLM not installed. Falling back to transformers backend. "
+                              "For better performance, install vLLM: pip install vllm")
+                engine = 'transformers'
+                self.backend = 'transformers'
             except Exception as e:
-                raise RuntimeError(f"Failed to initialize VLLM model: {e}")
+                logging.warning(f"⚠️ vLLM initialization failed: {e}. Falling back to transformers backend.")
+                engine = 'transformers'
+                self.backend = 'transformers'
 
-        elif engine == 'transformers':
+        if engine == 'transformers':
             try:
                 from transformers import AutoTokenizer, AutoModelForCausalLM
                 import torch
@@ -183,7 +193,7 @@ class ModelHandler:
                 self.tokenizer = AutoTokenizer.from_pretrained(self.model_id)
                 self.model = AutoModelForCausalLM.from_pretrained(
                     self.model_id,
-                    torch_dtype=torch.float16,
+                    dtype=torch.float16,
                     device_map="auto",
                     trust_remote_code=kwargs.get('trust_remote_code', False)
                 )
@@ -195,14 +205,14 @@ class ModelHandler:
         else:
             raise ValueError(f"Unsupported engine: {engine}")
 
-    def generate(self, prompts: List[str], max_tokens: int = 1024, temperature: float = 0.1,
+    def generate(self, prompts: List[str], max_tokens: int = 32768, temperature: float = 0.1,
                  top_p: float = 0.9, **kwargs) -> List[str]:
         """
         Generate responses for given prompts using API or local models.
 
         Args:
             prompts: List of prompt strings
-            max_tokens: Maximum tokens to generate
+            max_tokens: Maximum tokens to generate (default: 32768, falls back to 8192 on error)
             temperature: Sampling temperature
             top_p: Top-p sampling parameter
             **kwargs: Additional generation parameters
@@ -211,10 +221,29 @@ class ModelHandler:
             List of generated responses
         """
         # Route to appropriate generation method
-        if self.api_provider:
-            return self._generate_api(prompts, max_tokens, temperature, top_p, **kwargs)
-        else:
-            return self._generate_local(prompts, max_tokens, temperature, top_p, **kwargs)
+        try:
+            if self.api_provider:
+                return self._generate_api(prompts, max_tokens, temperature, top_p, **kwargs)
+            else:
+                return self._generate_local(prompts, max_tokens, temperature, top_p, **kwargs)
+        except Exception as e:
+            error_msg = str(e).lower()
+            # If the error is related to max_tokens being too large, retry with smaller value
+            if max_tokens > 8192 and any(keyword in error_msg for keyword in [
+                'max_tokens', 'max tokens', 'context length', 'maximum context',
+                'token limit', 'sequence length', 'too long', 'exceeds',
+                'max_model_len', 'max_new_tokens', 'maximum generation'
+            ]):
+                fallback_tokens = 8192
+                logging.warning(
+                    f"⚠️ max_tokens={max_tokens} caused an error. "
+                    f"Falling back to max_tokens={fallback_tokens}. Error: {e}"
+                )
+                if self.api_provider:
+                    return self._generate_api(prompts, fallback_tokens, temperature, top_p, **kwargs)
+                else:
+                    return self._generate_local(prompts, fallback_tokens, temperature, top_p, **kwargs)
+            raise
 
     def _generate_api(self, prompts: List[str], max_tokens: int = 1024, temperature: float = 0.1,
                       top_p: float = 0.9, **kwargs) -> List[str]:
@@ -458,16 +487,22 @@ class ModelHandler:
                     inputs = self.tokenizer(prompt, return_tensors="pt").to(self.model.device)
                     input_tokens = len(inputs['input_ids'][0])
 
-                    # Generate
+                    # Generate - use do_sample=False when temperature is 0
+                    do_sample = temperature > 0
+                    gen_kwargs = {
+                        **inputs,
+                        'max_new_tokens': max_tokens,
+                        'pad_token_id': self.tokenizer.eos_token_id if self.tokenizer.eos_token_id is not None else self.tokenizer.pad_token_id,
+                    }
+                    if do_sample:
+                        gen_kwargs['temperature'] = temperature
+                        gen_kwargs['top_p'] = top_p
+                        gen_kwargs['do_sample'] = True
+                    else:
+                        gen_kwargs['do_sample'] = False
+
                     with torch.no_grad():
-                        outputs = self.model.generate(
-                            **inputs,
-                            max_new_tokens=max_tokens,
-                            temperature=temperature,
-                            top_p=top_p,
-                            do_sample=True,
-                            pad_token_id=self.tokenizer.eos_token_id
-                        )
+                        outputs = self.model.generate(**gen_kwargs)
 
                     # Decode response
                     generated_tokens = outputs[0][len(inputs['input_ids'][0]):]
@@ -511,7 +546,7 @@ class ModelHandler:
             "model_name": self.model_id,
             "backend": self.backend,
             "api_provider": self.api_provider,
-            "model_type": "api_based"
+            "model_type": "api_based" if self.api_provider else "local"
         }
 
     def _count_tokens(self, text: str) -> int:

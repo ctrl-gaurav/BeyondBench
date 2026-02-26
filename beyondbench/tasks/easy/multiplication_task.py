@@ -19,9 +19,9 @@ class MultiplicationTask(BaseTask):
         data = []
         for _ in range(self.num_samples):
             if include_negatives:
-                numbers = random.sample(range(self.min_val, self.max_val + 1), list_size)
+                numbers = [random.randint(self.min_val, self.max_val) for _ in range(list_size)]
             else:
-                numbers = random.sample(range(1, self.max_val + 1), list_size)  
+                numbers = [random.randint(1, self.max_val) for _ in range(list_size)]
             data.append(numbers)
         return data
     
@@ -40,10 +40,10 @@ class MultiplicationTask(BaseTask):
         instruction_followed = parsed_answer is not None
         
         accuracy = 0
-        if parsed_answer:
+        if parsed_answer is not None:
             try:
                 parsed_answer = int(float(parsed_answer))
-            except ValueError:
+            except (ValueError, TypeError):
                 pass
             
         if (parsed_answer == ground_truth):

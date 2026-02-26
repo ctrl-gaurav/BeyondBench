@@ -117,36 +117,45 @@ def extract_list(text: str) -> Optional[List[Union[int, float]]]:
 # ============================================================================
 
 def extract_from_boxed_format(text: str) -> Optional[str]:
-    """Extract answer from various boxed formats."""
+    """Extract answer from various boxed formats.
+
+    Handles a wide range of boxed format variations from different models
+    including small models that may produce malformed LaTeX.
+    """
     patterns = [
-        # Standard LaTeX boxed format
-        r'\\boxed{([^{}]+)}',
-        # Nested braces handling
-        r'\\boxed{([^{}]*(?:{[^{}]*}[^{}]*)*)}',
-        # LaTeX boxed with text command
-        r'\\boxed{\\text{([^{}]+)}}',
-        # LaTeX boxed with textbf
-        r'\\boxed{\\textbf{([^{}]+)}}',
+        # LaTeX boxed with text/textbf/mathrm commands (MUST come before simple boxed)
+        r'\\boxed\{\\text\{([^}]+)\}\}',
+        r'\\boxed\{\\textbf\{([^}]+)\}\}',
+        r'\\boxed\{\\mathrm\{([^}]+)\}\}',
+        r'\\boxed\{\\mathbf\{([^}]+)\}\}',
+        # Standard LaTeX boxed format (handles negative numbers, lists, text)
+        r'\\boxed\{([^{}]+)\}',
+        # Nested braces handling (e.g., \boxed{-\frac{1}{2}})
+        r'\\boxed\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}',
         # LaTeX boxed with math environment
-        r'\\[\(\[]\\boxed{([^{}]+)}\\[\)\]]',
+        r'\\[\(\[]\\boxed\{([^{}]+)\}\\[\)\]]',
         # Dollar sign wrapped boxed
-        r'\$\\boxed{([^{}]+)}\$',
-        r'\$\$\\boxed{([^{}]+)}\$\$',
+        r'\$\\boxed\{([^{}]+)\}\$',
+        r'\$\$\\boxed\{([^{}]+)\}\$\$',
         # Markdown-style boxed
-        r'\[boxed{([^{}]+)}\]',
+        r'\[boxed\{([^{}]+)\}\]',
         # LaTeX boxed with array command
-        r'\\boxed{\\begin{array}{[^}]*}([^}]+)\\end{array}}',
+        r'\\boxed\{\\begin\{array\}\{[^}]*\}([^}]+)\\end\{array\}\}',
         # Nested boxed
-        r'\\boxed{\\boxed{([^{}]+)}}',
+        r'\\boxed\{\\boxed\{([^{}]+)\}\}',
         # Simple boxed format without backslash
-        r'boxed{([^{}]+)}',
+        r'(?<![\\a-zA-Z])boxed\{([^{}]+)\}',
         # Alternative boxed formats
-        r'\\box{([^{}]+)}',
-        r'\\fbox{([^{}]+)}',
+        r'\\box\{([^{}]+)\}',
+        r'\\fbox\{([^{}]+)\}',
         # Answer tags used by some models
-        r'<answer>([^<]+)</answer>',
-        r'<solution>([^<]+)</solution>',
-        r'\[ANSWER\]([^\[]+)\[/ANSWER\]',
+        r'<answer>\s*([^<]+?)\s*</answer>',
+        r'<solution>\s*([^<]+?)\s*</solution>',
+        r'\[ANSWER\]\s*([^\[]+?)\s*\[/ANSWER\]',
+        # Some small models use **answer** format at the end
+        r'(?:final answer|the answer)(?:\s+is)?[:\s]+\*\*([^*]+)\*\*',
+        # Handle boxed with escaped braces from some model outputs
+        r'\\boxed\s*\{\s*([^{}]+?)\s*\}',
     ]
 
     for pattern in patterns:
@@ -154,33 +163,55 @@ def extract_from_boxed_format(text: str) -> Optional[str]:
         if matches:
             # Return the last match (most likely the final answer)
             answer = matches[-1].strip()
-            # Clean LaTeX artifacts
-            answer = re.sub(r'\\[a-zA-Z]+\s*', '', answer)
-            return answer
+            if not answer:
+                continue
+            # Clean LaTeX text commands while preserving content
+            answer = re.sub(r'\\text\{([^}]*)\}', r'\1', answer)
+            answer = re.sub(r'\\textbf\{([^}]*)\}', r'\1', answer)
+            answer = re.sub(r'\\mathrm\{([^}]*)\}', r'\1', answer)
+            answer = re.sub(r'\\mathbf\{([^}]*)\}', r'\1', answer)
+            # Clean \displaystyle and similar commands
+            answer = re.sub(r'\\displaystyle\s*', '', answer)
+            # Clean remaining LaTeX artifacts (but preserve minus signs and commas)
+            answer = re.sub(r'\\(?!-)[a-zA-Z]+\s*', '', answer)
+            # Clean remaining braces
+            answer = answer.replace('{', '').replace('}', '')
+            # Normalize whitespace
+            answer = re.sub(r'\s+', ' ', answer).strip()
+            if answer:
+                return answer
 
     return None
 
 
 def extract_from_markdown_formatting(text: str) -> Optional[str]:
-    """Extract answers from markdown bold/italic formatting."""
+    """Extract answers from markdown bold/italic formatting.
+
+    Only returns matches that look like actual answers (numbers, short phrases),
+    not section headers or explanatory text in bold.
+    """
     patterns = [
         # Bold with asterisks
         r'\*\*([^*]+)\*\*',
         # Bold with underscores
         r'__([^_]+)__',
-        # Italic with asterisks (single)
-        r'\*([^*]+)\*',
-        # Italic with underscores (single)
-        r'_([^_]+)_',
     ]
 
     for pattern in patterns:
         matches = re.findall(pattern, text)
         if matches:
             # Check if any match looks like an answer (contains numbers or is short)
+            # Iterate from the end since the final answer is usually last
             for match in reversed(matches):
                 match = match.strip()
-                if re.search(r'\d', match) or len(match) < 20:
+                # Skip matches that look like headers or labels
+                if match.endswith(':') or match.startswith('#'):
+                    continue
+                # Skip very long matches (likely explanatory text)
+                if len(match) > 60:
+                    continue
+                # Accept if it's a number, a short phrase, or contains a number
+                if re.search(r'-?\d', match) or len(match) < 30:
                     return match
 
     return None
@@ -189,11 +220,11 @@ def extract_from_markdown_formatting(text: str) -> Optional[str]:
 def extract_from_final_answer(text: str) -> Optional[str]:
     """Extract answer from 'final answer' statements."""
     patterns = [
-        # Final answer variations
-        r'(?:final answer|the final answer|my final answer)[:\s]+[is\s]*(.+?)(?:\n|$|\.(?:\s|$))',
-        r'(?:answer|the answer)[:\s]+[is\s]*(.+?)(?:\n|$|\.(?:\s|$))',
-        r'(?:solution|the solution)[:\s]+[is\s]*(.+?)(?:\n|$|\.(?:\s|$))',
-        r'(?:result|the result)[:\s]+[is\s]*(.+?)(?:\n|$|\.(?:\s|$))',
+        # Final answer variations (case insensitive)
+        r'(?:final answer|the final answer|my final answer)[:\s]+(?:is\s+)?(.+?)(?:\n|$|\.(?:\s|$))',
+        r'(?:the answer|answer)[:\s]+(?:is\s+)?(.+?)(?:\n|$|\.(?:\s|$))',
+        r'(?:the solution|solution)[:\s]+(?:is\s+)?(.+?)(?:\n|$|\.(?:\s|$))',
+        r'(?:the result|result)[:\s]+(?:is\s+)?(.+?)(?:\n|$|\.(?:\s|$))',
         # Therefore/thus statements
         r'(?:therefore|thus|hence|so|consequently)[,\s]+(?:the )?(?:answer|result|solution) (?:is|are|would be|will be)[:\s]*(.+?)(?:\n|$|\.(?:\s|$))',
         # "X is the answer" format
@@ -201,13 +232,26 @@ def extract_from_final_answer(text: str) -> Optional[str]:
         r'(.+?)\s+is the (?:final )?result',
         r'(.+?)\s+is the (?:final )?solution',
         # Output format
-        r'(?:output|the output)[:\s]+[is\s]*(.+?)(?:\n|$|\.(?:\s|$))',
+        r'(?:output|the output)[:\s]+(?:is\s+)?(.+?)(?:\n|$|\.(?:\s|$))',
+        # Common patterns from smaller models
+        r'(?:the )?(?:answer|result|solution) is\s+(.+?)(?:\n|$|\.(?:\s|$))',
+        # "= X" at end of line
+        r'=\s*(.+?)(?:\n|$)',
+        # "So the sorted list is: ..."
+        r'(?:the )?sorted (?:list|array|sequence|order) (?:is|would be)[:\s]+(.+?)(?:\n|$|\.(?:\s|$))',
+        # "The sum is X"
+        r'(?:the )?(?:sum|total|count|product|difference|quotient|average|mean|median|mode|maximum|minimum|max|min|range) (?:is|equals?|would be|=)[:\s]*(.+?)(?:\n|$|\.(?:\s|$))',
+        # "The next term is X" for sequence tasks
+        r'(?:the )?next (?:term|number|element|value) (?:is|would be|=)[:\s]*(.+?)(?:\n|$|\.(?:\s|$))',
     ]
 
     for pattern in patterns:
         matches = re.findall(pattern, text.lower())
         if matches:
-            return matches[-1].strip()
+            result = matches[-1].strip()
+            # Skip if the match is too long (likely explanation, not answer)
+            if result and len(result) < 100:
+                return result
 
     return None
 
@@ -320,11 +364,11 @@ def extract_from_final_line(text: str, expected_type: str) -> Optional[str]:
         return None
 
     # Check the last few lines for answer patterns
-    for i in range(min(5, len(lines))):
+    for i in range(min(8, len(lines))):
         line = lines[-(i+1)]
 
-        # Skip lines that look like explanations
-        if len(line) > 100 or line.lower().startswith(('note', 'explanation', 'because', 'since', 'as ')):
+        # Skip lines that look like explanations (but be less aggressive)
+        if len(line) > 200 or line.lower().startswith(('note:', 'explanation:', 'hint:')):
             continue
 
         # Look for standalone numbers or simple expressions
@@ -333,10 +377,14 @@ def extract_from_final_line(text: str, expected_type: str) -> Optional[str]:
                 r'^(-?\d+(?:,\d{3})*(?:\.\d+)?)\s*$',  # Just a number (with optional commas)
                 r'^=\s*(-?\d+(?:,\d{3})*(?:\.\d+)?)\s*$',  # = number
                 r'^:\s*(-?\d+(?:,\d{3})*(?:\.\d+)?)\s*$',  # : number
-                r'(?:^|\s)(-?\d+(?:\.\d+)?)\s*$',  # Number at end of line
+                r'(?:^|\s)(-?\d+(?:\.\d+)?)\s*[.\s]*$',  # Number at end of line
+                # Handle "The answer is X." format
+                r'(?:answer|result|sum|total|count|value)\s+(?:is|=)\s+(-?\d+(?:,\d{3})*(?:\.\d+)?)',
+                # Handle bold numbers: **42**
+                r'\*\*(-?\d+(?:,\d{3})*(?:\.\d+)?)\*\*',
             ]
             for pattern in number_patterns:
-                match = re.search(pattern, line)
+                match = re.search(pattern, line, re.IGNORECASE)
                 if match:
                     return match.group(1).replace(',', '')
 
@@ -345,7 +393,10 @@ def extract_from_final_line(text: str, expected_type: str) -> Optional[str]:
                 r'\[([^\[\]]+)\]',  # [a, b, c]
                 r'\(([^()]+)\)',    # (a, b, c)
                 r'\{([^{}]+)\}',    # {a, b, c}
-                r'^(-?\d+(?:\s*,\s*-?\d+)+)\s*$',  # a, b, c
+                r'^(-?\d+(?:\s*,\s*-?\d+)+)\s*$',  # a, b, c (comma separated)
+                r'^(-?\d+(?:\s+-?\d+)+)\s*$',  # a b c (space separated)
+                # Handle bold lists: **[-3, 0, 5, 12]**
+                r'\*\*\[([^\[\]]+)\]\*\*',
             ]
             for pattern in list_patterns:
                 match = re.search(pattern, line)
@@ -355,21 +406,42 @@ def extract_from_final_line(text: str, expected_type: str) -> Optional[str]:
         elif expected_type == "boolean":
             bool_patterns = [
                 r'\b(true|false|yes|no)\b',
+                r'\b(satisfiable|unsatisfiable)\b',
+                r'\b(valid|invalid)\b',
+                r'\b(possible|impossible)\b',
             ]
             for pattern in bool_patterns:
                 match = re.search(pattern, line.lower())
                 if match:
                     return match.group(1)
 
+        elif expected_type == "string":
+            # For string answers, look for quoted or emphasized text
+            string_patterns = [
+                r'"([^"]+)"',
+                r"'([^']+)'",
+                r'\*\*([^*]+)\*\*',
+            ]
+            for pattern in string_patterns:
+                match = re.search(pattern, line)
+                if match:
+                    result = match.group(1).strip()
+                    if result and len(result) < 50:
+                        return result
+
     return None
 
 
 def extract_plain_value(text: str, expected_type: str) -> Optional[str]:
-    """Extract plain values when response is very short or simple."""
+    """Extract plain values when response is very short or simple.
+
+    Also handles longer responses as a last resort by scanning for the
+    most likely answer value in the text.
+    """
     text = text.strip()
 
     # For very short responses, try direct extraction
-    if len(text) < 50:
+    if len(text) < 100:
         if expected_type == "number":
             # Find any number in the text
             match = re.search(r'(-?\d+(?:,\d{3})*(?:\.\d+)?)', text)
@@ -381,6 +453,10 @@ def extract_plain_value(text: str, expected_type: str) -> Optional[str]:
             match = re.search(r'[\[\(]([^\]\)]+)[\]\)]', text)
             if match:
                 return match.group(1)
+            # Also try comma-separated numbers without brackets
+            match = re.search(r'(-?\d+(?:\s*,\s*-?\d+)+)', text)
+            if match:
+                return match.group(1)
 
         elif expected_type == "boolean":
             text_lower = text.lower()
@@ -388,6 +464,28 @@ def extract_plain_value(text: str, expected_type: str) -> Optional[str]:
                 return 'true'
             elif 'false' in text_lower or 'no' in text_lower:
                 return 'false'
+
+        elif expected_type == "string":
+            # For very short string responses, return the text itself
+            if len(text) < 50:
+                return text
+
+    # For longer responses, try to find the answer near the end
+    if len(text) >= 100:
+        # Look at the last 500 characters for an answer
+        tail = text[-500:]
+
+        if expected_type == "number":
+            # Find the last number in the response (most likely the final answer)
+            numbers = re.findall(r'(-?\d+(?:,\d{3})*(?:\.\d+)?)', tail)
+            if numbers:
+                return numbers[-1].replace(',', '')
+
+        elif expected_type == "list":
+            # Find the last list-like expression
+            list_matches = re.findall(r'\[([^\[\]]+)\]', tail)
+            if list_matches:
+                return list_matches[-1]
 
     return None
 
@@ -571,9 +669,16 @@ def parse_number_list(text: Union[str, List]) -> Optional[List[Union[int, float]
         return None
 
     # Try to parse as JSON first
-    if (text.startswith('[') and text.endswith(']')) or (text.startswith('(') and text.endswith(')')):
+    # Handle various bracket types and clean whitespace
+    json_candidate = text.strip()
+    if (json_candidate.startswith('[') and json_candidate.endswith(']')) or \
+       (json_candidate.startswith('(') and json_candidate.endswith(')')):
         # Convert tuple notation to list notation for JSON parsing
-        json_text = text.replace('(', '[').replace(')', ']')
+        json_text = json_candidate.replace('(', '[').replace(')', ']')
+        # Clean up common formatting issues from model outputs
+        json_text = re.sub(r',\s*,', ',', json_text)  # Remove double commas
+        json_text = re.sub(r',\s*\]', ']', json_text)  # Remove trailing comma
+        json_text = re.sub(r'\[\s*,', '[', json_text)  # Remove leading comma
         try:
             parsed = json.loads(json_text)
             if isinstance(parsed, list):

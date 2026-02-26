@@ -16,6 +16,7 @@ def get_requirements():
         # Core dependencies
         "torch>=2.5.0",
         "transformers>=4.47.0",
+        "accelerate>=1.0.0",
         "numpy>=2.0.0",
         "pandas>=2.2.0",
         "tqdm>=4.67.0",
@@ -97,7 +98,7 @@ def get_extra_requirements():
 
 setup(
     name="beyondbench",
-    version="0.0.1",
+    version="0.0.2",
     description="BeyondBench: Contamination-Resistant Evaluation of Reasoning in Language Models",
     long_description=read_file("README_PYPI.md"),
     long_description_content_type="text/markdown",

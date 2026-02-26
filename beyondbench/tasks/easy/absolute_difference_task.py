@@ -22,11 +22,19 @@ class AbsoluteDifferenceTask(BaseTask):
         data = []
         include_negatives = True  # Based on your original code
         
+        pool_neg = range(self.min_val, self.max_val + 1)
+        pool_pos = range(1, 101)
         for _ in range(self.num_samples):
             if include_negatives:
-                numbers = random.sample(range(self.min_val, self.max_val + 1), list_size)
+                if list_size > len(pool_neg):
+                    numbers = [random.randint(self.min_val, self.max_val) for _ in range(list_size)]
+                else:
+                    numbers = random.sample(pool_neg, list_size)
             else:
-                numbers = random.sample(range(1, 101), list_size)
+                if list_size > len(pool_pos):
+                    numbers = [random.randint(1, 100) for _ in range(list_size)]
+                else:
+                    numbers = random.sample(pool_pos, list_size)
             data.append(numbers)
         
         return data

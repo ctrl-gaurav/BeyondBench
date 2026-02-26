@@ -14,7 +14,8 @@ try:
     from .tower_hanoi_task import RobustTowerHanoiTask
 
 except ImportError as e:
-    print(f"Warning: Failed to import some hard task classes: {e}")
+    import logging
+    logging.debug(f"Failed to import some hard task classes: {e}")
 
 __all__ = [
     "BooleanSATTask",

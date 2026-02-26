@@ -9,6 +9,15 @@ import sys
 import time
 import os
 from typing import Optional, List, Dict, Any
+from importlib.metadata import version as _pkg_version, PackageNotFoundError
+
+try:
+    _VERSION = _pkg_version("beyondbench")
+except PackageNotFoundError:
+    try:
+        from beyondbench import __version__ as _VERSION
+    except ImportError:
+        _VERSION = "unknown"
 
 try:
     from rich.console import Console
@@ -49,7 +58,7 @@ BANNER = """
 ╚═════╝ ╚══════╝╚═╝  ╚═══╝ ╚═════╝╚═╝  ╚═╝
 [/bold cyan]
 [dim]Contamination-Resistant LLM Reasoning Evaluation[/dim]
-[dim]Version 0.0.1[/dim]
+[dim]Version """ + _VERSION + """[/dim]
 """
 
 

@@ -1812,7 +1812,8 @@ Be precise, complete, and follow the format exactly.
         # Return comprehensive evaluation
         return {
             'accuracy': 1.0 if is_correct else 0.0,
-            'instruction_followed': instruction_following_score,
+            'instruction_followed': 1 if parse_result['parsed_solution'] else 0,
+            'instruction_following_quality': instruction_following_score,
             'reasoning_quality': reasoning_quality_score,
             'predicted_answer': str(parse_result['parsed_solution']) if parse_result['parsed_solution'] else None,
             'ground_truth': data_point['answer'],

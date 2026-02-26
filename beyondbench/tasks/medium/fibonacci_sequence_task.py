@@ -71,16 +71,17 @@ import sys
 from pathlib import Path
 import argparse
 
-# Import local utilities (copied from LLMThinkBench)
+# Import local utilities
+from ...core.base_task import BaseTask
+from ...models.model_handler import ModelHandler
+from ...utils.logging_utils import setup_logging
+from ...utils.report_generator import generate_final_report
+
 try:
-    from ...core.base_task import BaseTask
-    from ...models.model_handler import ModelHandler
-    from ...utils.logging_utils import setup_logging
-    from ...utils.report_generator import generate_final_report
     from vllm import LLM, SamplingParams
-except ImportError as e:
-    logging.warning(f"Could not import required modules: {e}")
-    logging.info("Please ensure utils folder contains required files from LLMThinkBench")
+except ImportError:
+    LLM = None
+    SamplingParams = None
 
 class FibonacciSequenceTask(BaseTask):
     """Implementation of Fibonacci and recursive sequence completion task"""

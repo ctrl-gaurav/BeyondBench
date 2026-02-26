@@ -73,21 +73,19 @@ import sys
 from pathlib import Path
 import argparse
 
-# Import local utilities (copied from LLMThinkBench)
+# Import local utilities
+from ...core.base_task import BaseTask
+from ...models.model_handler import ModelHandler
+from ...utils.logging_utils import setup_logging
+from ...utils.report_generator import generate_final_report
+from ...utils.shared_utils import values_are_close, round_if_close_to_int, is_valid_number
+from ...utils.parsing import parse_sequence_result
+
 try:
-    from ...core.base_task import BaseTask
-    from ...models.model_handler import ModelHandler
-    from ...utils.logging_utils import setup_logging
-    from ...utils.report_generator import generate_final_report
     from vllm import LLM, SamplingParams
-    from ...utils.shared_utils import values_are_close, round_if_close_to_int, is_valid_number
-    # UNIFIED PARSER IMPORT - This is the key fix
-    from ...utils.parsing import parse_sequence_result
-    print('✅ All imports successful including unified parser')
-except ImportError as e:
-    print('❌ Import failed')
-    logging.warning(f"Could not import required modules: {e}")
-    logging.info("Please ensure utils folder contains required files from LLMThinkBench")
+except ImportError:
+    LLM = None
+    SamplingParams = None
 
 class AlgebraicSequenceTask(BaseTask):
     """Implementation of multi-step algebraic sequence task with unified parser"""
@@ -545,12 +543,6 @@ For example: If the sequence involves floor(sqrt(n + sqrt(n))), compute the patt
                 # Use robust tolerance-based comparison for all numeric values
                 # More lenient tolerance for complex algebraic sequences
                 accuracy = 1 if self._values_are_close(parsed_answer, ground_truth, rel_tol=1e-3, abs_tol=1.5) else 0
-                
-                # Log parsing details for debugging
-                if self.answer_parser.debug:
-                    parsing_info = self.answer_parser.get_parsing_debug_info()
-                    logging.debug(f"Parsing attempts: {parsing_info}")
-                    
             except Exception as e:
                 logging.debug(f"Comparison error: {e}")
                 accuracy = 0

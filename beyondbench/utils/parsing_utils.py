@@ -101,14 +101,17 @@ class AnswerParser:
 
     def _parse_boxed_format(self, text: str, task_type: str = "general") -> Optional[str]:
         """Extract answer from various boxed formats."""
-        # Comprehensive boxed format patterns
+        # Comprehensive boxed format patterns - ordered by specificity
         patterns = [
+            # LaTeX boxed with text/textbf commands (MUST come first to handle nested braces)
+            r'\\boxed\{\\text\{([^}]+)\}\}',
+            r'\\boxed\{\\textbf\{([^}]+)\}\}',
+            r'\\boxed\{\\mathrm\{([^}]+)\}\}',
+            r'\\boxed\{\\mathbf\{([^}]+)\}\}',
             # Standard LaTeX boxed format
             r'\\boxed{([^{}]+)}',
-            # LaTeX boxed with text command
-            r'\\boxed{\\text{([^{}]+)}}',
-            # LaTeX boxed with textbf command
-            r'\\boxed{\\textbf{([^{}]+)}}',
+            # Nested braces handling
+            r'\\boxed{([^{}]*(?:{[^{}]*}[^{}]*)*)}',
             # LaTeX math environment with boxed
             r'\\[\(\[]\\boxed{([^{}]+)}\\[\)\]]',
             # Markdown-style boxed
@@ -120,6 +123,8 @@ class AnswerParser:
             # Alternative boxed formats
             r'\\box{([^{}]+)}',
             r'\$\\boxed{([^{}]+)}\$',
+            # Answer tags
+            r'<answer>([^<]+)</answer>',
             # Simple brackets that might be used instead
             r'\[([^\[\]]+)\](?=\s*$)',  # Brackets at end of response
         ]
@@ -130,6 +135,10 @@ class AnswerParser:
                 # Take the last match (most likely to be the final answer)
                 answer = matches[-1].strip()
                 if answer:
+                    # Clean LaTeX text commands while preserving content
+                    answer = re.sub(r'\\text\{([^}]*)\}', r'\1', answer)
+                    answer = re.sub(r'\\textbf\{([^}]*)\}', r'\1', answer)
+                    answer = re.sub(r'\\mathrm\{([^}]*)\}', r'\1', answer)
                     return self._clean_extracted_answer(answer)
 
         return None

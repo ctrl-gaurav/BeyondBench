@@ -1,6 +1,60 @@
-<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="32" height="32" rx="6" fill="#0a0f15"/>
-<path d="M16 6L26 12V20L16 26L6 20V12L16 6Z" fill="none" stroke="#00E676" stroke-width="2"/>
-<path d="M16 10L22 14V18L16 22L10 18V14L16 10Z" fill="#00E676" fill-opacity="0.3" stroke="#00BFA5" stroke-width="1"/>
-<circle cx="16" cy="16" r="3" fill="#00E676"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="32" height="32">
+  <defs>
+    <linearGradient id="primaryGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00E676;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#00BFA5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#69F0AE;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="accentGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#00E676;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#A5D6A7;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#020a06;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#041208;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Dark background -->
+  <rect width="400" height="400" rx="40" fill="url(#bgGradient)"/>
+
+  <!-- Outer hexagon -->
+  <polygon
+    points="200,35 335,110 335,250 200,325 65,250 65,110"
+    fill="none"
+    stroke="url(#primaryGradient)"
+    stroke-width="3"
+    opacity="0.9"
+  />
+
+  <!-- Inner hexagon -->
+  <polygon
+    points="200,65 305,125 305,235 200,295 95,235 95,125"
+    fill="none"
+    stroke="url(#accentGradient)"
+    stroke-width="1.5"
+    opacity="0.5"
+  />
+
+  <!-- Stylized B letter -->
+  <g transform="translate(128, 110)">
+    <path
+      d="M0,0 L0,150 M0,0 L55,0 Q90,0 90,37 Q90,75 55,75 L0,75 M0,75 L65,75 Q110,75 110,112 Q110,150 65,150 L0,150"
+      fill="none"
+      stroke="url(#primaryGradient)"
+      stroke-width="10"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+  </g>
+
+  <!-- Circuit trace nodes -->
+  <g opacity="0.8">
+    <circle cx="140" cy="140" r="4" fill="#00E676"/>
+    <circle cx="260" cy="140" r="4" fill="#00E676"/>
+    <circle cx="140" cy="260" r="4" fill="#69F0AE"/>
+    <circle cx="260" cy="260" r="4" fill="#69F0AE"/>
+    <circle cx="200" cy="100" r="3" fill="#00BFA5"/>
+    <circle cx="200" cy="300" r="3" fill="#00BFA5"/>
+  </g>
 </svg>

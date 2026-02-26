@@ -345,7 +345,7 @@ class BaseTask(ABC):
                     response, tokens = self._generate_vllm_response(prompt)
                 elif self.model_handler.backend == 'transformers':
                     response, tokens = self._generate_transformers_response(prompt)
-                elif self.model_handler.backend in ['openai', 'gemini']:
+                elif self.model_handler.backend in ['openai', 'gemini', 'anthropic']:
                     response, tokens = self._generate_api_response(prompt)
                 else:
                     raise RuntimeError(f"Unknown backend: {self.model_handler.backend}")
@@ -761,7 +761,17 @@ class BaseTask(ABC):
     def _get_ground_truth(self, data_point) -> Any:
         """Extract ground truth from a data point, handling different formats."""
         if isinstance(data_point, dict):
-            return data_point.get("answer", "unknown")
+            # Try common ground truth keys used across different task types
+            for key in ['answer', 'ground_truth', 'expected_answer', 'solution',
+                        'correct_answer', 'target', 'label', 'sum', 'expected_relation',
+                        'optimal_moves', 'next_term']:
+                if key in data_point:
+                    return data_point[key]
+            return "unknown"
+        elif isinstance(data_point, (list, tuple)):
+            # For list-based tasks (e.g., sorting, sum), the data_point IS the input
+            # Ground truth depends on the task, so return the raw data
+            return str(data_point)
         else:
             return str(data_point) if data_point is not None else "unknown"
 

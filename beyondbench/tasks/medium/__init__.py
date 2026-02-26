@@ -9,7 +9,8 @@ try:
     from .prime_sequence_task import PrimeSequenceTask
 
 except ImportError as e:
-    print(f"Warning: Failed to import some medium task classes: {e}")
+    import logging
+    logging.debug(f"Failed to import some medium task classes: {e}")
 
 __all__ = [
     "AlgebraicSequenceTask",

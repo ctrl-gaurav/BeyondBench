@@ -6,6 +6,15 @@ import logging
 import numpy as np
 from typing import Dict, Any, List
 from pathlib import Path
+from importlib.metadata import version as _pkg_version, PackageNotFoundError
+
+try:
+    _VERSION = _pkg_version("beyondbench")
+except PackageNotFoundError:
+    try:
+        from beyondbench import __version__ as _VERSION
+    except ImportError:
+        _VERSION = "unknown"
 
 try:
     from tabulate import tabulate
@@ -168,7 +177,7 @@ def generate_final_report(results: Dict[str, Any], output_path: str = None) -> D
             "model_id": results.get("model_id", "unknown"),
             "timestamp": results.get("timestamp", "unknown"),
             "evaluation_engine": "beyondbench",
-            "version": "0.0.1"
+            "version": _VERSION
         }
     }
 

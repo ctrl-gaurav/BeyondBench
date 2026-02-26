@@ -25,6 +25,7 @@
 
 | Date | Update |
 |------|--------|
+| **Feb 2026** | v0.0.2 released &mdash; critical bug fixes, much more stable! See [Changelog](CHANGELOG.md) |
 | **Feb 2026** | v0.0.1 released &mdash; 44 tasks, 117 variations, 101+ models |
 | **Jan 2026** | Paper accepted at **ICLR 2026** |
 | **Jan 2026** | Interactive leaderboard website launched |

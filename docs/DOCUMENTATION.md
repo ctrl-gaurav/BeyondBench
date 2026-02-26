@@ -15,8 +15,8 @@ beyondbench evaluate [OPTIONS]
 - `--model-id TEXT`: Model identifier (HuggingFace path or API model name)
 
 **Backend Configuration:**
-- `--backend [vllm|transformers|openai|gemini]`: Force specific backend
-- `--api-provider [openai|gemini]`: API provider for cloud models
+- `--backend [vllm|transformers|openai|gemini]`: Inference backend (default: vllm for local models, with automatic fallback to transformers). For API models, you can also use `--api-provider` instead.
+- `--api-provider [openai|gemini|anthropic]`: API provider for cloud models (preferred way to specify API backends)
 - `--api-key TEXT`: API key (or set environment variables)
 
 **Hardware Configuration:**
@@ -28,15 +28,15 @@ beyondbench evaluate [OPTIONS]
 **Generation Parameters:**
 - `--temperature FLOAT`: Sampling temperature (default: 0.7)
 - `--top-p FLOAT`: Nucleus sampling parameter (default: 0.9)
-- `--max-tokens INTEGER`: Maximum tokens to generate (default: 512)
+- `--max-tokens INTEGER`: Maximum tokens to generate (default: 32768, falls back to 8192 on error)
 - `--seed INTEGER`: Random seed for reproducibility
 
 **API-Specific Parameters:**
 - `--reasoning-effort [minimal|low|medium|high]`: OpenAI GPT-5 reasoning effort (default: medium)
-- `--thinking-budget INTEGER`: Gemini thinking budget (default: 1024)
+- `--thinking-budget INTEGER`: Gemini thinking budget (default: 1024, 0 to disable, -1 for dynamic)
 
 **Evaluation Parameters:**
-- `--tasks TEXT`: Multiple task selection (e.g., --tasks sorting --tasks comparison)
+- `--tasks TEXT`: Task selection, comma-separated (e.g., --tasks sorting,comparison)
 - `--suite [easy|medium|hard|all]`: Task suite to run (default: all)
 - `--datapoints INTEGER`: Number of datapoints per task (default: 100)
 - `--folds INTEGER`: Number of cross-validation folds (default: 1)
@@ -53,6 +53,13 @@ beyondbench evaluate [OPTIONS]
 - `--batch-size INTEGER`: Batch size for local model inference (default: 1)
 - `--max-retries INTEGER`: Maximum retries for failed operations (default: 3)
 - `--timeout INTEGER`: Timeout for individual operations in seconds (default: 300)
+
+#### `beyondbench` (Interactive Wizard)
+Running `beyondbench` without arguments launches an interactive setup wizard that guides you through configuration step by step.
+
+```bash
+beyondbench
+```
 
 #### `beyondbench list-tasks`
 List available tasks in each suite.
@@ -85,6 +92,12 @@ export GEMINI_API_KEY="your-gemini-api-key"
 # or
 export GOOGLE_API_KEY="your-google-api-key"
 
+# Anthropic Configuration
+export ANTHROPIC_API_KEY="your-anthropic-api-key"
+
+# For gated HuggingFace models (e.g., Llama, Mistral)
+export HF_TOKEN="your-huggingface-token"
+
 # CUDA Configuration
 export CUDA_VISIBLE_DEVICES="0,1,2,3"
 ```
@@ -106,7 +119,7 @@ suite: "easy"
 tasks:
   - "sorting"
   - "comparison"
-  - "fibonacci"
+  - "fibonacci_sequence"
 datapoints: 50
 folds: 3
 
@@ -216,6 +229,8 @@ beyondbench evaluate \\
 
 ### OpenAI API
 
+**Supported Models:** gpt-4o, gpt-4o-mini, gpt-4-turbo, gpt-5, gpt-5-mini, gpt-5-nano, o1, o1-mini, o3, o3-mini, o4-mini
+
 **GPT-4o with Standard Parameters:**
 ```bash
 beyondbench evaluate \\
@@ -235,12 +250,26 @@ beyondbench evaluate \\
 
 ### Gemini API
 
+**Supported Models:** gemini-2.5-pro, gemini-2.5-flash, gemini-2.0-flash, gemini-2.0-flash-lite, gemini-1.5-pro, gemini-1.5-flash
+
 **With Thinking Budget:**
 ```bash
 beyondbench evaluate \\
   --model-id gemini-2.5-pro \\
   --api-provider gemini \\
   --thinking-budget 2048
+```
+
+### Anthropic API
+
+**Supported Models:** claude-sonnet-4-20250514, claude-opus-4-20250514, claude-3-5-sonnet-20241022, claude-3-5-haiku-20241022, claude-3-opus-20240229, claude-3-haiku-20240307
+
+**Claude Models:**
+```bash
+beyondbench evaluate \\
+  --model-id claude-sonnet-4-20250514 \\
+  --api-provider anthropic \\
+  --suite all
 ```
 
 ## 📊 Output Analysis
@@ -250,15 +279,15 @@ beyondbench evaluate \\
 ```
 beyondbench_results/
 ├── final_results.json              # Main results file
-├── beyondbench_20241027_143022.log     # Detailed logs
-├── statistics_report.json          # Model usage statistics
-├── task_summaries/                 # Per-task summaries
-│   ├── sorting_summary.json
-│   ├── comparison_summary.json
-│   └── ...
-└── detailed_results/               # Detailed per-example results (if --store-details)
-    ├── sorting_detailed.json
-    ├── comparison_detailed.json
+├── evaluation_summary.json         # Summary metrics
+├── model_statistics.json           # Model usage statistics
+├── beyondbench_YYYYMMDD_HHMMSS.log # Detailed logs
+└── task_results/                   # Per-task results (if --store-details)
+    ├── sorting/
+    │   ├── test_case_0/
+    │   │   └── detailed_results_fold_0.json
+    │   └── ...
+    ├── comparison/
     └── ...
 ```
 
@@ -276,6 +305,10 @@ beyondbench_results/
 **Success Rate**: Percentage of successfully parsed responses
 - Should be >95% for production use
 - Lower rates indicate parsing issues
+
+**Instruction Following**: Whether the model followed the requested output format (e.g., used `\boxed{}`)
+- Tracked per sample in detailed results
+- High instruction following with low accuracy indicates the model understands the format but not the task
 
 ## 🔧 Troubleshooting
 
@@ -382,12 +415,11 @@ done
 ### Python Integration
 
 ```python
-import beyondbench
 from beyondbench import ModelHandler, EvaluationEngine
 
 # Direct programmatic usage
-handler = ModelHandler(model_id="gpt-4o", api_provider="openai")
-engine = EvaluationEngine(handler, output_dir="./results")
+handler = ModelHandler(model_id="gpt-4o", api_provider="openai", api_key="your-api-key")
+engine = EvaluationEngine(model_handler=handler, output_dir="./results")
 results = engine.run_evaluation(suite="easy", datapoints=50)
 ```
 

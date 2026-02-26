@@ -23,7 +23,8 @@ class CountUniqueTask(BaseTask):
         data = []
         for _ in range(self.num_samples):
             # Generate list with some duplicates
-            unique_count = random.randint(list_size // 2, min(list_size, self.max_val - self.min_val + 1))
+            pool_size = self.max_val - self.min_val + 1
+            unique_count = random.randint(max(1, min(list_size // 2, pool_size)), min(list_size, pool_size))
             unique_values = random.sample(range(self.min_val, self.max_val + 1), unique_count)
 
             # Create list with duplicates

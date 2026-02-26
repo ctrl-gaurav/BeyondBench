@@ -20,7 +20,11 @@ class IndexOfMaximumTask(BaseTask):
         if self.seed is not None:
             random.seed(self.seed)
 
-        return [random.sample(range(self.min_val, self.max_val + 1), list_size)
+        pool = range(self.min_val, self.max_val + 1)
+        if list_size > len(pool):
+            return [[random.randint(self.min_val, self.max_val) for _ in range(list_size)]
+                    for _ in range(self.num_samples)]
+        return [random.sample(pool, list_size)
                 for _ in range(self.num_samples)]
 
     def create_prompt(self, data_point):

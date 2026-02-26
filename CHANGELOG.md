@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.0.2] - 2026-02-25
+
+### Critical Bug Fixes & Stability
+
+This release is a significant stability improvement over v0.0.1, resolving 41 bugs identified across all task suites. The framework is now substantially more reliable for production evaluation runs.
+
+### Fixed
+
+- **Easy Suite (29 tasks)**: Fixed evaluation logic, parsing, and result formatting across all easy tasks — zero errors on 0.5B–14B models
+- **Medium Suite (5 tasks)**: Resolved sequence generation and answer extraction issues
+- **Hard Suite (10 tasks)**: Fixed Tower of Hanoi (N=3–7), cryptarithmetic, matrix chain, logic grid puzzles, and more
+- **vLLM backend**: Corrected batch processing pipeline and token handling
+- **Parsing utilities**: Improved robustness of `\boxed{}`, code block, and structured output extraction
+- **CLI**: Fixed `--model-id`, `--datapoints`, `--folds` option handling and max-tokens fallback (32768 → 8192)
+- **EvaluationEngine**: Fixed `inspect.signature`-based parameter dispatch for hard task constructors
+- **ModelHandler**: Improved multi-backend stability (vLLM, Transformers, OpenAI, Gemini, Anthropic)
+
+---
+
 ## [0.0.1] - 2026-02-25
 
 ### First Public Release

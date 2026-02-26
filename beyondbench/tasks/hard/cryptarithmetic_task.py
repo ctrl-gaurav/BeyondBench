@@ -909,14 +909,23 @@ REMEMBER: Provide ONE complete solution with all letters assigned!"""
             num1 = solver.word_to_number(problem['word1'], assignment)
             num2 = solver.word_to_number(problem['word2'], assignment)
             num_result = solver.word_to_number(problem['result_word'], assignment)
-            
+
+            operation = problem.get('operation', 'addition')
+            op_map = {
+                'addition': ('+', num1 + num2),
+                'subtraction': ('-', num1 - num2),
+                'multiplication': ('*', num1 * num2),
+            }
+            op_symbol, computed = op_map.get(operation, ('+', num1 + num2))
+
             return {
                 'word1_value': num1,
                 'word2_value': num2,
                 'result_value': num_result,
-                'sum_check': num1 + num2,
-                'equation_holds': num1 + num2 == num_result,
-                'equation_string': f"{num1} + {num2} = {num_result}"
+                'operation': operation,
+                'computed_result': computed,
+                'equation_holds': computed == num_result,
+                'equation_string': f"{num1} {op_symbol} {num2} = {num_result}"
             }
         except Exception as e:
             return {

@@ -24,8 +24,15 @@ class CountNegativeTask(BaseTask):
         data = []
         for _ in range(self.num_samples):
             # Generate roughly half negative and half positive
-            negatives = [random.randint(self.min_val, -1) for _ in range(list_size // 2)]
-            positives = [random.randint(1, self.max_val) for _ in range(list_size - len(negatives))]
+            neg_upper = min(-1, self.max_val)
+            neg_lower = min(self.min_val, neg_upper)
+            pos_lower = max(1, self.min_val)
+            pos_upper = max(self.max_val, pos_lower)
+            if neg_lower <= neg_upper:
+                negatives = [random.randint(neg_lower, neg_upper) for _ in range(list_size // 2)]
+            else:
+                negatives = []
+            positives = [random.randint(pos_lower, pos_upper) for _ in range(list_size - len(negatives))]
             numbers = negatives + positives
             random.shuffle(numbers)
             data.append(numbers)

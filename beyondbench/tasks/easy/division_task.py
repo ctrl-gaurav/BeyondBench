@@ -23,8 +23,19 @@ class DivisionTask(BaseTask):
             # Generate two numbers, ensuring no division by zero
             numerator = random.randint(self.min_val, self.max_val)
             # Ensure denominator is not zero
-            denominator = random.randint(self.min_val, self.max_val)
-            while denominator == 0:
+            if self.min_val <= 0 <= self.max_val:
+                # Range includes zero — pick from non-zero values
+                if self.min_val == 0 and self.max_val == 0:
+                    denominator = 1  # Degenerate range, use fallback
+                else:
+                    denominator = 0
+                    for _ in range(1000):
+                        denominator = random.randint(self.min_val, self.max_val)
+                        if denominator != 0:
+                            break
+                    if denominator == 0:
+                        denominator = 1  # Fallback
+            else:
                 denominator = random.randint(self.min_val, self.max_val)
                 
             data.append([numerator, denominator])

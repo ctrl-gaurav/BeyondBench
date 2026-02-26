@@ -110,26 +110,100 @@ class EvaluationEngine:
                     overall_stats['failed_tasks'] += 1
                     continue
 
-                # Initialize task with all required parameters
-                task_instance = task_class(
-                    model_handler=self.model_handler,
-                    output_dir=str(self.output_dir / "task_results"),
-                    min_val=eval_params.get('range_min', 1),
-                    max_val=eval_params.get('range_max', 100),
-                    num_folds=folds,
-                    num_samples=datapoints,
-                    store_details=self.store_details,
-                    temperature=eval_params.get('temperature', 0.7),
-                    top_p=eval_params.get('top_p', 0.9),
-                    max_tokens=eval_params.get('max_tokens', 1024),
-                    seed=eval_params.get('seed'),
-                    max_retries=self.max_retries
-                )
+                # Initialize task - detect constructor signature to handle
+                # different task types (easy/medium use min_val/max_val,
+                # hard tasks have custom parameters like board_sizes, etc.)
+                import inspect
+                init_sig = inspect.signature(task_class.__init__)
+                init_params = set(init_sig.parameters.keys()) - {'self'}
+
+                # Common parameters shared by all tasks
+                common_kwargs = {
+                    'model_handler': self.model_handler,
+                    'output_dir': str(self.output_dir / "task_results"),
+                    'num_folds': folds,
+                    'num_samples': datapoints,
+                    'store_details': self.store_details,
+                    'temperature': eval_params.get('temperature', 0.7),
+                    'top_p': eval_params.get('top_p', 0.9),
+                    'max_tokens': eval_params.get('max_tokens', 32768),
+                    'seed': eval_params.get('seed'),
+                }
+
+                # Check if task uses **kwargs (accepts arbitrary params)
+                accepts_kwargs = 'kwargs' in init_params
+
+                # Add max_retries if the task accepts it (explicitly or via **kwargs)
+                if 'max_retries' in init_params or accepts_kwargs:
+                    common_kwargs['max_retries'] = self.max_retries
+
+                # Standard easy/medium tasks use min_val/max_val
+                # Also add for tasks that accept **kwargs (they pass through to BaseTask)
+                if 'min_val' in init_params or accepts_kwargs:
+                    common_kwargs['min_val'] = eval_params.get('range_min', 1)
+                    common_kwargs['max_val'] = eval_params.get('range_max', 100)
+
+                # Hard task-specific parameters with sensible defaults
+                hard_task_defaults = {
+                    'board_sizes': [4, 5, 6, 8],
+                    'num_disks_list': [3, 4, 5],
+                    'num_variables_list': [4, 6, 8],
+                    'sat_types_list': ['random_k'],
+                    'clause_ratios_list': [3.0],
+                    'graph_types': ['random', 'planar'],
+                    'num_vertices_list': [5, 8, 10],
+                    'grid_sizes': [3, 4],
+                    'difficulty_levels': ['easy', 'medium', 'hard'],
+                    'word_lengths': [3, 4, 5],
+                    'puzzle_types': ['addition'],
+                    'num_equations_list': [2, 3],
+                    'constraint_types': ['standard'],
+                    'matrix_counts_list': [3, 4, 5],
+                    'dimension_patterns': ['uniform'],
+                    'num_projects_list': [3, 4, 5],
+                    'technique_levels': ['basic'],
+                }
+
+                for param_name, default_val in hard_task_defaults.items():
+                    if param_name in init_params:
+                        common_kwargs[param_name] = eval_params.get(param_name, default_val)
+
+                # Only pass parameters the constructor actually accepts
+                # If the task uses **kwargs, pass all common params through
+                if 'kwargs' in init_params:
+                    filtered_kwargs = common_kwargs
+                else:
+                    filtered_kwargs = {k: v for k, v in common_kwargs.items() if k in init_params}
+
+                try:
+                    task_instance = task_class(**filtered_kwargs)
+                except TypeError as init_error:
+                    self.logger.error(f"❌ Failed to initialize task {task_name}: {init_error}")
+                    self.logger.debug(f"   Constructor params: {init_params}")
+                    self.logger.debug(f"   Provided kwargs: {set(filtered_kwargs.keys())}")
+                    overall_stats['failed_tasks'] += 1
+                    continue
 
                 # Run task evaluation
-                # BaseTask.run_evaluation only accepts list_sizes parameter
-                list_sizes = eval_params.get('list_sizes', [8, 16, 32])
-                task_result = task_instance.run_evaluation(list_sizes=list_sizes)
+                # Tasks have different run_evaluation signatures:
+                # - Some accept list_sizes (easy list-based, medium, hard)
+                # - Some accept no parameters (comparison, division, etc.)
+                # We try with list_sizes first, then fallback to no args
+                list_sizes = eval_params.get('list_sizes') or [8, 16, 32]
+                import inspect
+                sig = inspect.signature(task_instance.run_evaluation)
+                params = sig.parameters
+
+                if 'list_sizes' in params:
+                    task_result = task_instance.run_evaluation(list_sizes=list_sizes)
+                elif len(params) > 0 and list(params.keys())[0] != 'self':
+                    # Has positional args, try passing list_sizes positionally
+                    try:
+                        task_result = task_instance.run_evaluation(list_sizes)
+                    except TypeError:
+                        task_result = task_instance.run_evaluation()
+                else:
+                    task_result = task_instance.run_evaluation()
 
                 task_results[task_name] = task_result
                 overall_stats['completed_tasks'] += 1
@@ -149,6 +223,17 @@ class EvaluationEngine:
                     overall_stats['total_evaluations'] += summary.get('total_datapoints', 0)
                     overall_stats['successful_evaluations'] += summary.get('successful_datapoints', 0)
                     avg_accuracy = summary.get('avg_accuracy', 0)
+                elif isinstance(task_result, dict) and 'overall_accuracy' in task_result:
+                    # Handle tasks with custom run_evaluation (e.g., RobustTowerHanoiTask)
+                    avg_accuracy = task_result.get('overall_accuracy', 0)
+                    # Count fold results as evaluations
+                    fold_results = task_result.get('fold_results', [])
+                    if fold_results:
+                        for fold in fold_results:
+                            total = fold.get('total_count', 0)
+                            correct = fold.get('correct_count', 0)
+                            overall_stats['total_evaluations'] += total
+                            overall_stats['successful_evaluations'] += correct
                 else:
                     avg_accuracy = 0
 
@@ -197,7 +282,13 @@ class EvaluationEngine:
         token_counts = []
 
         for task_name, result in task_results.items():
-            if 'summary' in result:
+            if isinstance(result, list) and result:
+                # List of per-fold/per-config metrics
+                task_acc = sum(m.get('accuracy', 0) for m in result) / len(result)
+                accuracies.append(task_acc)
+                task_success = sum(1 for m in result if m.get('successful_generations', 0) > 0) / len(result)
+                success_rates.append(task_success)
+            elif isinstance(result, dict) and 'summary' in result:
                 summary = result['summary']
                 if 'avg_accuracy' in summary:
                     accuracies.append(summary['avg_accuracy'])
@@ -205,6 +296,9 @@ class EvaluationEngine:
                     success_rates.append(summary['success_rate'])
                 if 'total_tokens' in summary:
                     token_counts.append(summary.get('total_tokens', 0))
+            elif isinstance(result, dict) and 'overall_accuracy' in result:
+                # Handle tasks with custom run_evaluation (e.g., RobustTowerHanoiTask)
+                accuracies.append(result['overall_accuracy'])
 
         # Calculate aggregate metrics
         avg_accuracy = sum(accuracies) / len(accuracies) if accuracies else 0.0
@@ -238,6 +332,25 @@ class EvaluationEngine:
             }
         }
 
+    @staticmethod
+    def _json_serializer(obj):
+        """Handle non-serializable types for JSON output."""
+        import numpy as np
+        from enum import Enum
+        if isinstance(obj, (np.integer,)):
+            return int(obj)
+        elif isinstance(obj, (np.floating,)):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, Enum):
+            return obj.value
+        elif isinstance(obj, set):
+            return list(obj)
+        elif hasattr(obj, '__dict__'):
+            return str(obj)
+        return str(obj)
+
     def _save_results(self, results: Dict[str, Any]):
         """Save comprehensive results to files."""
 
@@ -245,18 +358,18 @@ class EvaluationEngine:
             # Save main results
             results_file = self.output_dir / "final_results.json"
             with open(results_file, 'w', encoding='utf-8') as f:
-                json.dump(results, f, indent=2, ensure_ascii=False)
+                json.dump(results, f, indent=2, ensure_ascii=False, default=self._json_serializer)
 
             # Save summary only
             summary_file = self.output_dir / "evaluation_summary.json"
             with open(summary_file, 'w', encoding='utf-8') as f:
-                json.dump(results['summary'], f, indent=2, ensure_ascii=False)
+                json.dump(results['summary'], f, indent=2, ensure_ascii=False, default=self._json_serializer)
 
             # Save model statistics
             if hasattr(self.model_handler, 'get_statistics'):
                 stats_file = self.output_dir / "model_statistics.json"
                 with open(stats_file, 'w', encoding='utf-8') as f:
-                    json.dump(self.model_handler.get_statistics(), f, indent=2, ensure_ascii=False)
+                    json.dump(self.model_handler.get_statistics(), f, indent=2, ensure_ascii=False, default=self._json_serializer)
 
             self.logger.info(f"💾 Results saved to {self.output_dir}")
 

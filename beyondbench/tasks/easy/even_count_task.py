@@ -19,12 +19,11 @@ class EvenCountTask(BaseTask):
             random.seed(self.seed)
             
         data = []
-        if include_negatives:
-            data = [random.sample(range(-100, 101), list_size) 
-                    for _ in range(self.num_samples)]
-        else:
-            data = [random.sample(range(1, 101), list_size) 
-                    for _ in range(self.num_samples)]
+        low = self.min_val if include_negatives else max(1, self.min_val)
+        high = self.max_val
+        for _ in range(self.num_samples):
+            numbers = [random.randint(low, high) for _ in range(list_size)]
+            data.append(numbers)
         return data
     
     def create_prompt(self, data_point):
@@ -45,8 +44,8 @@ class EvenCountTask(BaseTask):
         
         return {
             "input_list": data_point,
-            "even_count": ground_truth,
-            "calculated_answer": answer if isinstance(answer, int) else None,
+            "ground_truth": ground_truth,
+            "parsed_answer": answer if isinstance(answer, int) else None,
             "accuracy": accuracy,
             "instruction_followed": instruction_followed
         }

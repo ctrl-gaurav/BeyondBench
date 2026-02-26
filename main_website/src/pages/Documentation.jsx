@@ -146,7 +146,7 @@ export default function Documentation() {
               </div>
               <div>
                 <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>BeyondBench Documentation</h1>
-                <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>v0.0.1 &bull; pip install beyondbench</p>
+                <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>v0.0.2 &bull; pip install beyondbench</p>
               </div>
             </div>
             <p className={`text-sm leading-relaxed ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -736,7 +736,7 @@ results = engine.run_evaluation(
                 <div className="text-gray-300 font-semibold mb-2 mt-4">Generation Parameters</div>
                 <div><span className="text-bb-accent">--temperature</span> FLOAT &nbsp;&nbsp; Sampling temperature (default: 0.7)</div>
                 <div><span className="text-bb-accent">--top-p</span> FLOAT &nbsp;&nbsp; Nucleus sampling (default: 0.9)</div>
-                <div><span className="text-bb-accent">--max-tokens</span> INT &nbsp;&nbsp; Max generation tokens (default: 512)</div>
+                <div><span className="text-bb-accent">--max-tokens</span> INT &nbsp;&nbsp; Max generation tokens (default: 32768, falls back to 8192 on error)</div>
                 <div><span className="text-bb-accent">--seed</span> INT &nbsp;&nbsp; Random seed for reproducibility</div>
                 <div className="text-gray-300 font-semibold mb-2 mt-4">Hardware Configuration</div>
                 <div><span className="text-bb-accent">--cuda-device</span> TEXT &nbsp;&nbsp; CUDA device for local models (default: cuda:0)</div>
@@ -746,7 +746,7 @@ results = engine.run_evaluation(
                 <div><span className="text-bb-accent">--batch-size</span> INT &nbsp;&nbsp; Batch size for inference (default: 1)</div>
                 <div className="text-gray-300 font-semibold mb-2 mt-4">Provider-Specific</div>
                 <div><span className="text-bb-accent">--reasoning-effort</span> [minimal|low|medium|high] &nbsp;&nbsp; OpenAI reasoning effort</div>
-                <div><span className="text-bb-accent">--thinking-budget</span> INT &nbsp;&nbsp; Gemini thinking budget (default: 1024)</div>
+                <div><span className="text-bb-accent">--thinking-budget</span> INT &nbsp;&nbsp; Gemini thinking budget (default: 1024, 0 to disable, -1 for dynamic)</div>
                 <div className="text-gray-300 font-semibold mb-2 mt-4">Scalable Task Options</div>
                 <div><span className="text-bb-accent">--list-sizes</span> TEXT &nbsp;&nbsp; Comma-separated list sizes (e.g., "8,16,32,64")</div>
                 <div><span className="text-bb-accent">--range-min</span> INT &nbsp;&nbsp; Min value for number generation (default: -100)</div>
@@ -774,7 +774,7 @@ beyondbench list-tasks --suite hard  # Show only hard tasks`} />
 
             <SubSection title="beyondbench --version">
               <CodeBlock code={`beyondbench --version
-# Output: beyondbench, version 0.0.1`} />
+# Output: beyondbench, version 0.0.2`} />
             </SubSection>
           </Section>
 
@@ -898,9 +898,16 @@ logger.info("Starting evaluation...")`} />
             </div>
 
             <SubSection title="Environment Variables">
-              <CodeBlock code={`export OPENAI_API_KEY="sk-..."
+              <CodeBlock code={`# API Provider Keys
+export OPENAI_API_KEY="sk-..."
 export GEMINI_API_KEY="..."
-export ANTHROPIC_API_KEY="sk-ant-..."`} />
+export ANTHROPIC_API_KEY="sk-ant-..."
+
+# For gated HuggingFace models (e.g., Llama, Mistral)
+export HF_TOKEN="hf_..."
+
+# GPU selection for local models
+export CUDA_VISIBLE_DEVICES="0,1"  # Use specific GPUs`} />
             </SubSection>
           </Section>
 
@@ -939,7 +946,7 @@ export ANTHROPIC_API_KEY="sk-ant-..."`} />
               <p>NP-complete and constraint satisfaction problems testing advanced reasoning.</p>
               <div className="glass-card p-4 mt-2">
                 <div className="space-y-1 text-xs font-mono text-gray-500">
-                  <div><span className="text-gray-400">tower_of_hanoi</span> - 6 variations | O(2^n) computational complexity</div>
+                  <div><span className="text-gray-400">tower_hanoi</span> - 6 variations | O(2^n) computational complexity</div>
                   <div><span className="text-gray-400">n_queens</span> - 4 variations | NP-complete board placement</div>
                   <div><span className="text-gray-400">graph_coloring</span> - 10 variations | Chromatic number computation</div>
                   <div><span className="text-gray-400">boolean_sat</span> - 5 variations | 2-SAT, 3-SAT, Horn clauses</div>
@@ -1204,7 +1211,7 @@ handler._backend = MyCustomBackend("my-model")`} />
     }
   },
   "metadata": {
-    "version": "0.0.1",
+    "version": "0.0.2",
     "timestamp": "2025-02-05T10:30:00Z",
     "seed": 42,
     "temperature": 0.7,

@@ -3,10 +3,22 @@ import os
 import sys
 from datetime import datetime
 
-def setup_logging(output_dir, log_level="INFO", enable_file_logging=True, enable_console_logging=True):
-    """Set up logging to file and console with enhanced error handling"""
+def setup_logging(output_dir=None, log_level="INFO", enable_file_logging=True, enable_console_logging=True, level=None):
+    """Set up logging to file and console with enhanced error handling.
+
+    Args:
+        output_dir: Directory for log files. If None, file logging is disabled.
+        log_level: Logging level string (DEBUG, INFO, WARNING, ERROR).
+        enable_file_logging: Whether to log to a file.
+        enable_console_logging: Whether to log to console.
+        level: Alias for log_level (for convenience).
+    """
+    if level is not None:
+        log_level = level
+    if output_dir is None:
+        enable_file_logging = False
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_file = os.path.join(output_dir, f"eval_log_{timestamp}.txt")
+    log_file = os.path.join(output_dir, f"eval_log_{timestamp}.txt") if output_dir else None
 
     # Clear any existing handlers to avoid conflicts
     for handler in logging.root.handlers[:]:
@@ -21,8 +33,8 @@ def setup_logging(output_dir, log_level="INFO", enable_file_logging=True, enable
     # Configure root logger
     logging.root.setLevel(log_level_obj)
 
-    # File handler (if enabled)
-    if enable_file_logging:
+    # File handler (if enabled and log_file is available)
+    if enable_file_logging and log_file:
         file_handler = logging.FileHandler(log_file, mode='w', encoding='utf-8')
         file_handler.setLevel(log_level_obj)
         file_handler.setFormatter(formatter)
