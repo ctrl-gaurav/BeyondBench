@@ -1,0 +1,37 @@
+# BeyondBench Full Evaluation Configuration
+#
+# Runs the complete evaluation suite (easy + medium + hard) with all tasks.
+#
+# Usage:
+#   beyondbench run-config beyondbench/configs/full_evaluation.yaml
+#
+# WARNING: Full evaluation can take several hours depending on model and hardware.
+
+model:
+  model_id: "meta-llama/Llama-3.2-3B-Instruct"
+  backend: "vllm"
+  cuda_device: "cuda:0"
+  tensor_parallel_size: 1
+  gpu_memory_utilization: 0.96
+  trust_remote_code: false
+
+evaluation:
+  suite: "all"
+  datapoints: 100
+  folds: 1
+  list_sizes: [8, 16, 32, 64]
+  temperature: 0.7
+  top_p: 0.9
+  max_tokens: 32768
+  range_min: -100
+  range_max: 100
+
+output:
+  output_dir: "./beyondbench_results/full_evaluation"
+  store_details: true
+  log_level: "INFO"
+
+performance:
+  batch_size: 1
+  max_retries: 3
+  timeout: 300

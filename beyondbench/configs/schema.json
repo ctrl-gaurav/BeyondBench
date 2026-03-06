@@ -1,0 +1,188 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BeyondBench Configuration",
+  "description": "JSON Schema for BeyondBench evaluation configuration files.",
+  "type": "object",
+  "properties": {
+    "model": {
+      "type": "object",
+      "description": "Model configuration.",
+      "properties": {
+        "model_id": {
+          "type": "string",
+          "description": "Model identifier (HuggingFace path or API model name)."
+        },
+        "backend": {
+          "type": "string",
+          "enum": ["vllm", "transformers", "openai", "gemini"],
+          "description": "Inference backend."
+        },
+        "api_provider": {
+          "type": "string",
+          "enum": ["openai", "gemini", "anthropic"],
+          "description": "API provider for cloud models."
+        },
+        "api_key": {
+          "type": "string",
+          "description": "API key (prefer environment variables instead)."
+        },
+        "cuda_device": {
+          "type": "string",
+          "default": "cuda:0",
+          "description": "CUDA device for local models."
+        },
+        "tensor_parallel_size": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1,
+          "description": "Number of GPUs for tensor parallelism."
+        },
+        "gpu_memory_utilization": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 1.0,
+          "default": 0.96,
+          "description": "GPU memory utilization ratio."
+        },
+        "trust_remote_code": {
+          "type": "boolean",
+          "default": false,
+          "description": "Allow remote code execution."
+        }
+      },
+      "required": ["model_id"],
+      "additionalProperties": false
+    },
+    "evaluation": {
+      "type": "object",
+      "description": "Evaluation parameters.",
+      "properties": {
+        "suite": {
+          "type": "string",
+          "enum": ["easy", "medium", "hard", "all"],
+          "default": "all",
+          "description": "Task suite to run."
+        },
+        "tasks": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Specific tasks to evaluate."
+        },
+        "datapoints": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 100,
+          "description": "Number of datapoints per task."
+        },
+        "folds": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1,
+          "description": "Number of cross-validation folds."
+        },
+        "list_sizes": {
+          "type": "array",
+          "items": {"type": "integer", "minimum": 1},
+          "description": "List sizes for scalable tasks."
+        },
+        "temperature": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 2.0,
+          "default": 0.7,
+          "description": "Sampling temperature."
+        },
+        "top_p": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.9,
+          "description": "Nucleus sampling parameter."
+        },
+        "max_tokens": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 32768,
+          "description": "Maximum tokens to generate."
+        },
+        "seed": {
+          "type": "integer",
+          "description": "Random seed for reproducibility."
+        },
+        "reasoning_effort": {
+          "type": "string",
+          "enum": ["minimal", "low", "medium", "high"],
+          "default": "medium",
+          "description": "OpenAI reasoning effort level."
+        },
+        "thinking_budget": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 1024,
+          "description": "Gemini thinking budget."
+        },
+        "range_min": {
+          "type": "integer",
+          "default": -100,
+          "description": "Minimum value for number generation."
+        },
+        "range_max": {
+          "type": "integer",
+          "default": 100,
+          "description": "Maximum value for number generation."
+        }
+      },
+      "additionalProperties": false
+    },
+    "output": {
+      "type": "object",
+      "description": "Output configuration.",
+      "properties": {
+        "output_dir": {
+          "type": "string",
+          "default": "./beyondbench_results",
+          "description": "Output directory for results."
+        },
+        "store_details": {
+          "type": "boolean",
+          "default": false,
+          "description": "Store detailed per-example results."
+        },
+        "log_level": {
+          "type": "string",
+          "enum": ["DEBUG", "INFO", "WARNING", "ERROR"],
+          "default": "INFO",
+          "description": "Logging level."
+        }
+      },
+      "additionalProperties": false
+    },
+    "performance": {
+      "type": "object",
+      "description": "Performance tuning options.",
+      "properties": {
+        "batch_size": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1,
+          "description": "Batch size for local model inference."
+        },
+        "max_retries": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 3,
+          "description": "Maximum retries for failed operations."
+        },
+        "timeout": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 300,
+          "description": "Timeout for individual operations in seconds."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": ["model"],
+  "additionalProperties": false
+}

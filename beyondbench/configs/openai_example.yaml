@@ -1,0 +1,25 @@
+# BeyondBench OpenAI API Evaluation Configuration
+#
+# Usage:
+#   beyondbench run-config beyondbench/configs/openai_example.yaml
+#
+# Make sure to set the OPENAI_API_KEY environment variable before running.
+
+model:
+  model_id: "gpt-4o"
+  api_provider: "openai"
+
+evaluation:
+  suite: "easy"
+  datapoints: 50
+  folds: 1
+  list_sizes: [8, 16, 32]
+  temperature: 0.7
+  top_p: 0.9
+  max_tokens: 4096
+  reasoning_effort: "medium"
+
+output:
+  output_dir: "./beyondbench_results/openai_gpt4o"
+  store_details: true
+  log_level: "INFO"
