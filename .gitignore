@@ -226,3 +226,6 @@ react_website/dist/
 
 # Not needed (review and delete)
 _not_needed/
+
+# Build plan (internal development only)
+.build_plan/

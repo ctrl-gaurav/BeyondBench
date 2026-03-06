@@ -14,10 +14,15 @@ Key Features:
 - Comprehensive metrics and reporting
 """
 
-__version__ = "0.0.2"
+from importlib.metadata import version as _pkg_version, PackageNotFoundError
+try:
+    __version__ = _pkg_version("beyondbench")
+except PackageNotFoundError:
+    __version__ = "0.0.2"  # fallback for development
+
 __author__ = "BeyondBench Team"
 __email__ = "contact@beyondbench.org"
-__license__ = "MIT"
+__license__ = "Apache-2.0"
 
 from .core.evaluation_engine import EvaluationEngine
 from .core.task_registry import TaskRegistry

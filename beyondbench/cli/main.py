@@ -258,7 +258,6 @@ def validate_and_prepare_config(kwargs: Dict[str, Any]) -> Dict[str, Any]:
     # Prepare engine configuration
     engine_config = {
         'max_retries': kwargs['max_retries'],
-        'seed': kwargs.get('seed'),
         'store_details': kwargs['store_details']
     }
 

@@ -316,25 +316,39 @@ def run_evaluation_wizard():
         console.print("[yellow]Evaluation cancelled.[/yellow]")
         return
 
-    # Run evaluation with progress
-    console.print("\n")
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        BarColumn(),
-        TaskProgressColumn(),
-        TimeRemainingColumn(),
-        console=console
-    ) as progress:
-        task = progress.add_task("[cyan]Running evaluation...", total=100)
+    try:
+        from ..models.model_handler import ModelHandler
+        from ..core.evaluation_engine import EvaluationEngine
 
-        # Simulate progress (in real implementation, this would track actual progress)
-        for i in range(100):
-            time.sleep(0.05)
-            progress.update(task, advance=1)
+        # Build model handler kwargs
+        model_kwargs = {
+            'model_id': model_id,
+            'api_provider': provider if provider != "local" else None,
+            'api_key': api_key,
+        }
 
-    console.print("\n[bold green]✅ Evaluation complete![/bold green]")
-    console.print(f"[dim]Results saved to: {params['output_dir']}[/dim]")
+        console.print("\n[cyan]Initializing model handler...[/cyan]")
+        model_handler = ModelHandler(**model_kwargs)
+
+        console.print("[cyan]Initializing evaluation engine...[/cyan]")
+        engine = EvaluationEngine(
+            model_handler=model_handler,
+            output_dir=params['output_dir'],
+        )
+
+        console.print("[cyan]Running evaluation...[/cyan]\n")
+        results = engine.run_evaluation(
+            suite=suite,
+            datapoints=params['datapoints'],
+            temperature=params['temperature'],
+            max_tokens=params['max_tokens'],
+        )
+
+        console.print("\n[bold green]Evaluation complete![/bold green]")
+        console.print(results)
+
+    except Exception as e:
+        console.print(f"\n[bold red]Evaluation failed: {e}[/bold red]")
 
 
 def list_tasks_wizard():

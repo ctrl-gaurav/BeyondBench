@@ -190,7 +190,6 @@ class EvaluationEngine:
                 # - Some accept no parameters (comparison, division, etc.)
                 # We try with list_sizes first, then fallback to no args
                 list_sizes = eval_params.get('list_sizes') or [8, 16, 32]
-                import inspect
                 sig = inspect.signature(task_instance.run_evaluation)
                 params = sig.parameters
 

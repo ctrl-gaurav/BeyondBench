@@ -251,171 +251,118 @@ class ModelHandler:
         responses = []
 
         for prompt in prompts:
-            try:
-                # Count input tokens
-                input_tokens = self._count_tokens(prompt)
+            generated_text = None
+            max_rate_limit_retries = 3
 
-                if self.api_provider == "openai":
-                    # Use appropriate parameters based on model
-                    api_params = {
-                        "model": self.model_id,
-                        "messages": [{"role": "user", "content": prompt}]
-                    }
+            for attempt in range(max_rate_limit_retries + 1):
+                try:
+                    # Count input tokens
+                    input_tokens = self._count_tokens(prompt)
 
-                    # Token parameter varies by model
-                    if 'gpt-5' in self.model_id.lower() or 'o' in self.model_id.lower():
-                        # Newer models use max_completion_tokens
-                        api_params['max_completion_tokens'] = max_tokens
+                    if self.api_provider == "openai":
+                        api_params = {
+                            "model": self.model_id,
+                            "messages": [{"role": "user", "content": prompt}],
+                            "max_completion_tokens": max_tokens,
+                        }
 
-                        # Add reasoning effort parameter for GPT-5
-                        if self.reasoning_effort and 'gpt-5' in self.model_id.lower():
+                        if self.reasoning_effort:
                             api_params['reasoning'] = {"effort": self.reasoning_effort}
-                    else:
-                        # Older models use max_tokens
-                        api_params['max_tokens'] = max_tokens
 
-                    # Some models don't support temperature/top_p customization
-                    if not ('gpt-5' in self.model_id.lower() or 'o' in self.model_id.lower()):
-                        # Only add temperature/top_p for models that support them
                         api_params['temperature'] = temperature
                         api_params['top_p'] = top_p
 
-                    # Use the responses.create() method for GPT-5 with reasoning
-                    if 'gpt-5' in self.model_id.lower() and self.reasoning_effort:
-                        response = self.client.responses.create(
-                            model=self.model_id,
-                            input=prompt,
-                            reasoning={"effort": self.reasoning_effort}
-                        )
-                        # GPT-5 responses API uses output_text
-                        if hasattr(response, 'output_text'):
-                            generated_text = response.output_text
-                        elif hasattr(response, 'output'):
-                            generated_text = response.output
-                        elif hasattr(response, 'text'):
-                            generated_text = response.text
-                        else:
-                            # Fallback - try to find text content
-                            generated_text = str(response)
-                            logging.warning(f"Unknown GPT-5 response structure: {type(response)}, attributes: {dir(response)}")
-
-                        # GPT-5 responses API has different usage structure
-                        if hasattr(response, 'usage'):
-                            # Check for different possible usage attribute names
-                            if hasattr(response.usage, 'input_tokens'):
-                                input_tokens = response.usage.input_tokens
-                                output_tokens = response.usage.output_tokens
-                            elif hasattr(response.usage, 'prompt_tokens_details'):
-                                # Some GPT-5 responses might have detailed usage
-                                input_tokens = getattr(response.usage, 'prompt_tokens_details', {}).get('total_tokens', input_tokens)
-                                output_tokens = getattr(response.usage, 'completion_tokens_details', {}).get('total_tokens', self._count_tokens(generated_text))
-                            else:
-                                # Fallback to estimation if structure is unknown
-                                output_tokens = self._count_tokens(generated_text)
-                                logging.warning(f"Unknown GPT-5 usage structure: {dir(response.usage)}")
-
-                            reasoning_effort_msg = f", reasoning_effort={self.reasoning_effort}" if self.reasoning_effort else ""
-                            logging.info(f"🤖 OpenAI GPT-5 API call: model={self.model_id}, input_tokens={input_tokens}, output_tokens={output_tokens}{reasoning_effort_msg}")
-                        else:
-                            output_tokens = self._count_tokens(generated_text)
-                            logging.info(f"🤖 OpenAI GPT-5 API call: model={self.model_id}, estimated_output_tokens={output_tokens}")
-                    else:
                         response = self.client.chat.completions.create(**api_params)
                         generated_text = response.choices[0].message.content
 
-                        # Get actual token usage from OpenAI response (standard chat completions)
-                        if hasattr(response, 'usage'):
+                        if hasattr(response, 'usage') and response.usage:
                             input_tokens = response.usage.prompt_tokens
                             output_tokens = response.usage.completion_tokens
-                            # Log API call details
                             logging.info(f"🤖 OpenAI API call: model={self.model_id}, prompt_tokens={input_tokens}, completion_tokens={output_tokens}")
                         else:
                             output_tokens = self._count_tokens(generated_text)
                             logging.info(f"🤖 OpenAI API call: model={self.model_id}, estimated_output_tokens={output_tokens}")
 
-                elif self.api_provider == "gemini":
-                    if self.genai_types:
-                        # New genai package with thinking config support
-                        config = self.genai_types.GenerateContentConfig(
-                            max_output_tokens=max_tokens,
-                            temperature=temperature,
-                            top_p=top_p
-                        )
-
-                        # Add thinking config if thinking_budget is specified
-                        if self.thinking_budget is not None:
-                            config.thinking_config = self.genai_types.ThinkingConfig(
-                                thinking_budget=self.thinking_budget
+                    elif self.api_provider == "gemini":
+                        if self.genai_types:
+                            config = self.genai_types.GenerateContentConfig(
+                                max_output_tokens=max_tokens,
+                                temperature=temperature,
+                                top_p=top_p
                             )
 
-                        response = self.client.models.generate_content(
-                            model=self.model_id,
-                            contents=prompt,
-                            config=config
-                        )
-                        generated_text = response.text
-                    else:
-                        # Legacy google-generativeai package
-                        model = self.client.GenerativeModel(self.model_id)
-                        generation_config = self.client.types.GenerationConfig(
-                            max_output_tokens=max_tokens,
-                            temperature=temperature,
-                            top_p=top_p
-                        )
-                        response = model.generate_content(prompt, generation_config=generation_config)
-                        generated_text = response.text
+                            if self.thinking_budget is not None:
+                                config.thinking_config = self.genai_types.ThinkingConfig(
+                                    thinking_budget=self.thinking_budget
+                                )
 
-                    # For Gemini, count tokens manually
-                    output_tokens = self._count_tokens(generated_text)
-                    thinking_budget_msg = f", thinking_budget={self.thinking_budget}" if self.thinking_budget is not None else ""
-                    # Log API call details
-                    logging.info(f"🧠 Gemini API call: model={self.model_id}, estimated_input_tokens={input_tokens}, estimated_output_tokens={output_tokens}{thinking_budget_msg}")
+                            response = self.client.models.generate_content(
+                                model=self.model_id,
+                                contents=prompt,
+                                config=config
+                            )
+                            generated_text = response.text
+                        else:
+                            model = self.client.GenerativeModel(self.model_id)
+                            generation_config = self.client.types.GenerationConfig(
+                                max_output_tokens=max_tokens,
+                                temperature=temperature,
+                                top_p=top_p
+                            )
+                            response = model.generate_content(prompt, generation_config=generation_config)
+                            generated_text = response.text
 
-                elif self.api_provider == "anthropic":
-                    # Anthropic Claude API
-                    response = self.client.messages.create(
-                        model=self.model_id,
-                        max_tokens=max_tokens,
-                        temperature=temperature,
-                        top_p=top_p,
-                        messages=[
-                            {"role": "user", "content": prompt}
-                        ]
-                    )
-
-                    # Extract text from response
-                    generated_text = ""
-                    for block in response.content:
-                        if hasattr(block, 'text'):
-                            generated_text += block.text
-
-                    # Get actual token usage from Anthropic response
-                    if hasattr(response, 'usage'):
-                        input_tokens = response.usage.input_tokens
-                        output_tokens = response.usage.output_tokens
-                        logging.info(f"🎭 Anthropic API call: model={self.model_id}, input_tokens={input_tokens}, output_tokens={output_tokens}")
-                    else:
                         output_tokens = self._count_tokens(generated_text)
-                        logging.info(f"🎭 Anthropic API call: model={self.model_id}, estimated_output_tokens={output_tokens}")
+                        thinking_budget_msg = f", thinking_budget={self.thinking_budget}" if self.thinking_budget is not None else ""
+                        logging.info(f"🧠 Gemini API call: model={self.model_id}, estimated_input_tokens={input_tokens}, estimated_output_tokens={output_tokens}{thinking_budget_msg}")
 
-                # Update statistics
-                self.stats['api_calls'] += 1
-                self.stats['total_input_tokens'] += input_tokens
-                self.stats['total_output_tokens'] += output_tokens
-                self.stats['prompts_processed'].append({
-                    'input_tokens': input_tokens,
-                    'output_tokens': output_tokens,
-                    'timestamp': time.time()
-                })
+                    elif self.api_provider == "anthropic":
+                        response = self.client.messages.create(
+                            model=self.model_id,
+                            max_tokens=max_tokens,
+                            temperature=temperature,
+                            top_p=top_p,
+                            messages=[
+                                {"role": "user", "content": prompt}
+                            ]
+                        )
 
-                responses.append(generated_text)
+                        generated_text = ""
+                        for block in response.content:
+                            if hasattr(block, 'text'):
+                                generated_text += block.text
 
-                # Add small delay to avoid rate limiting
-                time.sleep(0.1)
+                        if hasattr(response, 'usage'):
+                            input_tokens = response.usage.input_tokens
+                            output_tokens = response.usage.output_tokens
+                            logging.info(f"🎭 Anthropic API call: model={self.model_id}, input_tokens={input_tokens}, output_tokens={output_tokens}")
+                        else:
+                            output_tokens = self._count_tokens(generated_text)
+                            logging.info(f"🎭 Anthropic API call: model={self.model_id}, estimated_output_tokens={output_tokens}")
 
-            except Exception as e:
-                logging.error(f"API call failed for prompt: {e}")
-                responses.append("")  # Return empty string on failure
+                    # Update statistics
+                    self.stats['api_calls'] += 1
+                    self.stats['total_input_tokens'] += input_tokens
+                    self.stats['total_output_tokens'] += output_tokens
+                    self.stats['prompts_processed'].append({
+                        'input_tokens': input_tokens,
+                        'output_tokens': output_tokens,
+                        'timestamp': time.time()
+                    })
+
+                    responses.append(generated_text)
+                    break
+
+                except Exception as e:
+                    error_code = getattr(e, 'status_code', None)
+                    if error_code == 429 and attempt < max_rate_limit_retries:
+                        backoff = min(2 ** attempt * 0.5, 30)
+                        logging.warning(f"Rate limited (429), retrying in {backoff:.1f}s (attempt {attempt + 1}/{max_rate_limit_retries})")
+                        time.sleep(backoff)
+                        continue
+                    logging.error(f"API call failed for prompt: {e}")
+                    responses.append("")
+                    break
 
         return responses
 
@@ -559,16 +506,14 @@ class ModelHandler:
         Returns:
             Token count
         """
-        if self.token_counter and text:
+        if not text:
+            return 0
+        if self.token_counter:
             try:
                 return len(self.token_counter.encode(text))
             except Exception as e:
                 logging.warning(f"Token counting failed: {e}")
-                # Fallback to word-based estimation
-                return int(len(text.split()) * 1.3)
-        else:
-            # Fallback to word-based estimation
-            return int(len(text.split()) * 1.3)
+        return int(len(text.split()) * 1.3)
 
     def count_tokens(self, text: str) -> int:
         """
