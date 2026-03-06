@@ -8,7 +8,7 @@
 [![Conference](https://img.shields.io/badge/🏆_ICLR-2026-blue?style=for-the-badge)](https://iclr.cc/)
 [![PyPI](https://img.shields.io/pypi/v/beyondbench.svg?style=for-the-badge&logo=pypi&logoColor=white)](https://pypi.org/project/beyondbench/)
 [![Python](https://img.shields.io/pypi/pyversions/beyondbench.svg?style=for-the-badge&logo=python&logoColor=white)](https://pypi.org/project/beyondbench/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
+[![License](https://img.shields.io/badge/License-Apache_2.0-green.svg?style=for-the-badge)](LICENSE)
 [![Stars](https://img.shields.io/github/stars/ctrl-gaurav/BeyondBench?style=for-the-badge&logo=github)](https://github.com/ctrl-gaurav/BeyondBench/stargazers)
 
 *Contamination-Resistant Evaluation of Reasoning in Language Models*
@@ -25,6 +25,7 @@
 
 | Date | Update |
 |------|--------|
+| **Mar 2026** | v0.1.0 released &mdash; FastAPI serve, CLI improvements, CI/CD, comprehensive tests. See [Changelog](CHANGELOG.md) |
 | **Feb 2026** | v0.0.2 released &mdash; critical bug fixes, much more stable! See [Changelog](CHANGELOG.md) |
 | **Feb 2026** | v0.0.1 released &mdash; 44 tasks, 117 variations, 101+ models |
 | **Jan 2026** | Paper accepted at **ICLR 2026** |
@@ -175,6 +176,41 @@ results = engine.run_evaluation(suite="easy", datapoints=100)
 
 # Print results
 print(f"Average Accuracy: {results['summary']['avg_accuracy']:.2%}")
+```
+
+### API Server
+
+```bash
+# Start the BeyondBench API server
+beyondbench serve --host 0.0.0.0 --port 8000
+
+# API docs at http://localhost:8000/docs
+```
+
+### Configuration Files
+
+```bash
+# Create a config interactively
+beyondbench init
+
+# Run from config file
+beyondbench run-config beyondbench/configs/default.yaml
+```
+
+### Results Viewer
+
+```bash
+# List past results
+beyondbench results list
+
+# Show detailed results
+beyondbench results show ./beyondbench_results/final_results.json
+
+# Compare two evaluations
+beyondbench results compare result_a.json result_b.json
+
+# Get task info
+beyondbench info sorting
 ```
 
 ---
@@ -336,7 +372,7 @@ If you use BeyondBench in your research, please cite our paper (accepted at **IC
 
 ## 📜 License
 
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **Apache License 2.0** - see the [LICENSE](LICENSE) file for details.
 
 ---
 

@@ -4,7 +4,7 @@
 [![ICLR 2026](https://img.shields.io/badge/ICLR-2026-blue?style=for-the-badge)](https://iclr.cc/)
 [![PyPI](https://img.shields.io/pypi/v/beyondbench.svg?style=for-the-badge&logo=pypi&logoColor=white)](https://pypi.org/project/beyondbench/)
 [![Python](https://img.shields.io/pypi/pyversions/beyondbench.svg?style=for-the-badge&logo=python&logoColor=white)](https://pypi.org/project/beyondbench/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](https://github.com/ctrl-gaurav/BeyondBench/blob/main/LICENSE)
+[![License](https://img.shields.io/badge/License-Apache_2.0-green.svg?style=for-the-badge)](https://github.com/ctrl-gaurav/BeyondBench/blob/main/LICENSE)
 [![Stars](https://img.shields.io/github/stars/ctrl-gaurav/BeyondBench?style=for-the-badge&logo=github)](https://github.com/ctrl-gaurav/BeyondBench/stargazers)
 
 **101+ Models Evaluated | 44 Reasoning Tasks | 117 Variations | >10^15 Unique Instances**
@@ -105,6 +105,17 @@ print(f"Average Accuracy: {results['summary']['avg_accuracy']:.2%}")
 
 ---
 
+### New in v0.1.0
+
+- **API Server**: `beyondbench serve` - FastAPI REST API
+- **Config Files**: `beyondbench init` and `beyondbench run-config`
+- **Results Viewer**: `beyondbench results list/show/compare`
+- **Task Info**: `beyondbench info <task>`
+- **CI/CD**: GitHub Actions for testing, linting, PyPI publishing
+- **239 Tests**: Comprehensive test coverage
+
+---
+
 ## Supported Backends
 
 | Backend | Models | Features |
@@ -187,4 +198,4 @@ If you use BeyondBench in your research, please cite our paper (accepted at **IC
 
 *Advancing the frontier of AI reasoning evaluation, one benchmark at a time.*
 
-**License**: MIT
+**License**: Apache-2.0

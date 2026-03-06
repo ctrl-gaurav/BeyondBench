@@ -79,6 +79,56 @@ Run evaluation from configuration file.
 beyondbench run-config CONFIG_FILE
 ```
 
+#### `beyondbench serve`
+Start the BeyondBench API server (requires `pip install beyondbench[serve]`).
+
+```bash
+beyondbench serve [OPTIONS]
+```
+
+**Options:**
+- `--host TEXT`: Host to bind to (default: 0.0.0.0)
+- `--port INTEGER`: Port to listen on (default: 8000)
+- `--reload`: Enable auto-reload for development
+
+**API Endpoints:**
+- `GET /health` - Health check
+- `GET /tasks` - List tasks (filterable by suite)
+- `GET /tasks/{task_name}` - Task details
+- `POST /evaluate` - Start evaluation job
+- `GET /jobs/{job_id}` - Check job status
+- `GET /results` - List past results
+- `GET /results/{result_id}` - Get result details
+- `GET /docs` - Interactive API documentation (Swagger UI)
+
+#### `beyondbench init`
+Create a configuration file interactively.
+
+```bash
+beyondbench init [--output beyondbench.yaml]
+```
+
+#### `beyondbench info`
+Show detailed information about a specific task.
+
+```bash
+beyondbench info TASK_NAME
+```
+
+#### `beyondbench results`
+View and compare past evaluation results.
+
+```bash
+# List results
+beyondbench results list [--output-dir ./beyondbench_results]
+
+# Show detailed results
+beyondbench results show PATH_TO_RESULTS_JSON
+
+# Compare two results
+beyondbench results compare PATH1 PATH2
+```
+
 ## 🔧 Environment Variables
 
 Set these environment variables for seamless API usage:
@@ -109,35 +159,25 @@ export CUDA_VISIBLE_DEVICES="0,1,2,3"
 Create `eval_config.yaml`:
 
 ```yaml
-# Model Configuration
-model_id: "gpt-4o"
-api_provider: "openai"
-reasoning_effort: "high"
+model:
+  model_id: "gpt-4o"
+  api_provider: "openai"
 
-# Evaluation Configuration
-suite: "easy"
-tasks:
-  - "sorting"
-  - "comparison"
-  - "fibonacci_sequence"
-datapoints: 50
-folds: 3
+evaluation:
+  suite: "easy"
+  tasks:
+    - "sorting"
+    - "comparison"
+  datapoints: 50
+  folds: 3
+  temperature: 0.1
+  max_tokens: 1024
+  seed: 42
 
-# Generation Parameters
-temperature: 0.1
-top_p: 0.95
-max_tokens: 1024
-seed: 42
-
-# Output Configuration
-output_dir: "./results"
-store_details: true
-log_level: "INFO"
-
-# Hardware Configuration (for local models)
-backend: "vllm"
-tensor_parallel_size: 2
-gpu_memory_utilization: 0.9
+output:
+  output_dir: "./results"
+  store_details: true
+  log_level: "INFO"
 ```
 
 ### JSON Configuration
@@ -459,7 +499,7 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@v2
       with:
-        python-version: '3.9'
+        python-version: '3.10'
     - name: Install beyondbench
       run: pip install beyondbench
     - name: Run evaluation

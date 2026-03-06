@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.1.0] - 2026-03-06
+
+### Added
+- **FastAPI REST API server** (`beyondbench serve`) with endpoints for tasks, evaluation, jobs, and results
+- **`beyondbench init`** command for interactive config file creation
+- **`beyondbench info <task>`** command for viewing task details
+- **`beyondbench results list/show/compare`** commands for results viewer
+- **Config file validation** with JSON schema
+- **Example configs**: `default.yaml`, `openai_example.yaml`, `full_evaluation.yaml`
+- **Comprehensive test suite** (239 tests) covering data generation and evaluation for all task suites
+- **Real data generation + evaluation tests** for all task suites
+- **Ruff linting configuration** for code quality
+- **PEP 561 `py.typed` marker** for type checking support
+- **pytest-xdist** parallel test support
+- **GitHub Actions CI/CD**: `test.yml` (Python 3.10-3.13 matrix), `lint.yml`, `publish.yml` (PyPI OIDC)
+- **Pre-commit configuration** (ruff + hooks)
+- **`CONTRIBUTING.md`** and **`SECURITY.md`** documentation
+- **Issue templates** (bug report, feature request) and **PR template**
+- **Dependabot configuration** for automated dependency updates
+- **`__main__.py`** for `python -m beyondbench` support
+- **`configs/default.yaml`** for default evaluation configuration
+- **Exponential backoff** for API rate limiting
+- **Improved error messages** with Rich formatting
+
+### Changed
+- **License** changed from MIT to Apache-2.0
+- **Simplified ModelHandler** GPT-5 logic
+- **Single version source of truth** via `importlib.metadata`
+- **Wizard** now wires to actual evaluation pipeline
+- **Minimum Python version** raised from 3.8 to 3.10
+
+### Fixed
+- **Token extraction** for all API backends
+- **EvaluationEngine seed handling** for reproducible evaluations
+- **Fixed license** metadata to Apache-2.0
+
+### Removed
+- **Redundant `setup.py`** (replaced by `pyproject.toml`)
+- **Dead code**: `simple_cli.py`, `PlaceholderTask`
+
+---
+
 ## [0.0.2] - 2026-02-25
 
 ### Critical Bug Fixes & Stability
@@ -126,7 +168,7 @@ BeyondBench v0.0.1 marks the first public release of our contamination-resistant
 ### Technical Specifications
 
 #### Requirements
-- Python 3.8+
+- Python 3.10+
 - PyTorch 2.0+
 - Transformers 4.30+
 

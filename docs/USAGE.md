@@ -156,6 +156,62 @@ Options:
 - `--suite`: Filter by suite (`easy`, `medium`, `hard`, `all`)
 - `--format`: Output format (`table`, `json`, `yaml`)
 
+### Serve Command
+
+Start the API server:
+
+```bash
+# Install serve dependencies
+pip install beyondbench[serve]
+
+# Start server
+beyondbench serve --port 8000
+
+# With auto-reload for development
+beyondbench serve --reload
+```
+
+### Init Command
+
+Create a config file interactively:
+
+```bash
+beyondbench init
+beyondbench init --output my_config.yaml
+```
+
+### Info Command
+
+Get task details:
+
+```bash
+beyondbench info sorting
+beyondbench info tower_hanoi
+```
+
+### Results Commands
+
+View and compare results:
+
+```bash
+# List past results
+beyondbench results list
+
+# Show details
+beyondbench results show ./beyondbench_results/final_results.json
+
+# Compare two runs
+beyondbench results compare ./results_a/final_results.json ./results_b/final_results.json
+```
+
+### Run from Config
+
+```bash
+# Run from YAML config
+beyondbench run-config beyondbench/configs/default.yaml
+beyondbench run-config beyondbench/configs/openai_example.yaml
+```
+
 ---
 
 ## Backend Configuration
