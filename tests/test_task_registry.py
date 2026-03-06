@@ -1,120 +1,106 @@
-"""
-Test TaskRegistry functionality.
-"""
+"""Test TaskRegistry functionality."""
 
 import pytest
 from beyondbench.core.task_registry import TaskRegistry
 
 
-class TestTaskRegistry:
-    """Test TaskRegistry class."""
-
+class TestTaskRegistryInit:
     @pytest.fixture
     def registry(self):
-        """Create a TaskRegistry instance."""
         return TaskRegistry()
 
-    def test_registry_initialization(self, registry):
-        """Test registry initializes correctly."""
+    def test_initialization(self, registry):
         assert registry is not None
+        assert hasattr(registry, '_tasks')
+        assert hasattr(registry, '_suite_mapping')
 
-    def test_get_easy_tasks(self, registry):
-        """Test retrieving easy tasks."""
-        tasks = registry.get_tasks_for_suite("easy")
-        assert isinstance(tasks, (list, dict))
-        assert len(tasks) > 0
-
-    def test_get_medium_tasks(self, registry):
-        """Test retrieving medium tasks."""
-        tasks = registry.get_tasks_for_suite("medium")
-        assert isinstance(tasks, (list, dict))
-
-    def test_get_hard_tasks(self, registry):
-        """Test retrieving hard tasks."""
-        tasks = registry.get_tasks_for_suite("hard")
-        assert isinstance(tasks, (list, dict))
-
-    def test_get_all_tasks(self, registry):
-        """Test retrieving all tasks."""
-        all_tasks = registry.get_tasks_for_suite("all")
-        easy_tasks = registry.get_tasks_for_suite("easy")
-        medium_tasks = registry.get_tasks_for_suite("medium")
-        hard_tasks = registry.get_tasks_for_suite("hard")
-
-        # All tasks should include tasks from all suites
-        if isinstance(all_tasks, list):
-            assert len(all_tasks) >= len(easy_tasks)
-
-    def test_invalid_suite(self, registry):
-        """Test invalid suite name handling."""
-        tasks = registry.get_tasks_for_suite("invalid_suite_name")
-        # Should return empty or raise appropriate error
-        assert tasks is None or len(tasks) == 0 or isinstance(tasks, (list, dict))
+    def test_suite_mapping_has_all_suites(self, registry):
+        assert 'easy' in registry._suite_mapping
+        assert 'medium' in registry._suite_mapping
+        assert 'hard' in registry._suite_mapping
 
     def test_easy_task_count(self, registry):
-        """Test that easy suite has expected number of tasks."""
         tasks = registry.get_tasks_for_suite("easy")
-        # Should have 29 easy tasks
-        if isinstance(tasks, list):
-            assert len(tasks) == 29
-        elif isinstance(tasks, dict):
-            assert len(tasks) == 29
+        assert len(tasks) == 29
 
-
-class TestTaskRegistryContents:
-    """Test specific task registration."""
-
-    @pytest.fixture
-    def registry(self):
-        """Create a TaskRegistry instance."""
-        return TaskRegistry()
-
-    def test_sum_task_registered(self, registry):
-        """Test that sum task is registered."""
-        tasks = registry.get_tasks_for_suite("easy")
-        task_list = list(tasks) if isinstance(tasks, dict) else tasks
-        # Should contain 'sum' task
-        assert 'sum' in task_list or any('sum' in str(t).lower() for t in task_list)
-
-    def test_sorting_task_registered(self, registry):
-        """Test that sorting task is registered."""
-        tasks = registry.get_tasks_for_suite("easy")
-        task_list = list(tasks) if isinstance(tasks, dict) else tasks
-        assert 'sorting' in task_list or any('sort' in str(t).lower() for t in task_list)
-
-    def test_medium_suite_has_sequence_tasks(self, registry):
-        """Test that medium suite has sequence tasks."""
+    def test_medium_task_count(self, registry):
         tasks = registry.get_tasks_for_suite("medium")
-        assert len(tasks) >= 5  # At least 5 medium tasks
+        assert len(tasks) == 5
 
-    def test_hard_suite_has_complex_tasks(self, registry):
-        """Test that hard suite has complex tasks."""
+    def test_hard_task_count(self, registry):
         tasks = registry.get_tasks_for_suite("hard")
-        assert len(tasks) >= 10  # At least 10 hard tasks
+        assert len(tasks) == 10
+
+    def test_all_tasks_count(self, registry):
+        tasks = registry.get_tasks_for_suite("all")
+        assert len(tasks) == 44
+
+    def test_invalid_suite_returns_empty(self, registry):
+        tasks = registry.get_tasks_for_suite("nonexistent")
+        assert tasks == []
 
 
-class TestTaskAccess:
-    """Test accessing individual tasks."""
-
+class TestTaskClassImports:
     @pytest.fixture
     def registry(self):
-        """Create a TaskRegistry instance."""
         return TaskRegistry()
 
-    def test_get_task_by_name(self, registry):
-        """Test getting a task by name."""
-        # Try to get a specific task
-        if hasattr(registry, 'get_task'):
-            task = registry.get_task('sum')
-            assert task is not None
-        else:
-            # Registry might use different method
-            tasks = registry.get_tasks_for_suite('easy')
-            assert len(tasks) > 0
+    def test_easy_tasks_imported(self, registry):
+        """Verify all 29 easy task classes were actually imported."""
+        easy_tasks = registry.get_tasks_for_suite("easy")
+        imported = sum(1 for t in easy_tasks if t in registry._tasks)
+        assert imported == 29, f"Only {imported}/29 easy tasks imported"
 
-    def test_task_has_info(self, registry):
-        """Test that tasks have information available."""
-        tasks = registry.get_tasks_for_suite('easy')
-        assert tasks is not None
-        # Should have at least one task
-        assert len(tasks) > 0
+    def test_medium_tasks_imported(self, registry):
+        medium_tasks = registry.get_tasks_for_suite("medium")
+        imported = sum(1 for t in medium_tasks if t in registry._tasks)
+        assert imported == 5, f"Only {imported}/5 medium tasks imported"
+
+    def test_hard_tasks_imported(self, registry):
+        hard_tasks = registry.get_tasks_for_suite("hard")
+        imported = sum(1 for t in hard_tasks if t in registry._tasks)
+        assert imported == 10, f"Only {imported}/10 hard tasks imported"
+
+    def test_get_task_class_returns_class(self, registry):
+        task_class = registry.get_task_class("sum")
+        assert task_class is not None
+
+    def test_get_task_class_unknown_returns_none(self, registry):
+        task_class = registry.get_task_class("nonexistent_task_xyz")
+        assert task_class is None
+
+    def test_validate_task_name(self, registry):
+        assert registry.validate_task_name("sum") is True
+        assert registry.validate_task_name("sorting") is True
+        assert registry.validate_task_name("fake_task") is False
+
+    def test_get_task_info(self, registry):
+        info = registry.get_task_info("sum")
+        assert info is not None
+        assert info["suite"] == "easy"
+        assert info["name"] == "sum"
+
+    def test_get_task_info_unknown_returns_none(self, registry):
+        info = registry.get_task_info("nonexistent_task_xyz")
+        assert info is None
+
+    def test_get_available_tasks(self, registry):
+        available = registry.get_available_tasks("all")
+        assert "easy" in available
+        assert "medium" in available
+        assert "hard" in available
+
+    def test_get_available_tasks_single_suite(self, registry):
+        available = registry.get_available_tasks("easy")
+        assert "easy" in available
+        assert "medium" not in available
+
+    def test_get_available_tasks_unknown_suite(self, registry):
+        available = registry.get_available_tasks("nonexistent")
+        assert available == {}
+
+    def test_get_suite_stats(self, registry):
+        stats = registry.get_suite_stats()
+        assert stats["easy"] == 29
+        assert stats["medium"] == 5
+        assert stats["hard"] == 10

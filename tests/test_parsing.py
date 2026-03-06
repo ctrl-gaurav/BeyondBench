@@ -401,3 +401,65 @@ class TestEdgeCases:
         """Test list with float numbers."""
         result = extract_list("[1.1, 2.2, 3.3]")
         assert result == [1.1, 2.2, 3.3]
+
+
+class TestComparisonParsing:
+    """Test comparison-specific parsing."""
+
+    def test_greater_than_boxed(self):
+        result = parse_boxed_answer(r"\boxed{greater than}", "string")
+        assert result is not None
+        assert "greater" in str(result).lower()
+
+    def test_less_than_natural_language(self):
+        from beyondbench.utils.parsing import extract_from_final_answer
+        result = extract_from_final_answer("After comparing, the answer is less than.")
+        assert result is not None
+
+
+class TestSequenceParsing:
+    """Test sequence answer parsing."""
+
+    def test_fibonacci_answer(self):
+        from beyondbench.utils.sequence_parsing_utils import parse_fibonacci_answer
+        result = parse_fibonacci_answer(r"The next Fibonacci number is \boxed{21}")
+        assert result == 21
+
+    def test_sequence_parser_class(self):
+        from beyondbench.utils.sequence_parsing_utils import SequenceAnswerParser
+        parser = SequenceAnswerParser()
+        result = parser.parse_sequence_answer(r"\boxed{55}", "fibonacci")
+        assert result == 55
+
+
+class TestGridParsing:
+    """Test grid/matrix parsing."""
+
+    def test_sudoku_grid(self):
+        grid_text = "1 2 3\n4 5 6\n7 8 9"
+        result = parse_grid(grid_text)
+        assert result == [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+
+    def test_json_grid(self):
+        result = parse_grid("[[1,2],[3,4]]")
+        assert result == [[1, 2], [3, 4]]
+
+
+class TestRobustExtraction:
+    """Test robust_extract_answer edge cases."""
+
+    def test_markdown_bold_answer(self):
+        result = parse_boxed_answer("The final answer is **42**", "number")
+        assert result == 42
+
+    def test_code_block_answer(self):
+        result = parse_boxed_answer("```\nanswer = 42\n```", "number")
+        assert result == 42
+
+    def test_answer_tag(self):
+        result = parse_boxed_answer("<answer>42</answer>", "number")
+        assert result == 42
+
+    def test_latex_text_in_boxed(self):
+        result = parse_boxed_answer(r"\boxed{\text{42}}", "number")
+        assert result == 42
