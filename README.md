@@ -7,7 +7,8 @@
 [![Paper](https://img.shields.io/badge/📄_Paper-ArXiv%3A2509.24210-red?style=for-the-badge&logo=arxiv)](https://arxiv.org/abs/2509.24210)
 [![Conference](https://img.shields.io/badge/🏆_ICLR-2026-blue?style=for-the-badge)](https://iclr.cc/)
 [![PyPI](https://img.shields.io/pypi/v/beyondbench.svg?style=for-the-badge&logo=pypi&logoColor=white)](https://pypi.org/project/beyondbench/)
-[![Python](https://img.shields.io/pypi/pyversions/beyondbench.svg?style=for-the-badge&logo=python&logoColor=white)](https://pypi.org/project/beyondbench/)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python&logoColor=white)](https://pypi.org/project/beyondbench/)
+[![CI](https://img.shields.io/github/actions/workflow/status/ctrl-gaurav/BeyondBench/test.yml?branch=main&style=for-the-badge&logo=github&label=CI)](https://github.com/ctrl-gaurav/BeyondBench/actions/workflows/test.yml)
 [![License](https://img.shields.io/badge/License-Apache_2.0-green.svg?style=for-the-badge)](LICENSE)
 [![Stars](https://img.shields.io/github/stars/ctrl-gaurav/BeyondBench?style=for-the-badge&logo=github)](https://github.com/ctrl-gaurav/BeyondBench/stargazers)
 
@@ -25,9 +26,9 @@
 
 | Date | Update |
 |------|--------|
-| **Mar 2026** | v0.1.0 released &mdash; FastAPI serve, CLI improvements, CI/CD, comprehensive tests. See [Changelog](CHANGELOG.md) |
-| **Feb 2026** | v0.0.2 released &mdash; critical bug fixes, much more stable! See [Changelog](CHANGELOG.md) |
-| **Feb 2026** | v0.0.1 released &mdash; 44 tasks, 117 variations, 101+ models |
+| **Mar 6, 2026** | v0.1.0 released &mdash; FastAPI serve, CLI improvements, CI/CD, comprehensive tests. See [Changelog](CHANGELOG.md) |
+| **Feb 25, 2026** | v0.0.2 released &mdash; critical bug fixes, much more stable! See [Changelog](CHANGELOG.md) |
+| **Feb 25, 2026** | v0.0.1 released &mdash; 44 tasks, 117 variations, 101+ models |
 | **Jan 2026** | Paper accepted at **ICLR 2026** |
 | **Jan 2026** | Interactive leaderboard website launched |
 | **Sep 2025** | Paper submitted: [arXiv:2509.24210](https://arxiv.org/abs/2509.24210) |

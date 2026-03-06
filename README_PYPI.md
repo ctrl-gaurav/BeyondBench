@@ -3,7 +3,7 @@
 [![Paper](https://img.shields.io/badge/Paper-arXiv%3A2509.24210-red?style=for-the-badge&logo=arxiv)](https://arxiv.org/abs/2509.24210)
 [![ICLR 2026](https://img.shields.io/badge/ICLR-2026-blue?style=for-the-badge)](https://iclr.cc/)
 [![PyPI](https://img.shields.io/pypi/v/beyondbench.svg?style=for-the-badge&logo=pypi&logoColor=white)](https://pypi.org/project/beyondbench/)
-[![Python](https://img.shields.io/pypi/pyversions/beyondbench.svg?style=for-the-badge&logo=python&logoColor=white)](https://pypi.org/project/beyondbench/)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python&logoColor=white)](https://pypi.org/project/beyondbench/)
 [![License](https://img.shields.io/badge/License-Apache_2.0-green.svg?style=for-the-badge)](https://github.com/ctrl-gaurav/BeyondBench/blob/main/LICENSE)
 [![Stars](https://img.shields.io/github/stars/ctrl-gaurav/BeyondBench?style=for-the-badge&logo=github)](https://github.com/ctrl-gaurav/BeyondBench/stargazers)
 
