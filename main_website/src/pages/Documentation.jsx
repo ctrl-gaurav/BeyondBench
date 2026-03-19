@@ -1,6 +1,7 @@
-import { useState } from 'react'
-import { BookOpen, Terminal, Code, Settings, Layers, Cpu, Package, FileText, ChevronRight, Hexagon, Copy, Check, Zap, Database, GitBranch, Shield, BarChart3, Wrench, Globe, AlertTriangle, Lightbulb } from 'lucide-react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { BookOpen, Terminal, Code, Settings, Layers, Cpu, Package, FileText, ChevronRight, Hexagon, Copy, Check, Zap, Database, GitBranch, Shield, BarChart3, Wrench, Globe, AlertTriangle, Lightbulb, ArrowUp } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext'
+import { usePyPIVersion } from '../hooks/usePyPIVersion'
 
 function CodeBlock({ code, language = 'bash' }) {
   const [copied, setCopied] = useState(false)
@@ -16,12 +17,21 @@ function CodeBlock({ code, language = 'bash' }) {
         isDark ? 'bg-bb-dark-600/80 border-bb-dark-50/20' : 'bg-gray-100 border-gray-200'
       }`}>
         <span className={`text-[10px] uppercase tracking-wider font-mono ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>{language}</span>
-        <button onClick={handleCopy} className={`transition-colors ${isDark ? 'text-gray-600 hover:text-bb-accent' : 'text-gray-400 hover:text-bb-accent-dark'}`}>
+        <button
+          onClick={handleCopy}
+          className={`transition-all duration-300 ${
+            copied
+              ? isDark ? 'text-bb-accent scale-110' : 'text-bb-accent-dark scale-110'
+              : isDark ? 'text-gray-600 hover:text-bb-accent hover:scale-110' : 'text-gray-400 hover:text-bb-accent-dark hover:scale-110'
+          } ${copied ? 'copy-success' : ''}`}
+        >
           {copied ? <Check className={`w-3.5 h-3.5 ${isDark ? 'text-bb-accent' : 'text-bb-accent-dark'}`} /> : <Copy className="w-3.5 h-3.5" />}
         </button>
       </div>
-      <pre className={`rounded-b-lg p-4 overflow-x-auto text-sm font-mono leading-relaxed border ${
-        isDark ? 'bg-bb-dark-500/80 border-bb-dark-50/20 text-gray-300' : 'bg-gray-50 border-gray-200 text-gray-700'
+      <pre className={`rounded-b-lg p-4 overflow-x-auto text-sm font-mono leading-relaxed border transition-all duration-300 group-hover:shadow-lg ${
+        isDark
+          ? 'bg-bb-dark-500/80 border-bb-dark-50/20 text-gray-300 group-hover:border-bb-accent/10'
+          : 'bg-gray-50 border-gray-200 text-gray-700 group-hover:border-bb-accent-dark/10'
       }`}>
         <code>{code}</code>
       </pre>
@@ -31,13 +41,35 @@ function CodeBlock({ code, language = 'bash' }) {
 
 function Section({ id, icon: Icon, title, children }) {
   const { isDark } = useTheme()
+  const ref = useRef(null)
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setVisible(true)
+        observer.unobserve(el)
+      }
+    }, { threshold: 0.05 })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
   return (
-    <section id={id} className="mb-12 scroll-mt-24">
+    <section
+      ref={ref}
+      id={id}
+      className={`mb-12 scroll-mt-24 transition-all duration-700 ease-out ${
+        visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+      }`}
+    >
       <div className="flex items-center gap-3 mb-4">
-        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isDark ? 'bg-bb-accent/10' : 'bg-bb-accent-dark/10'}`}>
+        <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 hover:scale-110 ${isDark ? 'bg-bb-accent/10' : 'bg-bb-accent-dark/10'}`}>
           <Icon className={`w-4 h-4 ${isDark ? 'text-bb-accent' : 'text-bb-accent-dark'}`} />
         </div>
-        <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{title}</h2>
+        <h2 className={`text-xl font-bold tracking-wide ${isDark ? 'text-white' : 'text-gray-900'}`}>{title}</h2>
       </div>
       <div className={`leading-relaxed text-sm space-y-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{children}</div>
     </section>
@@ -48,7 +80,7 @@ function SubSection({ title, children }) {
   const { isDark } = useTheme()
   return (
     <div className="mt-6">
-      <h3 className={`text-base font-semibold mb-3 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{title}</h3>
+      <h3 className={`text-base font-semibold mb-3 tracking-wide ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{title}</h3>
       <div className={`text-sm space-y-3 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{children}</div>
     </div>
   )
@@ -67,10 +99,35 @@ function Callout({ type = 'info', children }) {
     tip: <Lightbulb className="w-4 h-4 text-green-400 shrink-0 mt-0.5" />,
   }
   return (
-    <div className={`border-l-2 ${styles[type]} rounded-r-lg p-3 flex gap-2 text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+    <div className={`border-l-2 ${styles[type]} rounded-r-lg p-3 flex gap-2 text-xs transition-all duration-300 hover:translate-x-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
       {icons[type]}
       <div>{children}</div>
     </div>
+  )
+}
+
+function BackToTop({ isDark }) {
+  const [show, setShow] = useState(false)
+
+  useEffect(() => {
+    const handleScroll = () => setShow(window.scrollY > 400)
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  if (!show) return null
+
+  return (
+    <button
+      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+      className={`back-to-top ${
+        isDark
+          ? 'bg-bb-accent/20 text-bb-accent border border-bb-accent/30 hover:bg-bb-accent/30'
+          : 'bg-bb-accent-dark/20 text-bb-accent-dark border border-bb-accent-dark/30 hover:bg-bb-accent-dark/30'
+      }`}
+    >
+      <ArrowUp className="w-4 h-4" />
+    </button>
   )
 }
 
@@ -98,20 +155,44 @@ const NAV_ITEMS = [
 export default function Documentation() {
   const [activeSection, setActiveSection] = useState('overview')
   const { isDark } = useTheme()
+  const pypiVersion = usePyPIVersion('beyondbench')
+
+  // Scroll spy using IntersectionObserver
+  useEffect(() => {
+    const sectionIds = NAV_ITEMS.map(item => item.id)
+    const observers = []
+
+    sectionIds.forEach(id => {
+      const el = document.getElementById(id)
+      if (!el) return
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            setActiveSection(id)
+          }
+        },
+        { rootMargin: '-20% 0px -70% 0px', threshold: 0 }
+      )
+      observer.observe(el)
+      observers.push(observer)
+    })
+
+    return () => observers.forEach(obs => obs.disconnect())
+  }, [])
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:pl-64">
-      {/* Sidebar - fixed full-height panel */}
+      {/* Sidebar - fixed full-height panel with scroll spy */}
       <nav className={`hidden lg:flex flex-col fixed left-0 top-16 bottom-0 w-56 z-40 border-r px-4 pt-8 pb-6 overflow-y-auto ${
         isDark
           ? 'bg-bb-dark-500/90 backdrop-blur-xl border-bb-dark-50/20'
           : 'bg-white/90 backdrop-blur-xl border-bb-light-300/50'
       }`}>
-        <div className="flex items-center gap-2 mb-6">
-          <Hexagon className={`w-5 h-5 ${isDark ? 'text-bb-accent' : 'text-bb-accent-dark'}`} />
-          <span className={`text-sm font-bold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Documentation</span>
+        <div className="flex items-center gap-2 mb-6 group">
+          <Hexagon className={`w-5 h-5 transition-all duration-500 group-hover:rotate-[30deg] ${isDark ? 'text-bb-accent' : 'text-bb-accent-dark'}`} />
+          <span className={`text-sm font-bold tracking-wide ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Documentation</span>
         </div>
-        <ul className="space-y-1 flex-1">
+        <ul className="space-y-0.5 flex-1">
           {NAV_ITEMS.map(item => (
             <li key={item.id}>
               <button
@@ -120,13 +201,15 @@ export default function Documentation() {
                   const el = document.getElementById(item.id)
                   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
                 }}
-                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all text-left ${
+                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-300 text-left scroll-spy-item ${
                   activeSection === item.id
-                    ? isDark ? 'bg-bb-accent/10 text-bb-accent' : 'bg-bb-accent-dark/10 text-bb-accent-dark'
+                    ? isDark
+                      ? 'bg-bb-accent/10 text-bb-accent shadow-[0_0_10px_rgba(0,230,118,0.08)] active'
+                      : 'bg-bb-accent-dark/10 text-bb-accent-dark active'
                     : isDark ? 'text-gray-500 hover:text-gray-300 hover:bg-bb-dark-300/30' : 'text-gray-500 hover:text-gray-700 hover:bg-bb-light-200'
                 }`}
               >
-                <item.icon className="w-3.5 h-3.5 shrink-0" />
+                <item.icon className={`w-3.5 h-3.5 shrink-0 transition-transform duration-300 ${activeSection === item.id ? 'scale-110' : ''}`} />
                 {item.label}
               </button>
             </li>
@@ -134,19 +217,24 @@ export default function Documentation() {
         </ul>
       </nav>
 
+      {/* Back to top button */}
+      <BackToTop isDark={isDark} />
+
       {/* Content */}
       <div className="min-w-0">
           {/* Header */}
-          <div className="glass-card p-6 mb-8">
+          <div className="glass-card p-6 mb-8 shine-effect">
             <div className="flex items-center gap-3 mb-3">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 hover:scale-110 ${
                 isDark ? 'bg-gradient-to-br from-bb-accent/20 to-bb-teal/20' : 'bg-gradient-to-br from-bb-accent-dark/15 to-bb-teal/15'
               }`}>
                 <BookOpen className={`w-5 h-5 ${isDark ? 'text-bb-accent' : 'text-bb-accent-dark'}`} />
               </div>
               <div>
-                <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>BeyondBench Documentation</h1>
-                <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>v0.0.2 &bull; pip install beyondbench</p>
+                <h1 className={`text-2xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  BeyondBench <span className="gradient-text-green">Documentation</span>
+                </h1>
+                <p className={`text-xs font-mono ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>v{pypiVersion || '...'} &bull; pip install beyondbench</p>
               </div>
             </div>
             <p className={`text-sm leading-relaxed ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -774,7 +862,7 @@ beyondbench list-tasks --suite hard  # Show only hard tasks`} />
 
             <SubSection title="beyondbench --version">
               <CodeBlock code={`beyondbench --version
-# Output: beyondbench, version 0.0.2`} />
+# Output: beyondbench, version ${pypiVersion || '<latest>'}`} />
             </SubSection>
           </Section>
 
@@ -1211,7 +1299,7 @@ handler._backend = MyCustomBackend("my-model")`} />
     }
   },
   "metadata": {
-    "version": "0.0.2",
+    "version": "${pypiVersion || '<latest>'}",
     "timestamp": "2025-02-05T10:30:00Z",
     "seed": 42,
     "temperature": 0.7,
