@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { Trophy, Search, ChevronDown, ChevronUp, Filter, BarChart3, Zap, Brain, Target, Hexagon, TrendingUp, Award, Crown, Medal, Star, ArrowUpRight, ExternalLink, Check, Copy } from 'lucide-react'
 import { modelData, paperInfo } from '../data/modelData'
+import { usePyPIVersion } from '../hooks/usePyPIVersion'
 import { useTheme } from '../context/ThemeContext'
 
 function useStaggeredReveal(count, baseDelay = 100) {
@@ -210,6 +211,7 @@ function PodiumCard({ model, index }) {
 export default function Leaderboard() {
   const { isDark } = useTheme()
   const [copied, setCopied] = useState(false)
+  const pypiVersion = usePyPIVersion()
   const [search, setSearch] = useState('')
   const [sortKey, setSortKey] = useState('accuracy')
   const [sortDir, setSortDir] = useState('desc')
@@ -391,7 +393,7 @@ export default function Leaderboard() {
                   : 'bg-bb-light-200 text-gray-500 border border-bb-light-300 hover:text-gray-700'
               }`}
             >
-              PyPI
+              PyPI{pypiVersion ? ` v${pypiVersion}` : ''}
               <ArrowUpRight className="w-3 h-3" />
             </a>
           </div>
@@ -443,6 +445,9 @@ export default function Leaderboard() {
                     <span style={{ color: isDark ? '#60a5fa' : '#2563eb' }}>install</span>
                     {' '}
                     <span style={{ color: isDark ? '#34d399' : '#059669' }}>beyondbench</span>
+                    {pypiVersion && (
+                      <span className={`ml-2 text-xs ${isDark ? 'text-gray-600' : 'text-gray-400'}`}># v{pypiVersion}</span>
+                    )}
                     <span className={`inline-block w-[8px] h-[16px] ml-0.5 align-middle rounded-[1px] ${isDark ? 'bg-bb-accent' : 'bg-bb-accent-dark'}`} style={{ animation: 'blink 1s step-end infinite' }} />
                   </code>
                 </div>

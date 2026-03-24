@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { BookOpen, Terminal, Code, Settings, Layers, Cpu, Package, FileText, Hexagon, Copy, Check, Zap, Database, GitBranch, Shield, BarChart3, Wrench, Globe, AlertTriangle, Lightbulb, Search, ChevronDown } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext'
+import { usePyPIVersion } from '../hooks/usePyPIVersion'
 
 /* ============ SYNTAX HIGHLIGHTING ============ */
 
@@ -261,12 +262,12 @@ function OverviewContent({ isDark, cardCls, headCls, textCls }) {
   )
 }
 
-function InstallationContent({ isDark, cardCls, headCls, subheadCls, textCls }) {
+function InstallationContent({ isDark, cardCls, headCls, subheadCls, textCls, pypiVersion }) {
   return (
     <div className="space-y-6">
       <div className={cardCls}>
         <h2 className={headCls}>Installation</h2>
-        <p className={textCls}>Get BeyondBench up and running in minutes.</p>
+        <p className={textCls}>Get BeyondBench up and running in minutes.{pypiVersion && <span className="ml-2 font-mono text-xs opacity-60">Latest: v{pypiVersion}</span>}</p>
       </div>
       <div className={cardCls}>
         <h3 className={subheadCls}>From PyPI (Recommended)</h3>
@@ -1243,7 +1244,7 @@ beyondbench/tasks/hard/my_task.py           # For hard tasks`} />
   )
 }
 
-function OutputContent({ isDark, cardCls, headCls, subheadCls, textCls }) {
+function OutputContent({ isDark, cardCls, headCls, subheadCls, textCls, pypiVersion }) {
   return (
     <div className="space-y-6">
       <div className={cardCls}>
@@ -1270,7 +1271,7 @@ function OutputContent({ isDark, cardCls, headCls, subheadCls, textCls }) {
     "sudoku": { "accuracy": 0.12, "instruction_following": 0.98, "suite": "hard" }
   },
   "metadata": {
-    "version": "0.0.2",
+    "version": "${pypiVersion || '0.1.0'}",
     "timestamp": "2025-02-05T10:30:00Z",
     "seed": 42
   }
@@ -1357,6 +1358,7 @@ export default function Documentation() {
   const [activeSection, setActiveSection] = useState('overview')
   const [searchQuery, setSearchQuery] = useState('')
   const { isDark } = useTheme()
+  const pypiVersion = usePyPIVersion()
 
   const cardCls = `p-6 sm:p-8 rounded-2xl ${isDark ? 'glass-card' : 'bg-white/70 backdrop-blur-xl border border-gray-200/60 shadow-sm'}`
   const headCls = `text-xl sm:text-2xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`
@@ -1365,7 +1367,7 @@ export default function Documentation() {
   const labelCls = `text-xs font-mono uppercase tracking-wider mb-2 ${isDark ? 'text-bb-accent' : 'text-bb-accent-dark'}`
   const inlineCodeCls = `font-mono text-xs px-1.5 py-0.5 rounded-md ${isDark ? 'bg-bb-dark-400/60 text-bb-accent border border-bb-dark-50/20' : 'bg-gray-100 text-bb-accent-dark border border-gray-200'}`
 
-  const contentProps = { isDark, cardCls, headCls, subheadCls, textCls, labelCls, inlineCodeCls }
+  const contentProps = { isDark, cardCls, headCls, subheadCls, textCls, labelCls, inlineCodeCls, pypiVersion }
 
   const sectionContent = {
     'overview': <OverviewContent {...contentProps} />,

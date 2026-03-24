@@ -1,8 +1,10 @@
 import { Hexagon, Github, FileText, Package, ExternalLink, Mail, ArrowUpRight } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext'
+import { usePyPIVersion } from '../hooks/usePyPIVersion'
 
 export default function Footer() {
   const { isDark } = useTheme()
+  const pypiVersion = usePyPIVersion()
 
   const linkClass = `inline-flex items-center gap-1.5 transition-all duration-200 hover-line ${
     isDark ? 'text-gray-500 hover:text-bb-accent' : 'text-gray-500 hover:text-bb-accent-dark'
@@ -84,7 +86,7 @@ export default function Footer() {
               <li>
                 <a href="https://pypi.org/project/beyondbench/" target="_blank" rel="noopener noreferrer" className={linkClass}>
                   <Package className="w-3.5 h-3.5" />
-                  PyPI Package
+                  PyPI Package{pypiVersion ? ` v${pypiVersion}` : ''}
                 </a>
               </li>
               <li>

@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { Trophy, BookOpen, Github, FileText, Hexagon, Sun, Moon, ExternalLink, Menu, X, Package } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useTheme } from '../context/ThemeContext'
+import { usePyPIVersion } from '../hooks/usePyPIVersion'
 
 export default function Navbar() {
   const location = useLocation()
@@ -9,6 +10,7 @@ export default function Navbar() {
   const { isDark, toggleTheme } = useTheme()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
+  const pypiVersion = usePyPIVersion()
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20)
@@ -119,7 +121,7 @@ export default function Navbar() {
             </a>
             <a href="https://pypi.org/project/beyondbench/" target="_blank" rel="noopener noreferrer" className={extLinkClass}>
               <Package className="w-4 h-4" />
-              <span>PyPI</span>
+              <span>PyPI{pypiVersion ? ` v${pypiVersion}` : ''}</span>
             </a>
 
             <div className={`w-px h-6 mx-2 ${isDark ? 'bg-bb-dark-50/20' : 'bg-bb-light-300'}`} />
@@ -188,7 +190,7 @@ export default function Navbar() {
                 <Github className="w-4 h-4" /> GitHub
               </a>
               <a href="https://pypi.org/project/beyondbench/" target="_blank" rel="noopener noreferrer" className={extLinkClass}>
-                <Package className="w-4 h-4" /> PyPI
+                <Package className="w-4 h-4" /> PyPI{pypiVersion ? ` v${pypiVersion}` : ''}
               </a>
             </div>
           </div>
