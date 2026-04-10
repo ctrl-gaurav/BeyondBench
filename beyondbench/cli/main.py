@@ -89,6 +89,14 @@ def main():
 @click.option('--parser', type=click.Choice(['unified', 'legacy']), default='unified',
               help='Parser mode: unified (Phase 1 UnifiedParser) or legacy (original per-task parsers)')
 
+# Multi-GPU Parallel Options
+@click.option('--parallel', is_flag=True, default=False, help='Enable multi-GPU parallel evaluation')
+@click.option('--gpus', default='auto', show_default=True,
+              help='GPU IDs for parallel eval: "auto" (detect free GPUs), "0,1,2,3", or "0-7"')
+@click.option('--strategy', type=click.Choice(['task_parallel', 'data_parallel', 'model_parallel', 'auto']),
+              default='auto', show_default=True,
+              help='Parallel strategy: task_parallel (tasks→GPUs), data_parallel (split data), auto')
+
 def evaluate(**kwargs):
     """
     Run comprehensive evaluation on specified tasks.
@@ -137,39 +145,83 @@ def evaluate(**kwargs):
     except Exception:
         pass
 
+    # Determine if parallel mode is requested
+    use_parallel = config.get('parallel', False)
+
     try:
-        # Initialize model handler
-        logger.info(f"Initializing model handler for {config['model_id']}")
-        model_handler = ModelHandler(**config['model_config'])
+        if use_parallel:
+            # ------------------------------------------------------------------ #
+            # Parallel multi-GPU evaluation
+            # ------------------------------------------------------------------ #
+            from ..core.parallel_engine import ParallelEvaluationEngine
+            from ..core.gpu_scheduler import GPUScheduler
 
-        # Initialize evaluation engine
-        logger.info("Initializing evaluation engine")
-        evaluation_engine = EvaluationEngine(
-            model_handler=model_handler,
-            output_dir=str(output_dir),
-            **config['engine_config']
-        )
+            logger.info(f"[PARALLEL] Initialising parallel engine (gpus={config['gpus']}, strategy={config['strategy']})")
 
-        # Run evaluation
-        logger.info(f"Running evaluation on {config['suite']} suite")
-        results = evaluation_engine.run_evaluation(
-            suite=config['suite'],
-            tasks=config['tasks'],
-            **config['eval_config']
-        )
+            # We still create a lightweight model_handler for metadata only.
+            # Workers create their own handlers inside spawned processes.
+            # Use a stub/api handler if available so parent process loads no GPU weights.
+            model_handler = _create_metadata_handler(config['model_config'], logger)
+
+            parallel_engine = ParallelEvaluationEngine(
+                model_handler=model_handler,
+                output_dir=str(output_dir),
+                **config['engine_config']
+            )
+
+            scheduler = GPUScheduler()
+            gpu_ids = scheduler.parse_gpu_spec(config['gpus'], config['model_id'])
+
+            if not gpu_ids:
+                logger.error("No suitable GPUs found. Check --gpus argument and GPU memory.")
+                sys.exit(1)
+
+            logger.info(f"[PARALLEL] Using GPUs: {gpu_ids}  strategy={config['strategy']}")
+
+            results = parallel_engine.run_parallel_evaluation(
+                suite=config['suite'],
+                tasks=config['tasks'],
+                gpu_ids=gpu_ids,
+                strategy=config['strategy'],
+                model_id=config['model_id'],
+                model_kwargs=config['model_config'],
+                **config['eval_config']
+            )
+
+        else:
+            # ------------------------------------------------------------------ #
+            # Standard single-GPU evaluation
+            # ------------------------------------------------------------------ #
+            logger.info(f"Initializing model handler for {config['model_id']}")
+            model_handler = ModelHandler(**config['model_config'])
+
+            logger.info("Initializing evaluation engine")
+            evaluation_engine = EvaluationEngine(
+                model_handler=model_handler,
+                output_dir=str(output_dir),
+                **config['engine_config']
+            )
+
+            logger.info(f"Running evaluation on {config['suite']} suite")
+            results = evaluation_engine.run_evaluation(
+                suite=config['suite'],
+                tasks=config['tasks'],
+                **config['eval_config']
+            )
 
         # Print results summary
         print_results_summary(results)
 
-        # Save final results (evaluation_engine already saves, but this ensures CLI output dir has them)
+        # Save final results (engine already saves, but ensure CLI output dir has them)
         results_file = output_dir / "final_results.json"
         with open(results_file, 'w', encoding='utf-8') as f:
             json.dump(results, f, indent=2, ensure_ascii=False, default=str)
 
         logger.info(f"Evaluation completed successfully! Results saved to {output_dir}")
 
-        # Print statistics
-        model_handler.print_statistics_report()
+        # Print statistics (only for single-GPU mode where we have a handler)
+        if not use_parallel and hasattr(model_handler, 'print_statistics_report'):
+            model_handler.print_statistics_report()
 
     except KeyError as e:
         _handle_cli_error(e, "configuration")
@@ -842,6 +894,10 @@ def validate_and_prepare_config(kwargs: Dict[str, Any]) -> Dict[str, Any]:
         'engine_config': engine_config,
         'eval_config': eval_config,
         'parser_mode': kwargs.get('parser', 'unified'),
+        # Parallel options
+        'parallel': kwargs.get('parallel', False),
+        'gpus': kwargs.get('gpus', 'auto'),
+        'strategy': kwargs.get('strategy', 'auto'),
     }
 
 
@@ -952,6 +1008,43 @@ def _extract_accuracy(task_result: Any) -> float:
         elif 'overall_accuracy' in task_result:
             return task_result.get('overall_accuracy', 0)
     return 0.0
+
+
+def _create_metadata_handler(model_config: Dict[str, Any], log=None):
+    """Create a lightweight ModelHandler for the parent process.
+
+    In parallel mode the parent process must NOT load GPU weights — that's
+    the worker's job.  We create either an API handler (no GPU) or, for local
+    models, a thin stub that provides get_model_info() / get_statistics() but
+    skips model loading.
+    """
+    if model_config.get("api_provider"):
+        # API models are lightweight — safe to init in parent
+        return ModelHandler(**model_config)
+
+    # Local model: create a stub to avoid loading weights in the parent
+    class _MetaStub:
+        def __init__(self, cfg):
+            self.model_id = cfg.get("model_id", "")
+            self.backend = cfg.get("backend", "vllm")
+            self.api_provider = None
+            self.stats = {
+                "api_calls": 0,
+                "total_input_tokens": 0,
+                "total_output_tokens": 0,
+                "start_time": __import__("time").time(),
+                "prompts_processed": [],
+            }
+        def get_model_info(self):
+            return {"model_name": self.model_id, "backend": self.backend, "api_provider": None, "model_type": "local"}
+        def get_statistics(self):
+            return self.stats
+        def print_statistics_report(self):
+            pass
+        def generate(self, *a, **kw):
+            raise RuntimeError("Parent process stub — use worker processes for inference")
+
+    return _MetaStub(model_config)
 
 
 def _handle_cli_error(exc: Exception, error_type: str = "general") -> None:
