@@ -2,8 +2,23 @@
 Task-specific parsers for beyondbench package.
 
 These parsers provide robust, task-specific answer extraction for all easy suite tasks.
-They use the unified parsing utilities from beyondbench.utils.parsing as their foundation.
+They use the unified parsing utilities from beyondbench.utils.parsing as their foundation
+and shared extraction functions from beyondbench.parsers.common.
 """
+
+# Import shared extraction functions
+from .common import (
+    extract_from_boxed_formats,
+    extract_from_explicit_statements,
+    clean_and_convert_to_number,
+    extract_from_last_line,
+    extract_from_latex_math,
+    extract_from_code_blocks,
+    extract_from_markdown_formatting,
+    extract_input_numbers_from_prompt,
+    is_valid_number,
+    is_input_number,
+)
 
 # Import unified parsing functions
 from ..utils.parsing import (

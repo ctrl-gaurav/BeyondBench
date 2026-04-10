@@ -66,6 +66,7 @@ class BaseTask(ABC):
         self.max_consecutive_failures = 10  # Maximum consecutive failures before stopping
         
         # Initialize token counter
+        self._token_counting_warned = False  # Only warn once about fallback
         self._init_token_counter()
         
         # Create task-specific directory
@@ -186,10 +187,15 @@ class BaseTask(ABC):
                     return len(tokens)
             
             # Fallback to improved word-based estimation
+            if not self._token_counting_warned:
+                logging.warning("⚠️  Token counter unavailable, using word-based estimation for this evaluation")
+                self._token_counting_warned = True
             return self._estimate_tokens_from_words(text)
-            
+
         except Exception as e:
-            logging.warning(f"⚠️  Token counting failed: {e}, using word estimation")
+            if not self._token_counting_warned:
+                logging.warning(f"⚠️  Token counting failed: {e}, using word estimation for this evaluation")
+                self._token_counting_warned = True
             return self._estimate_tokens_from_words(text)
     
     def _estimate_tokens_from_words(self, text: str) -> int:
@@ -403,16 +409,14 @@ class BaseTask(ABC):
         return "", 0, False, metadata
     
     def _generate_vllm_response(self, prompt: str) -> Tuple[str, int]:
-        """Generate response using vLLM backend with accurate token counting"""
-        # For vLLM, we need to format the prompt according to the chat template
-        messages = [{"role": "user", "content": prompt}]
-        formatted_prompt = self.model_handler.tokenizer.apply_chat_template(
-            messages, add_generation_prompt=True, tokenize=False
-        )
-        
-        # Use the model_handler's generate method
+        """Generate response using vLLM backend with accurate token counting.
+
+        Chat template is now applied centrally in ModelHandler._generate_local(),
+        so we pass the raw user prompt here.
+        """
+        # Use the model_handler's generate method (handler applies chat template)
         responses = self.model_handler.generate(
-            prompts=[formatted_prompt],
+            prompts=[prompt],
             temperature=self.temperature,
             top_p=self.top_p,
             max_tokens=self.max_tokens
@@ -507,19 +511,12 @@ class BaseTask(ABC):
         for i, data_point in enumerate(tqdm(data, desc="Preparing prompts")):
             try:
                 prompt = self.create_prompt(data_point)
-
-                # Format prompt for vLLM chat template
-                messages = [{"role": "user", "content": prompt}]
-                formatted_prompt = self.model_handler.tokenizer.apply_chat_template(
-                    messages, add_generation_prompt=True, tokenize=False
-                )
-
-                prompts.append(formatted_prompt)
-                data_points.append((i, data_point, prompt))  # Keep original prompt for logging
+                # Chat template is now applied centrally in ModelHandler._generate_local()
+                prompts.append(prompt)
+                data_points.append((i, data_point, prompt))
 
             except Exception as e:
                 logging.warning(f"⚠️  Failed to create prompt for sample {i}: {e}")
-                # Add placeholder for failed prompt creation
                 prompts.append("")
                 data_points.append((i, data_point, ""))
 
@@ -538,24 +535,46 @@ class BaseTask(ABC):
 
         except Exception as e:
             logging.error(f"❌ Batch inference failed: {e}")
-            # Return empty results if batch fails completely
-            for i, data_point, prompt in data_points:
-                ground_truth = self._get_ground_truth(data_point)
-                fold_results.append({
-                    "prompt": prompt,
-                    "model_response": "",
-                    "string_len": 0,
-                    "words": 0,
-                    "tokens": 0,
-                    "generation_success": False,
-                    "parsing_success": False,
-                    "accuracy": 0,
-                    "instruction_followed": 0,
-                    "error": str(e),
-                    "predicted_answer": None,
-                    "ground_truth": ground_truth
-                })
-            return fold_results
+            logging.info("🔄 Retrying failed prompts sequentially...")
+            responses = []
+            retry_failures = 0
+            for idx, (i, data_point, original_prompt) in enumerate(data_points):
+                try:
+                    retry_resp = self.model_handler.generate(
+                        prompts=[prompts[idx]],
+                        temperature=self.temperature,
+                        top_p=self.top_p,
+                        max_tokens=self.max_tokens
+                    )
+                    responses.append(retry_resp[0] if retry_resp else "")
+                except Exception as retry_e:
+                    logging.warning(f"⚠️  Sequential retry failed for sample {i}: {retry_e}")
+                    responses.append("")
+                    retry_failures += 1
+            if retry_failures > 0:
+                logging.warning(f"⚠️  {retry_failures}/{len(data_points)} samples failed even on sequential retry")
+
+        # Retry individual empty responses from batch that may have partially failed
+        partial_failure_count = sum(1 for r in responses if not r)
+        if partial_failure_count > 0 and partial_failure_count < len(responses):
+            logging.info(f"🔄 Retrying {partial_failure_count} empty responses sequentially...")
+            retried = 0
+            for idx, resp in enumerate(responses):
+                if not resp and prompts[idx]:
+                    try:
+                        retry_resp = self.model_handler.generate(
+                            prompts=[prompts[idx]],
+                            temperature=self.temperature,
+                            top_p=self.top_p,
+                            max_tokens=self.max_tokens
+                        )
+                        if retry_resp and retry_resp[0]:
+                            responses[idx] = retry_resp[0]
+                            retried += 1
+                    except Exception as retry_e:
+                        logging.debug(f"Sequential retry failed for sample {idx}: {retry_e}")
+            if retried > 0:
+                logging.info(f"✅ Recovered {retried}/{partial_failure_count} failed samples via sequential retry")
 
         # Step 3: Evaluate all responses
         logging.info("📊 Step 3: Evaluating all responses...")
@@ -764,7 +783,14 @@ class BaseTask(ABC):
             # Try common ground truth keys used across different task types
             for key in ['answer', 'ground_truth', 'expected_answer', 'solution',
                         'correct_answer', 'target', 'label', 'sum', 'expected_relation',
-                        'optimal_moves', 'next_term']:
+                        'optimal_moves', 'next_term',
+                        # Medium/Hard task ground truth keys
+                        'expected_sequence', 'expected_grid', 'expected_moves',
+                        'expected_path', 'valid_assignment',
+                        # Additional keys used by various tasks
+                        'sorted_list', 'maximum', 'minimum', 'mean', 'median',
+                        'mode', 'count', 'product', 'difference', 'quotient',
+                        'result', 'expected_output']:
                 if key in data_point:
                     return data_point[key]
             return "unknown"

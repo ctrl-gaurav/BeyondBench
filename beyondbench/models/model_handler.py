@@ -46,6 +46,8 @@ class ModelHandler:
         self.reasoning_effort = reasoning_effort
         self.thinking_budget = thinking_budget
         self.client = None
+        self.skip_chat_template = kwargs.get('skip_chat_template', False)
+        self._chat_template_warned = False
 
         # Determine backend: api_provider takes precedence, then explicit backend, then kwargs engine, then default vllm
         if api_provider:
@@ -247,8 +249,13 @@ class ModelHandler:
 
     def _generate_api(self, prompts: List[str], max_tokens: int = 1024, temperature: float = 0.1,
                       top_p: float = 0.9, **kwargs) -> List[str]:
-        """Generate responses using API providers"""
+        """Generate responses using API providers.
+
+        Supports streaming for OpenAI, Gemini, and Anthropic backends.
+        Streaming is used by default to allow partial token tracking.
+        """
         responses = []
+        use_streaming = kwargs.get('stream', True)
 
         for prompt in prompts:
             generated_text = None
@@ -272,16 +279,25 @@ class ModelHandler:
                         api_params['temperature'] = temperature
                         api_params['top_p'] = top_p
 
-                        response = self.client.chat.completions.create(**api_params)
-                        generated_text = response.choices[0].message.content
-
-                        if hasattr(response, 'usage') and response.usage:
-                            input_tokens = response.usage.prompt_tokens
-                            output_tokens = response.usage.completion_tokens
-                            logging.info(f"🤖 OpenAI API call: model={self.model_id}, prompt_tokens={input_tokens}, completion_tokens={output_tokens}")
-                        else:
+                        if use_streaming:
+                            api_params['stream'] = True
+                            stream = self.client.chat.completions.create(**api_params)
+                            chunks = []
+                            for chunk in stream:
+                                if chunk.choices and chunk.choices[0].delta.content:
+                                    chunks.append(chunk.choices[0].delta.content)
+                            generated_text = "".join(chunks)
                             output_tokens = self._count_tokens(generated_text)
-                            logging.info(f"🤖 OpenAI API call: model={self.model_id}, estimated_output_tokens={output_tokens}")
+                            logging.info(f"🤖 OpenAI API call (streamed): model={self.model_id}, estimated_output_tokens={output_tokens}")
+                        else:
+                            response = self.client.chat.completions.create(**api_params)
+                            generated_text = response.choices[0].message.content
+                            if hasattr(response, 'usage') and response.usage:
+                                input_tokens = response.usage.prompt_tokens
+                                output_tokens = response.usage.completion_tokens
+                                logging.info(f"🤖 OpenAI API call: model={self.model_id}, prompt_tokens={input_tokens}, completion_tokens={output_tokens}")
+                            else:
+                                output_tokens = self._count_tokens(generated_text)
 
                     elif self.api_provider == "gemini":
                         if self.genai_types:
@@ -296,12 +312,24 @@ class ModelHandler:
                                     thinking_budget=self.thinking_budget
                                 )
 
-                            response = self.client.models.generate_content(
-                                model=self.model_id,
-                                contents=prompt,
-                                config=config
-                            )
-                            generated_text = response.text
+                            if use_streaming:
+                                stream = self.client.models.generate_content_stream(
+                                    model=self.model_id,
+                                    contents=prompt,
+                                    config=config
+                                )
+                                chunks = []
+                                for chunk in stream:
+                                    if hasattr(chunk, 'text') and chunk.text:
+                                        chunks.append(chunk.text)
+                                generated_text = "".join(chunks)
+                            else:
+                                response = self.client.models.generate_content(
+                                    model=self.model_id,
+                                    contents=prompt,
+                                    config=config
+                                )
+                                generated_text = response.text
                         else:
                             model = self.client.GenerativeModel(self.model_id)
                             generation_config = self.client.types.GenerationConfig(
@@ -317,28 +345,40 @@ class ModelHandler:
                         logging.info(f"🧠 Gemini API call: model={self.model_id}, estimated_input_tokens={input_tokens}, estimated_output_tokens={output_tokens}{thinking_budget_msg}")
 
                     elif self.api_provider == "anthropic":
-                        response = self.client.messages.create(
-                            model=self.model_id,
-                            max_tokens=max_tokens,
-                            temperature=temperature,
-                            top_p=top_p,
-                            messages=[
-                                {"role": "user", "content": prompt}
-                            ]
-                        )
-
-                        generated_text = ""
-                        for block in response.content:
-                            if hasattr(block, 'text'):
-                                generated_text += block.text
-
-                        if hasattr(response, 'usage'):
-                            input_tokens = response.usage.input_tokens
-                            output_tokens = response.usage.output_tokens
-                            logging.info(f"🎭 Anthropic API call: model={self.model_id}, input_tokens={input_tokens}, output_tokens={output_tokens}")
+                        if use_streaming:
+                            with self.client.messages.stream(
+                                model=self.model_id,
+                                max_tokens=max_tokens,
+                                temperature=temperature,
+                                top_p=top_p,
+                                messages=[{"role": "user", "content": prompt}]
+                            ) as stream:
+                                generated_text = stream.get_final_text()
+                                msg = stream.get_final_message()
+                                if hasattr(msg, 'usage'):
+                                    input_tokens = msg.usage.input_tokens
+                                    output_tokens = msg.usage.output_tokens
+                                else:
+                                    output_tokens = self._count_tokens(generated_text)
+                            logging.info(f"🎭 Anthropic API call (streamed): model={self.model_id}, input_tokens={input_tokens}, output_tokens={output_tokens}")
                         else:
-                            output_tokens = self._count_tokens(generated_text)
-                            logging.info(f"🎭 Anthropic API call: model={self.model_id}, estimated_output_tokens={output_tokens}")
+                            response = self.client.messages.create(
+                                model=self.model_id,
+                                max_tokens=max_tokens,
+                                temperature=temperature,
+                                top_p=top_p,
+                                messages=[{"role": "user", "content": prompt}]
+                            )
+                            generated_text = ""
+                            for block in response.content:
+                                if hasattr(block, 'text'):
+                                    generated_text += block.text
+                            if hasattr(response, 'usage'):
+                                input_tokens = response.usage.input_tokens
+                                output_tokens = response.usage.output_tokens
+                            else:
+                                output_tokens = self._count_tokens(generated_text)
+                            logging.info(f"🎭 Anthropic API call: model={self.model_id}, input_tokens={input_tokens}, output_tokens={output_tokens}")
 
                     # Update statistics
                     self.stats['api_calls'] += 1
@@ -366,10 +406,49 @@ class ModelHandler:
 
         return responses
 
+    def _apply_chat_template(self, prompt: str) -> str:
+        """Apply chat template to a raw user prompt.
+
+        Chat templating is centralized here so both vLLM and transformers
+        branches produce identically formatted inputs. Task-side code should
+        pass plain user prompts — this method wraps them in the model's chat
+        format (e.g. ``<|im_start|>user\n{prompt}<|im_end|>``).
+
+        If the tokenizer has no chat template or ``skip_chat_template`` is set,
+        the raw prompt is returned unchanged.
+        """
+        if getattr(self, 'skip_chat_template', False):
+            return prompt
+
+        tokenizer = getattr(self, 'tokenizer', None)
+        if tokenizer is None:
+            return prompt
+
+        try:
+            messages = [{"role": "user", "content": prompt}]
+            formatted = tokenizer.apply_chat_template(
+                messages, add_generation_prompt=True, tokenize=False
+            )
+            return formatted
+        except Exception as e:
+            if not getattr(self, '_chat_template_warned', False):
+                logging.warning(
+                    f"⚠️  Chat template not available for {self.model_id}, using raw prompt: {e}"
+                )
+                self._chat_template_warned = True
+            return prompt
+
     def _generate_local(self, prompts: List[str], max_tokens: int = 1024, temperature: float = 0.1,
                         top_p: float = 0.9, **kwargs) -> List[str]:
-        """Generate responses using local models (VLLM or transformers)"""
+        """Generate responses using local models (VLLM or transformers).
+
+        Chat templates are applied here centrally for BOTH backends.
+        Task code should pass raw user prompts — do NOT pre-template.
+        """
         responses = []
+
+        # Apply chat template to all prompts centrally
+        formatted_prompts = [self._apply_chat_template(p) for p in prompts]
 
         if self.backend == 'vllm':
             # VLLM generation - supports efficient batch processing
@@ -381,14 +460,14 @@ class ModelHandler:
                 )
 
                 # Log batch processing info
-                batch_size = len(prompts)
+                batch_size = len(formatted_prompts)
                 if batch_size > 1:
                     logging.info(f"🚀 vLLM batch processing: {batch_size} prompts at once")
 
                 # Generate for all prompts at once with VLLM (batched inference)
                 # vLLM automatically handles batching for optimal throughput
                 start_time = time.time()
-                outputs = self.model.generate(prompts, sampling_params)
+                outputs = self.model.generate(formatted_prompts, sampling_params)
                 generation_time = time.time() - start_time
 
                 total_input_tokens = 0
@@ -428,7 +507,7 @@ class ModelHandler:
         elif self.backend == 'transformers':
             # Transformers generation
             import torch
-            for prompt in prompts:
+            for prompt in formatted_prompts:
                 try:
                     # Tokenize input
                     inputs = self.tokenizer(prompt, return_tensors="pt").to(self.model.device)
@@ -591,28 +670,77 @@ class ModelHandler:
         print(f"   API calls per second: {stats['api_calls_per_second']:.2f}")
         print("="*80)
 
-        # Estimated costs (approximate)
-        if stats['api_provider'] == 'openai':
-            if 'gpt-4o' in stats['model_id']:
-                input_cost = stats['total_input_tokens'] * 0.0025 / 1000  # $2.50 per 1K input tokens
-                output_cost = stats['total_output_tokens'] * 0.01 / 1000  # $10.00 per 1K output tokens
-            elif 'gpt-4o-mini' in stats['model_id']:
-                input_cost = stats['total_input_tokens'] * 0.00015 / 1000  # $0.15 per 1K input tokens
-                output_cost = stats['total_output_tokens'] * 0.0006 / 1000  # $0.60 per 1K output tokens
-            elif 'gpt-3.5-turbo' in stats['model_id']:
-                input_cost = stats['total_input_tokens'] * 0.0005 / 1000  # $0.50 per 1K input tokens
-                output_cost = stats['total_output_tokens'] * 0.0015 / 1000  # $1.50 per 1K output tokens
-            else:
-                input_cost = output_cost = 0
+        # Estimated costs (2025 pricing)
+        input_cost, output_cost = self._estimate_cost(stats)
+        if input_cost > 0 or output_cost > 0:
+            total_cost = input_cost + output_cost
+            provider_label = stats['api_provider'] or 'local'
+            print(f"💰 ESTIMATED COST ({provider_label}):")
+            print(f"   Input tokens: ${input_cost:.4f}")
+            print(f"   Output tokens: ${output_cost:.4f}")
+            print(f"   Total: ${total_cost:.4f}")
+            print("   (Prices as of 2025, check provider pricing for current rates)")
+            print("="*80)
 
-            if input_cost > 0 or output_cost > 0:
-                total_cost = input_cost + output_cost
-                print(f"💰 ESTIMATED COST (OpenAI):")
-                print(f"   Input tokens: ${input_cost:.4f}")
-                print(f"   Output tokens: ${output_cost:.4f}")
-                print(f"   Total: ${total_cost:.4f}")
-                print("   (Note: Prices as of 2024, check OpenAI pricing for current rates)")
-                print("="*80)
+    # 2025 pricing per 1M tokens (input, output)
+    _PRICING = {
+        # OpenAI
+        'gpt-4o': (2.50, 10.00),
+        'gpt-4o-mini': (0.15, 0.60),
+        'gpt-5': (10.00, 30.00),
+        'gpt-5-mini': (1.00, 4.00),
+        # Gemini
+        'gemini-2.5-pro': (1.25, 10.00),
+        'gemini-2.5-flash': (0.15, 0.60),
+        # Anthropic
+        'claude-sonnet-4-20250514': (3.00, 15.00),
+        'claude-opus-4-20250514': (15.00, 75.00),
+        'claude-haiku-4-5-20251001': (0.80, 4.00),
+    }
+
+    def _estimate_cost(self, stats: dict) -> tuple:
+        """Estimate cost based on token counts and 2025 model pricing.
+
+        Returns:
+            (input_cost, output_cost) tuple in USD
+        """
+        model_id = stats.get('model_id', '')
+        input_tokens = stats.get('total_input_tokens', 0)
+        output_tokens = stats.get('total_output_tokens', 0)
+
+        # Find matching pricing entry
+        for model_prefix, (inp_per_m, out_per_m) in self._PRICING.items():
+            if model_prefix in model_id:
+                input_cost = input_tokens * inp_per_m / 1_000_000
+                output_cost = output_tokens * out_per_m / 1_000_000
+                return input_cost, output_cost
+
+        return 0.0, 0.0
+
+    def estimate_cost_before_evaluation(self, num_prompts: int, avg_prompt_tokens: int = 200,
+                                        avg_response_tokens: int = 500) -> float:
+        """Estimate cost before evaluation starts.
+
+        Args:
+            num_prompts: Number of prompts to evaluate
+            avg_prompt_tokens: Average tokens per prompt
+            avg_response_tokens: Average tokens per response
+
+        Returns:
+            Estimated total cost in USD
+        """
+        total_input = num_prompts * avg_prompt_tokens
+        total_output = num_prompts * avg_response_tokens
+        stats = {
+            'model_id': self.model_id,
+            'total_input_tokens': total_input,
+            'total_output_tokens': total_output,
+        }
+        input_cost, output_cost = self._estimate_cost(stats)
+        total = input_cost + output_cost
+        if total > 0:
+            logging.info(f"💰 Estimated cost for {num_prompts} prompts: ${total:.4f}")
+        return total
 
     def __del__(self):
         """Cleanup method (no resources to clean for API clients)"""

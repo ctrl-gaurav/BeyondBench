@@ -85,31 +85,53 @@ except ImportError:
 
 class FibonacciSequenceTask(BaseTask):
     """Implementation of Fibonacci and recursive sequence completion task"""
-    
+
+    # All available sequence types
+    ALL_SEQUENCE_TYPES = [
+        'fibonacci', 'lucas', 'tribonacci', 'modified_recursive',
+        'alternating_fibonacci', 'scaled_fibonacci'
+    ]
+
+    def __init__(self, *args, use_all_sequence_types=True, enabled_sequence_types=None, **kwargs):
+        """
+        Initialize FibonacciSequenceTask.
+
+        Args:
+            *args: Positional args forwarded to BaseTask.
+            use_all_sequence_types: If True, use all sequence types. If False,
+                use only those listed in ``enabled_sequence_types``.
+            enabled_sequence_types: List of sequence type names to enable when
+                ``use_all_sequence_types`` is False. Defaults to all types.
+            **kwargs: Additional keyword args forwarded to BaseTask.
+        """
+        super().__init__(*args, **kwargs)
+        self.use_all_sequence_types = use_all_sequence_types
+        self.enabled_sequence_types = (
+            list(enabled_sequence_types) if enabled_sequence_types
+            else list(self.ALL_SEQUENCE_TYPES)
+        )
+
     @property
     def task_name(self):
         return "fibonacci_sequence"
-    
+
     def generate_data(self, sequence_length=8):
         """
         Generate various types of recursive sequences
-        
+
         Args:
             sequence_length: Length of sequence to generate (will show partial)
         """
         if self.seed is not None:
             random.seed(self.seed)
-        
+
         data = []
-        
-        # Use either enabled types or all types based on configuration
-        if USE_ALL_SEQUENCE_TYPES:
-            sequence_types = [
-                'fibonacci', 'lucas', 'tribonacci', 'modified_recursive', 
-                'alternating_fibonacci', 'scaled_fibonacci'
-            ]
+
+        # Use instance configuration instead of module-level globals
+        if self.use_all_sequence_types:
+            sequence_types = list(self.ALL_SEQUENCE_TYPES)
         else:
-            sequence_types = ENABLED_SEQUENCE_TYPES
+            sequence_types = list(self.enabled_sequence_types)
         
         if not sequence_types:
             raise ValueError("No sequence types enabled! Please check ENABLED_SEQUENCE_TYPES configuration.")
@@ -327,7 +349,7 @@ For example: If the sequence is 1, 1, 2, 3, 5, 8, ? then the next term is \\boxe
         for seq_length in list_sizes:
             logging.info(f"\n{'='*50}")
             logging.info(f"Evaluating Fibonacci sequences with length {seq_length}")
-            logging.info(f"Enabled sequence types: {ENABLED_SEQUENCE_TYPES if not USE_ALL_SEQUENCE_TYPES else 'ALL'}")
+            logging.info(f"Enabled sequence types: {self.enabled_sequence_types if not self.use_all_sequence_types else 'ALL'}")
             logging.info(f"{'='*50}")
             
             # Generate evaluation data
@@ -337,7 +359,7 @@ For example: If the sequence is 1, 1, 2, 3, 5, 8, ? then the next term is \\boxe
             for fold in range(self.num_folds):
                 metrics = self.run_fold(data, seq_length, fold)
                 metrics['sequence_length'] = seq_length
-                metrics['enabled_types'] = ENABLED_SEQUENCE_TYPES if not USE_ALL_SEQUENCE_TYPES else "ALL"
+                metrics['enabled_types'] = self.enabled_sequence_types if not self.use_all_sequence_types else "ALL"
                 all_metrics.append(metrics)
         
         return all_metrics
@@ -476,7 +498,9 @@ if __name__ == "__main__":
             temperature=TEMPERATURE,
             top_p=TOP_P,
             max_tokens=MAX_TOKENS,
-            seed=SEED
+            seed=SEED,
+            use_all_sequence_types=USE_ALL_SEQUENCE_TYPES,
+            enabled_sequence_types=ENABLED_SEQUENCE_TYPES
         )
         
         # Run evaluation

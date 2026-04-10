@@ -229,3 +229,7 @@ _not_needed/
 
 # Build plan (internal development only)
 .build_plan/
+build_plan/
+
+# Baselines (local evaluation results)
+baselines/

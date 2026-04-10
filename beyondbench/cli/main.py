@@ -56,6 +56,7 @@ def main():
 @click.option('--tensor-parallel-size', type=int, default=1, help='Number of GPUs for tensor parallelism')
 @click.option('--gpu-memory-utilization', type=float, default=0.96, help='GPU memory utilization ratio')
 @click.option('--trust-remote-code', is_flag=True, help='Allow remote code execution')
+@click.option('--no-chat-template', is_flag=True, help='Skip chat template application (raw prompt testing)')
 
 # Generation Parameters
 @click.option('--temperature', type=float, default=0.7, help='Sampling temperature')
@@ -693,16 +694,87 @@ Comprehensive LLM Reasoning Evaluation
     click.echo(click.style(banner, fg='cyan', bold=True))
 
 
+def _auto_detect_api_provider(model_id: str) -> Optional[str]:
+    """Auto-detect API provider from model_id prefix."""
+    model_lower = model_id.lower()
+    if model_lower.startswith('gpt-') or model_lower.startswith('o1-') or model_lower.startswith('o3-'):
+        return 'openai'
+    if model_lower.startswith('gemini-'):
+        return 'gemini'
+    if model_lower.startswith('claude-'):
+        return 'anthropic'
+    return None
+
+
+def _auto_detect_api_key(provider: str) -> Optional[str]:
+    """Auto-detect API key from standard environment variables."""
+    env_vars = {
+        'openai': 'OPENAI_API_KEY',
+        'gemini': 'GEMINI_API_KEY',
+        'anthropic': 'ANTHROPIC_API_KEY',
+    }
+    var = env_vars.get(provider)
+    if var:
+        return os.environ.get(var)
+    return None
+
+
+def _parse_list_sizes(list_sizes_str: str) -> List[int]:
+    """Parse list sizes supporting ranges and comma-separated values.
+
+    Supports:
+    - Comma-separated: "8,16,32,64"
+    - Ranges: "8-64" -> [8, 16, 32, 64] (powers of 2)
+    - Mixed: "4,8-32,128" -> [4, 8, 16, 32, 128]
+
+    Raises:
+        click.BadParameter: If format is invalid or values are not positive integers
+    """
+    sizes = []
+    for part in list_sizes_str.split(','):
+        part = part.strip()
+        if '-' in part and not part.startswith('-'):
+            # Range: "8-64" -> powers of 2 between 8 and 64
+            try:
+                start, end = [int(x.strip()) for x in part.split('-', 1)]
+                if start <= 0 or end <= 0:
+                    raise click.BadParameter(f"List sizes must be positive integers, got range {start}-{end}")
+                val = start
+                while val <= end:
+                    sizes.append(val)
+                    val *= 2
+            except ValueError:
+                raise click.BadParameter(f"Invalid range format: '{part}'. Use 'start-end' (e.g., '8-64')")
+        else:
+            try:
+                val = int(part)
+                if val <= 0:
+                    raise click.BadParameter(f"List sizes must be positive integers, got {val}")
+                sizes.append(val)
+            except ValueError:
+                raise click.BadParameter(f"Invalid list size: '{part}'. Use comma-separated positive integers")
+    return sizes
+
+
 def validate_and_prepare_config(kwargs: Dict[str, Any]) -> Dict[str, Any]:
     """Validate CLI arguments and prepare configuration."""
 
-    # Parse list sizes
+    # Auto-detect API provider from model_id if not specified
+    if not kwargs.get('api_provider') and not kwargs.get('backend'):
+        detected = _auto_detect_api_provider(kwargs['model_id'])
+        if detected:
+            kwargs['api_provider'] = detected
+
+    # Auto-detect API key from environment if not specified
+    if kwargs.get('api_provider') and not kwargs.get('api_key'):
+        detected_key = _auto_detect_api_key(kwargs['api_provider'])
+        if detected_key:
+            kwargs['api_key'] = detected_key
+
+    # Parse list sizes with range support
     list_sizes = None
     if kwargs.get('list_sizes'):
-        try:
-            list_sizes = [int(x.strip()) for x in kwargs['list_sizes'].split(',')]
-        except ValueError:
-            raise click.BadParameter("Invalid list-sizes format. Use comma-separated integers (e.g., '8,16,32,64')")
+        list_sizes = _parse_list_sizes(kwargs['list_sizes'])
 
     # Prepare model configuration
     model_config = {
@@ -715,7 +787,8 @@ def validate_and_prepare_config(kwargs: Dict[str, Any]) -> Dict[str, Any]:
         'gpu_memory_utilization': kwargs['gpu_memory_utilization'],
         'trust_remote_code': kwargs['trust_remote_code'],
         'reasoning_effort': kwargs['reasoning_effort'],
-        'thinking_budget': kwargs['thinking_budget']
+        'thinking_budget': kwargs['thinking_budget'],
+        'skip_chat_template': kwargs.get('no_chat_template', False)
     }
 
     # Prepare engine configuration
