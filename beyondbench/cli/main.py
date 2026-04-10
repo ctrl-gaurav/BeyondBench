@@ -85,6 +85,10 @@ def main():
 @click.option('--max-retries', type=int, default=3, help='Maximum retries for failed operations')
 @click.option('--timeout', type=int, default=300, help='Timeout for individual operations (seconds)')
 
+# Parser Configuration
+@click.option('--parser', type=click.Choice(['unified', 'legacy']), default='unified',
+              help='Parser mode: unified (Phase 1 UnifiedParser) or legacy (original per-task parsers)')
+
 def evaluate(**kwargs):
     """
     Run comprehensive evaluation on specified tasks.
@@ -123,6 +127,15 @@ def evaluate(**kwargs):
 
     # Validate configuration
     config = validate_and_prepare_config(kwargs)
+
+    # Apply parser mode globally
+    parser_mode = config.get('parser_mode', 'unified')
+    try:
+        from ..parsers.settings import set_parser_mode
+        set_parser_mode(parser_mode)
+        logger.info(f"Parser mode: {parser_mode}")
+    except Exception:
+        pass
 
     try:
         # Initialize model handler
@@ -827,7 +840,8 @@ def validate_and_prepare_config(kwargs: Dict[str, Any]) -> Dict[str, Any]:
         'tasks': tasks,
         'model_config': model_config,
         'engine_config': engine_config,
-        'eval_config': eval_config
+        'eval_config': eval_config,
+        'parser_mode': kwargs.get('parser', 'unified'),
     }
 
 

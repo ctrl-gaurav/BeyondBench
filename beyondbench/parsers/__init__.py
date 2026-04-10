@@ -4,6 +4,12 @@ Task-specific parsers for beyondbench package.
 These parsers provide robust, task-specific answer extraction for all easy suite tasks.
 They use the unified parsing utilities from beyondbench.utils.parsing as their foundation
 and shared extraction functions from beyondbench.parsers.common.
+
+Phase 1 additions:
+- UnifiedParser (core.py): configurable strategy-pipeline parser
+- strategies/: pluggable per-strategy modules
+- model_adapters.py: per-model output normalization
+- task_configs.py: per-task parser configuration
 """
 
 # Import shared extraction functions
@@ -37,6 +43,12 @@ from ..utils.parsing import (
     parse_boolean_result
 )
 
+# Phase 1: Unified parser imports
+from .core import UnifiedParser, parse_response
+from .task_configs import ParserConfig, get_task_config, TASK_PARSER_CONFIGS
+from .model_adapters import get_adapter
+from .settings import set_parser_mode, get_parser_mode, PARSER_MODE
+
 # Import individual task parsers for backward compatibility
 from .absolute_difference_parsing import parse_absolute_difference_answer
 from .comparison_parsing import parse_comparison_result as parse_comparison_result_legacy
@@ -54,6 +66,14 @@ from .mode_parsing import parse_mode_answer
 from .subtraction_parsing import parse_subtraction_answer
 
 __all__ = [
+    # Phase 1: New unified parser (preferred)
+    "UnifiedParser",
+    "parse_response",
+    "ParserConfig",
+    "get_task_config",
+    "TASK_PARSER_CONFIGS",
+    "get_adapter",
+
     # Unified parsing functions (preferred)
     "parse_boxed_answer",
     "parse_number",

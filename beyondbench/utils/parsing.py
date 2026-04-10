@@ -17,6 +17,9 @@ import logging
 import math
 from typing import List, Optional, Union, Any, Tuple
 
+# Re-export AnswerParser from parsing_utils for backwards compatibility
+from .parsing_utils import AnswerParser
+
 
 # ============================================================================
 # Main Entry Points
@@ -638,7 +641,7 @@ def parse_number_list(text: Union[str, List]) -> Optional[List[Union[int, float]
     - Set notation: {1, 2, 3}
     - Comma-separated: 1, 2, 3
     - Space-separated: 1 2 3
-    - LaTeX arrays: \begin{bmatrix} 1 \\ 2 \\ 3 \end{bmatrix}
+    - LaTeX arrays: \\begin{bmatrix} 1 \\\\ 2 \\\\ 3 \\end{bmatrix}
     - Python lists: list([1, 2, 3])
     """
     if text is None:
