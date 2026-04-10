@@ -165,6 +165,14 @@ filterwarnings = [
     "ignore::DeprecationWarning",
     "ignore::UserWarning",
 ]
+markers = [
+    "gpu: marks tests that require a real CUDA GPU",
+    "slow: marks tests that are slow (real model inference)",
+    "api: marks tests that require API keys",
+    "unit: marks fast unit tests (no GPU required)",
+    "integration: marks integration tests (real GPU required)",
+    "e2e: marks end-to-end tests (real GPU + full pipeline)",
+]
 
 [tool.coverage.run]
 source = ["beyondbench"]
