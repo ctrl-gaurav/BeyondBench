@@ -243,7 +243,7 @@ class MatrixChainTask(BaseTask):
     def __init__(self, model_handler, output_dir, matrix_counts_list, dimension_patterns, 
                  num_folds, num_samples, store_details, temperature, top_p, max_tokens, seed=None):
         # Initialize base class
-        self._task_name = "matrix_chain_multiplication_results"
+        self._task_name = "matrix_chain_multiplication"
         super().__init__(model_handler, output_dir, min(matrix_counts_list), max(matrix_counts_list),
                         num_folds, num_samples, store_details, temperature, top_p, max_tokens, seed)
         self.matrix_counts_list = matrix_counts_list

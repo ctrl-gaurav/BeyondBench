@@ -711,7 +711,7 @@ class SudokuTask(BaseTask):
                  num_samples, store_details, temperature, top_p, max_tokens, 
                  grid_sizes=None, difficulty_levels=None, constraint_types=None, 
                  technique_levels=None, seed=None):
-        self._task_name = "sudoku_results"
+        self._task_name = "sudoku_solving"
         super().__init__(model_handler, output_dir, min_val, max_val, num_folds, num_samples, 
                         store_details, temperature, top_p, max_tokens, seed)
         

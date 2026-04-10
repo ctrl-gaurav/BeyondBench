@@ -94,4 +94,16 @@ class ComparisonStrategy:
                     raw_match=raw,
                 )
 
+        # Last resort: check if the entire (stripped) response is a single
+        # comparison keyword or symbol that we know.
+        stripped = text.strip().lower().rstrip('.')
+        if stripped in _NORMALIZE_MAP:
+            normalized = _NORMALIZE_MAP[stripped]
+            return ParseResult(
+                value=normalized,
+                confidence=0.65,
+                strategy_used=self.NAME + "_bare",
+                raw_match=stripped,
+            )
+
         return ParseResult(value=None, confidence=0.0, strategy_used=self.NAME)

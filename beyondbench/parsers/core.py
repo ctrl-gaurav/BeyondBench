@@ -52,34 +52,72 @@ _STRATEGY_INSTANCES: Dict[str, Any] = {
     "fallback":           FallbackStrategy(),
 }
 
+# Pre-compute which strategies accept expected_type to avoid inspect overhead
+import inspect as _inspect
+_STRATEGY_ACCEPTS_EXPECTED_TYPE: Dict[str, bool] = {}
+for _name, _strat in _STRATEGY_INSTANCES.items():
+    _sig = _inspect.signature(_strat.extract)
+    _STRATEGY_ACCEPTS_EXPECTED_TYPE[_name] = 'expected_type' in _sig.parameters
+
 # ============================================================================
 # Type conversion helpers
 # ============================================================================
 
 def _to_int(value: str) -> Optional[int]:
     try:
-        return int(float(value.replace(',', '')))
-    except (ValueError, TypeError, AttributeError):
+        cleaned = str(value).strip().replace(',', '')
+        # Handle "42.0" → 42
+        f = float(cleaned)
+        if f != f:  # NaN check
+            return None
+        return int(f)
+    except (ValueError, TypeError, AttributeError, OverflowError):
         return None
 
 
 def _to_float(value: str) -> Optional[float]:
     try:
-        return float(value.replace(',', ''))
-    except (ValueError, TypeError, AttributeError):
+        cleaned = str(value).strip().replace(',', '')
+        f = float(cleaned)
+        if f != f:  # NaN check
+            return None
+        return f
+    except (ValueError, TypeError, AttributeError, OverflowError):
         return None
 
 
 def _to_list(value: str) -> Optional[List]:
     import ast
+    if value is None:
+        return None
+    value_str = str(value).strip()
+    if not value_str:
+        return None
+
+    # Already a list (e.g. from grid strategy returning str(list))
     try:
-        parsed = ast.literal_eval(value)
+        parsed = ast.literal_eval(value_str)
         if isinstance(parsed, list):
             return parsed
+        if isinstance(parsed, tuple):
+            return list(parsed)
     except (ValueError, SyntaxError):
         pass
+
+    # Try JSON parsing for "[1,2,3]" style
+    import json
+    try:
+        parsed = json.loads(value_str)
+        if isinstance(parsed, list):
+            return parsed
+    except (json.JSONDecodeError, ValueError):
+        pass
+
     # Try comma-separated
-    parts = [p.strip() for p in value.split(',') if p.strip()]
+    parts = [p.strip() for p in value_str.split(',') if p.strip()]
+    if len(parts) <= 1 and ',' not in value_str:
+        # Single value is not a list
+        return None
     result = []
     for p in parts:
         try:
@@ -90,42 +128,61 @@ def _to_list(value: str) -> Optional[List]:
     return result if result else None
 
 
-def _convert(value: str, expected_type: str) -> Any:
+def _convert(value: Any, expected_type: str) -> Any:
     """Convert extracted string value to the expected type."""
     if value is None:
         return None
 
+    # If already the right type, return directly
+    if expected_type == "int" and isinstance(value, int) and not isinstance(value, bool):
+        return value
+    if expected_type == "float" and isinstance(value, (int, float)) and not isinstance(value, bool):
+        return float(value)
+    if expected_type == "list" and isinstance(value, list):
+        return value
+
+    value_str = str(value)
+
     if expected_type == "int":
-        return _to_int(value)
+        return _to_int(value_str)
     elif expected_type == "float":
-        result = _to_float(value)
+        result = _to_float(value_str)
         if result is None:
-            # Try int conversion as fallback
-            return _to_int(value)
+            return _to_int(value_str)
         return result
     elif expected_type == "list":
-        return _to_list(value)
+        return _to_list(value_str)
     elif expected_type == "grid":
-        return _to_list(value)  # Grid is list-of-lists; caller validates structure
+        return _to_list(value_str)  # Grid is list-of-lists; caller validates structure
     elif expected_type == "comparison":
-        # Already normalized by ComparisonStrategy
-        return value
+        # Normalize comparison values (may come from boxed/explicit strategies as raw symbols)
+        from .strategies.comparison_strategy import _NORMALIZE_MAP
+        cleaned = value_str.strip().lower().rstrip('.')
+        if cleaned in _NORMALIZE_MAP:
+            return _NORMALIZE_MAP[cleaned]
+        # Check for multi-word matches
+        for phrase in ("greater than", "less than", "equal to"):
+            if phrase in cleaned:
+                return phrase
+        return value_str.strip() if isinstance(value, str) else value
     elif expected_type == "boolean":
-        low = value.lower().strip()
+        low = value_str.lower().strip()
         if low in ("true", "yes", "1", "satisfiable", "sat"):
             return True
         if low in ("false", "no", "0", "unsatisfiable", "unsat"):
             return False
         return None
+    elif expected_type == "str":
+        return value_str.strip()
     elif expected_type == "auto":
         # Try int → float → string
-        vi = _to_int(value)
-        if vi is not None and str(vi) == value.replace(',', '').strip():
+        vi = _to_int(value_str)
+        if vi is not None and str(vi) == value_str.replace(',', '').strip():
             return vi
-        vf = _to_float(value)
+        vf = _to_float(value_str)
         if vf is not None:
             return vf
-        return value
+        return value_str.strip() if isinstance(value, str) else value
     else:
         return value
 
@@ -182,7 +239,7 @@ class UnifiedParser:
         Returns:
             ParseResult with the best extracted value, or a failed result.
         """
-        if not response:
+        if not response or not response.strip():
             return ParseResult(value=None, confidence=0.0, strategy_used="none")
 
         # 1. Apply model-specific normalization
@@ -205,14 +262,10 @@ class UnifiedParser:
                 continue
 
             try:
-                # Strategies accept optional expected_type hint
-                extract_fn = strategy.extract
-                import inspect
-                sig = inspect.signature(extract_fn)
-                if 'expected_type' in sig.parameters:
-                    result = extract_fn(text, expected_type=expected_type)
+                if _STRATEGY_ACCEPTS_EXPECTED_TYPE.get(strategy_name, False):
+                    result = strategy.extract(text, expected_type=expected_type)
                 else:
-                    result = extract_fn(text)
+                    result = strategy.extract(text)
             except Exception as exc:
                 logger.debug("Strategy %s raised %s: %s", strategy_name, type(exc).__name__, exc)
                 continue
@@ -239,9 +292,12 @@ class UnifiedParser:
                 break
 
         if best is None:
-            # All conversions failed — return highest-confidence raw result
+            # All conversions failed
             best = results_sorted[0]
-            converted_value = best.value  # keep as string
+            # For numeric/boolean types, don't return unconvertible strings
+            if expected_type in ("int", "float", "boolean"):
+                return ParseResult(value=None, confidence=0.0, strategy_used="none")
+            converted_value = best.value  # keep as string for str/auto/comparison types
 
         # 5. Apply post-processors
         for proc in self.config.post_processors:

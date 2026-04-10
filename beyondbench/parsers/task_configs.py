@@ -268,7 +268,7 @@ TASK_PARSER_CONFIGS: dict[str, ParserConfig] = {
         tolerance=0,
         description="N-Queens placement grid",
     ),
-    "tower_of_hanoi": ParserConfig(
+    "tower_hanoi": ParserConfig(
         expected_type="list",
         strategies=["explicit_statement", "list", "code_block", "json", "fallback"],
         tolerance=0,
@@ -315,6 +315,20 @@ TASK_PARSER_CONFIGS: dict[str, ParserConfig] = {
         strategies=["boxed", "explicit_statement", "latex_math", "code_block", "fallback"],
         tolerance=0,
         description="Modular arithmetic system solution",
+    ),
+    # Alias: task_registry uses "modular_systems" as the canonical key
+    "modular_systems": ParserConfig(
+        expected_type="int",
+        strategies=["boxed", "explicit_statement", "latex_math", "code_block", "fallback"],
+        tolerance=0,
+        description="Modular arithmetic system solution (alias for modular_systems_solver)",
+    ),
+    # Alias: tower_of_hanoi was the old key; keep for backward compatibility
+    "tower_of_hanoi": ParserConfig(
+        expected_type="list",
+        strategies=["explicit_statement", "list", "code_block", "json", "fallback"],
+        tolerance=0,
+        description="Tower of Hanoi move sequence (alias for tower_hanoi)",
     ),
 }
 

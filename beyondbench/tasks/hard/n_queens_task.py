@@ -413,7 +413,7 @@ class NQueensTask(BaseTask):
     
     def __init__(self, model_handler, output_dir, board_sizes, num_folds, 
                  num_samples, store_details, temperature, top_p, max_tokens, seed=None):
-        self._task_name = "n_queens_results"
+        self._task_name = "n_queens"
         super().__init__(model_handler, output_dir, min(board_sizes), max(board_sizes), num_folds, num_samples, 
                         store_details, temperature, top_p, max_tokens, seed)
         self.board_sizes = board_sizes

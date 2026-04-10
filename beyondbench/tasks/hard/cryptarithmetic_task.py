@@ -322,7 +322,7 @@ class CryptarithmeticTask(BaseTask):
     
     def __init__(self, model_handler, output_dir, word_lengths, puzzle_types, difficulty_levels, num_folds, 
                  num_samples, store_details, temperature, top_p, max_tokens, seed=None):
-        self._task_name = "cryptarithmetic_results"
+        self._task_name = "cryptarithmetic"
         super().__init__(model_handler, output_dir, min(word_lengths), max(word_lengths), num_folds, num_samples, 
                         store_details, temperature, top_p, max_tokens, seed)
         self.word_lengths = word_lengths

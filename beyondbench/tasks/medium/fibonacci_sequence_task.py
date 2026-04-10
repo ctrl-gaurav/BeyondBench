@@ -276,18 +276,26 @@ For example: If the sequence is 1, 1, 2, 3, 5, 8, ? then the next term is \\boxe
     def evaluate_response(self, response, data_point):
         """Evaluate model response for sequence completion"""
         ground_truth = data_point['next_term']
-        parsed_answer = self._parse_sequence_answer(response)
-        
+
+        # Prefer the unified parser; fall back to the internal one if needed.
+        try:
+            from ...utils.parsing import parse_sequence_result
+            parsed_answer = parse_sequence_result(response)
+        except Exception:
+            parsed_answer = self._parse_sequence_answer(response)
+
         instruction_followed = parsed_answer is not None
         accuracy = 0
-        
+
         if instruction_followed and parsed_answer is not None:
             try:
-                accuracy = 1 if parsed_answer == ground_truth else 0
+                # Fibonacci terms are integers, but allow tiny float rounding
+                # (e.g. model answers "13.0" for 13).
+                accuracy = 1 if abs(float(parsed_answer) - float(ground_truth)) < 0.5 else 0
             except Exception as e:
                 logging.debug(f"Comparison error: {e}")
                 accuracy = 0
-        
+
         return {
             "sequence_type": data_point['sequence_type'],
             "shown_sequence": data_point['shown_sequence'],

@@ -195,7 +195,7 @@ class ModelHandler:
                 self.tokenizer = AutoTokenizer.from_pretrained(self.model_id)
                 self.model = AutoModelForCausalLM.from_pretrained(
                     self.model_id,
-                    dtype=torch.float16,
+                    torch_dtype=torch.float16,
                     device_map="auto",
                     trust_remote_code=kwargs.get('trust_remote_code', False)
                 )

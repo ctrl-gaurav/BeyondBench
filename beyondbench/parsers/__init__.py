@@ -65,6 +65,23 @@ from .median_parsing import parse_median_answer
 from .mode_parsing import parse_mode_answer
 from .subtraction_parsing import parse_subtraction_answer
 
+# Phase 2: New easy task parsers (15 newer easy tasks)
+from .second_maximum_parsing import parse_second_maximum_answer
+from .range_parsing import parse_range_answer
+from .index_of_maximum_parsing import parse_index_of_maximum_answer
+from .count_negative_parsing import parse_count_negative_answer
+from .count_unique_parsing import parse_count_unique_answer
+from .max_adjacent_difference_parsing import parse_max_adjacent_difference_answer
+from .count_greater_than_previous_parsing import parse_count_greater_than_previous_answer
+from .sum_of_max_indices_parsing import parse_sum_of_max_indices_answer
+from .count_palindromic_parsing import parse_count_palindromic_answer
+from .longest_increasing_subsequence_parsing import parse_longest_increasing_subsequence_answer
+from .sum_of_digits_parsing import parse_sum_of_digits_answer
+from .count_perfect_squares_parsing import parse_count_perfect_squares_answer
+from .alternating_sum_parsing import parse_alternating_sum_answer
+from .count_multiples_parsing import parse_count_multiples_answer
+from .local_maxima_count_parsing import parse_local_maxima_count_answer
+
 __all__ = [
     # Phase 1: New unified parser (preferred)
     "UnifiedParser",
@@ -103,5 +120,22 @@ __all__ = [
     "parse_mean_answer",
     "parse_median_answer",
     "parse_mode_answer",
-    "parse_subtraction_answer"
+    "parse_subtraction_answer",
+
+    # Phase 2: Newer easy task parsers
+    "parse_second_maximum_answer",
+    "parse_range_answer",
+    "parse_index_of_maximum_answer",
+    "parse_count_negative_answer",
+    "parse_count_unique_answer",
+    "parse_max_adjacent_difference_answer",
+    "parse_count_greater_than_previous_answer",
+    "parse_sum_of_max_indices_answer",
+    "parse_count_palindromic_answer",
+    "parse_longest_increasing_subsequence_answer",
+    "parse_sum_of_digits_answer",
+    "parse_count_perfect_squares_answer",
+    "parse_alternating_sum_answer",
+    "parse_count_multiples_answer",
+    "parse_local_maxima_count_answer",
 ]

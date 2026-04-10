@@ -298,7 +298,7 @@ class BooleanSATTask(BaseTask):
     
     def __init__(self, model_handler, output_dir, num_variables_list, sat_types_list, clause_ratios_list,
                  num_folds, num_samples, store_details, temperature, top_p, max_tokens, seed=None):
-        self._task_name = "boolean_sat_results"
+        self._task_name = "boolean_sat"
         super().__init__(model_handler, output_dir, min(num_variables_list), max(num_variables_list), num_folds, num_samples, 
                         store_details, temperature, top_p, max_tokens, seed)
         # Store enhanced parameters

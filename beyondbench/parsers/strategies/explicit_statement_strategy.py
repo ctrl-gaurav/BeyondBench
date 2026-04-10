@@ -35,8 +35,13 @@ _EXPLICIT_PATTERNS = [
     (r'(?:\u7b54\u3048|\u7d50\u679c)(?:\u306f|[:：])\s*(.+?)\s*(?:\n|$|[。.])', 0.80, 0),
     # Multilingual — Korean
     (r'(?:\ub2f5|\uacb0\uacfc)(?:\ub294|\uc740|[:：])\s*(.+?)\s*(?:\n|$|[。.])', 0.80, 0),
-    # Numbered list answer at end
-    (r'(?:^|\n)\d+[.)]\s*(.+?)\s*$', 0.60, re.MULTILINE),
+    # "I get X" / "we get X" / "which gives X"
+    (r'(?:I|we)\s+get\s+([+-]?\d+(?:\.\d+)?)\b', 0.75, re.IGNORECASE),
+    (r'(?:which|that)\s+gives\s+(?:us\s+)?([+-]?\d+(?:\.\d+)?)\b', 0.75, re.IGNORECASE),
+    # "equals X" / "is equal to X"
+    (r'(?:equals?|is equal to)\s+([+-]?\d+(?:\.\d+)?)\b', 0.78, re.IGNORECASE),
+    # Numbered list answer at end (require space after dot/paren to avoid matching "42.0")
+    (r'(?:^|\n)\d+[.)]\s+(.+?)\s*$', 0.60, re.MULTILINE),
     # Standalone number on a line
     (r'(?:^|\n)\s*([-]?\d{1,3}(?:,\d{3})*(?:\.\d+)?)\s*(?:\n|$)', 0.55, re.MULTILINE),
 ]

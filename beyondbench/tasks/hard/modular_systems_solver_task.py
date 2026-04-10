@@ -405,7 +405,7 @@ class ModularSystemsTask(BaseTask):
     def __init__(self, model_handler, output_dir, num_equations_list, constraint_types, num_folds, 
                  num_samples, store_details, temperature, top_p, max_tokens, seed=None):
         # Initialize base class with proper min/max values
-        self._task_name = "modular_systems_solver_results"
+        self._task_name = "modular_systems"
         super().__init__(model_handler, output_dir, min(num_equations_list), max(num_equations_list), 
                         num_folds, num_samples, store_details, temperature, top_p, max_tokens, seed)
         self.num_equations_list = num_equations_list

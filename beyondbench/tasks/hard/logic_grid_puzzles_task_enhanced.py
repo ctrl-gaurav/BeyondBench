@@ -1577,7 +1577,7 @@ class LogicGridPuzzlesTask(BaseTask):
         max_val = max(grid_sizes)
         
         # Initialize BaseTask
-        self._task_name = "logic_grid_puzzles_enhanced_results"
+        self._task_name = "logic_grid_puzzles"
         super().__init__(model_handler, output_dir, min_val, max_val, num_folds, 
                          num_samples, store_details, temperature, top_p, max_tokens, seed)
         

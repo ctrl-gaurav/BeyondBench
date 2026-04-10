@@ -363,7 +363,7 @@ class RobustTowerHanoiTask(BaseTask):
     
     def __init__(self, model_handler, output_dir, num_disks_list, num_folds, 
                  num_samples, store_details, temperature, top_p, max_tokens, seed=None):
-        self._task_name = "tower_hanoi_results"
+        self._task_name = "tower_hanoi"
         super().__init__(model_handler, output_dir, 1, 10, num_folds, num_samples, 
                         store_details, temperature, top_p, max_tokens, seed)
         self.num_disks_list = num_disks_list
