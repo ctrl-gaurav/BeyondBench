@@ -8,6 +8,7 @@ robustness and comprehensive parameter support.
 import click
 import os
 import sys
+import time
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 import json
@@ -97,6 +98,12 @@ def main():
               default='auto', show_default=True,
               help='Parallel strategy: task_parallel (tasks→GPUs), data_parallel (split data), auto')
 
+# Dashboard Options (Phase 6)
+@click.option('--dashboard', 'launch_dashboard_flag', is_flag=True, default=False,
+              help='Launch the Gradio observability dashboard alongside evaluation')
+@click.option('--dashboard-port', type=int, default=7860, show_default=True,
+              help='Port for the live dashboard (requires --dashboard)')
+
 def evaluate(**kwargs):
     """
     Run comprehensive evaluation on specified tasks.
@@ -148,6 +155,39 @@ def evaluate(**kwargs):
     # Determine if parallel mode is requested
     use_parallel = config.get('parallel', False)
 
+    # ------------------------------------------------------------------ #
+    # Dashboard setup (Phase 6) — optional, launched before evaluation
+    # ------------------------------------------------------------------ #
+    use_dashboard = kwargs.get('launch_dashboard_flag', False)
+    dashboard_port = kwargs.get('dashboard_port', 7860)
+    data_bridge = None
+    _dashboard_app = None
+
+    if use_dashboard:
+        try:
+            import gradio  # noqa: F401
+            from ..dashboard.data_bridge import DataBridge, BridgeLogHandler
+            from ..dashboard.app import create_dashboard
+
+            data_bridge = DataBridge()
+
+            # Attach bridge log handler so evaluation logs flow into dashboard
+            bridge_log_handler = BridgeLogHandler(data_bridge)
+            import logging as _logging
+            _logging.getLogger().addHandler(bridge_log_handler)
+
+            _dashboard_app = create_dashboard(data_bridge=data_bridge, results_dir=str(output_dir))
+            _launch_extras = getattr(_dashboard_app, '_beyondbench_launch_extras', {})
+            _dashboard_app.launch(server_port=dashboard_port, share=False, prevent_thread_lock=True, **_launch_extras)
+            logger.info(f"Dashboard launched at http://0.0.0.0:{dashboard_port}")
+            click.echo(f"Dashboard available at http://localhost:{dashboard_port}")
+        except ImportError:
+            click.echo(
+                "Warning: --dashboard requires 'gradio'. Install with: pip install beyondbench[dashboard]\n"
+                "Continuing without dashboard."
+            )
+            use_dashboard = False
+
     try:
         if use_parallel:
             # ------------------------------------------------------------------ #
@@ -162,6 +202,12 @@ def evaluate(**kwargs):
             # Workers create their own handlers inside spawned processes.
             # Use a stub/api handler if available so parent process loads no GPU weights.
             model_handler = _create_metadata_handler(config['model_config'], logger)
+
+            if data_bridge is not None:
+                data_bridge.notify_evaluation_started(
+                    total_tasks=0,
+                    model_info=model_handler.get_model_info() if hasattr(model_handler, 'get_model_info') else {},
+                )
 
             parallel_engine = ParallelEvaluationEngine(
                 model_handler=model_handler,
@@ -188,6 +234,9 @@ def evaluate(**kwargs):
                 **config['eval_config']
             )
 
+            if data_bridge is not None:
+                data_bridge.notify_evaluation_complete(results)
+
         else:
             # ------------------------------------------------------------------ #
             # Standard single-GPU evaluation
@@ -202,12 +251,19 @@ def evaluate(**kwargs):
                 **config['engine_config']
             )
 
+            # Wire up bridge callbacks if dashboard is active
+            if data_bridge is not None:
+                _wire_bridge_to_engine(evaluation_engine, data_bridge, config)
+
             logger.info(f"Running evaluation on {config['suite']} suite")
             results = evaluation_engine.run_evaluation(
                 suite=config['suite'],
                 tasks=config['tasks'],
                 **config['eval_config']
             )
+
+            if data_bridge is not None:
+                data_bridge.notify_evaluation_complete(results)
 
         # Print results summary
         print_results_summary(results)
@@ -223,11 +279,27 @@ def evaluate(**kwargs):
         if not use_parallel and hasattr(model_handler, 'print_statistics_report'):
             model_handler.print_statistics_report()
 
+        # Keep dashboard alive after evaluation completes
+        if use_dashboard and _dashboard_app is not None:
+            click.echo(f"\nEvaluation done. Dashboard still running at http://localhost:{dashboard_port}")
+            click.echo("Press Ctrl+C to exit.")
+            try:
+                while True:
+                    time.sleep(1)
+            except KeyboardInterrupt:
+                pass
+
     except KeyError as e:
+        if data_bridge is not None:
+            data_bridge.notify_error(str(e))
         _handle_cli_error(e, "configuration")
     except ImportError as e:
+        if data_bridge is not None:
+            data_bridge.notify_error(str(e))
         _handle_cli_error(e, "import")
     except Exception as e:
+        if data_bridge is not None:
+            data_bridge.notify_error(str(e))
         logger.error(f"Evaluation failed: {e}")
         sys.exit(1)
 
@@ -820,6 +892,72 @@ def serve(host: str, port: int, use_reload: bool):
 
 
 # ------------------------------------------------------------------ #
+# dashboard command (Phase 6)
+# ------------------------------------------------------------------ #
+@main.command()
+@click.option('--port', default=7860, type=int, show_default=True, help='Port to serve dashboard on')
+@click.option('--results-dir', default='./beyondbench_results', show_default=True,
+              help='Directory with past evaluation results to display')
+@click.option('--compare', 'compare_files', default='', help='Comma-separated paths to two result files for overlay comparison')
+@click.option('--share', is_flag=True, help='Create a public Gradio share link')
+def dashboard(port: int, results_dir: str, compare_files: str, share: bool):
+    """Launch the BeyondBench observability dashboard.
+
+    Standalone viewer for past results:
+
+    \b
+      beyondbench dashboard --results-dir ./beyondbench_results
+
+    Compare two runs:
+
+    \b
+      beyondbench dashboard --compare run_a/final_results.json,run_b/final_results.json
+
+    Requires the [dashboard] extra: pip install beyondbench[dashboard]
+    """
+    try:
+        import gradio  # noqa: F401
+    except ImportError:
+        click.echo(
+            "Error: The 'dashboard' extra is required.\n"
+            "Install it with:\n\n"
+            "  pip install beyondbench[dashboard]\n"
+        )
+        sys.exit(1)
+
+    try:
+        from ..dashboard import launch_dashboard
+    except ImportError as exc:
+        click.echo(f"Error: Could not import dashboard module: {exc}")
+        sys.exit(1)
+
+    click.echo(f"Starting BeyondBench dashboard on http://0.0.0.0:{port}")
+    click.echo(f"Viewing results from: {results_dir}")
+
+    app = launch_dashboard(
+        data_bridge=None,
+        port=port,
+        results_dir=results_dir,
+        share=share,
+    )
+
+    # If compare mode was requested, pre-fill the compare tab (just notify user)
+    if compare_files:
+        paths = [p.strip() for p in compare_files.split(',') if p.strip()]
+        if len(paths) >= 2:
+            click.echo(f"Compare mode: {paths[0]} vs {paths[1]}")
+            click.echo("Navigate to the 'Compare Results' tab and enter the paths above.")
+
+    click.echo("Press Ctrl+C to stop the dashboard.")
+    try:
+        # Block until interrupted
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        click.echo("\nDashboard stopped.")
+
+
+# ------------------------------------------------------------------ #
 # wizard and chat (unchanged)
 # ------------------------------------------------------------------ #
 @main.command()
@@ -1093,6 +1231,64 @@ def _validate_config(config: Dict[str, Any]) -> None:
             f"Config validation error: {e.message}\n"
             f"  Path: {' -> '.join(str(p) for p in e.absolute_path)}"
         )
+
+
+def _wire_bridge_to_engine(engine, data_bridge, config: Dict[str, Any]) -> None:
+    """Monkey-patch EvaluationEngine.run_evaluation to emit DataBridge events.
+
+    This is a non-invasive approach: we wrap the existing run_evaluation method
+    so that existing code paths continue to work unchanged.
+    """
+    from ..core.task_registry import TaskRegistry
+
+    # Determine task list so we can tell the bridge the total count up-front
+    registry = TaskRegistry()
+    suite = config.get('suite', 'all')
+    tasks = config.get('tasks') or []
+    if tasks:
+        task_list = list(tasks)
+    else:
+        task_list = registry.get_tasks_for_suite(suite)
+
+    model_info = {}
+    if hasattr(engine, 'model_handler') and hasattr(engine.model_handler, 'get_model_info'):
+        try:
+            model_info = engine.model_handler.get_model_info()
+        except Exception:
+            pass
+
+    data_bridge.notify_evaluation_started(
+        total_tasks=len(task_list),
+        model_info=model_info,
+    )
+
+    original_run = engine.run_evaluation
+
+    def _patched_run_evaluation(suite='all', tasks=None, **kwargs):
+        # Resolve the actual task list the engine will run
+        _tasks = tasks or registry.get_tasks_for_suite(suite)
+
+        # Wrap the inner per-task loop by patching _aggregate_results to intercept results
+        original_aggregate = engine._aggregate_results
+
+        def _patched_aggregate(task_results, overall_stats, total_duration):
+            # Emit per-task events for each completed task
+            for task_name, result in task_results.items():
+                acc = _extract_accuracy(result)
+                data_bridge.notify_task_completed(
+                    task_name=task_name,
+                    accuracy=acc,
+                    suite='easy',  # default; bridge groups by suite
+                )
+            return original_aggregate(task_results, overall_stats, total_duration)
+
+        engine._aggregate_results = _patched_aggregate
+        try:
+            return original_run(suite=suite, tasks=tasks, **kwargs)
+        finally:
+            engine._aggregate_results = original_aggregate
+
+    engine.run_evaluation = _patched_run_evaluation
 
 
 def _extract_accuracy(task_result: Any) -> float:

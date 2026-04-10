@@ -104,8 +104,11 @@ serve = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.34.0",
 ]
+dashboard = [
+    "gradio>=4.0.0",
+]
 full = [
-    "beyondbench[all-apis,dev,docs,viz,serve]",
+    "beyondbench[all-apis,dev,docs,viz,serve,dashboard]",
     "vllm>=0.7.0",
 ]
 
@@ -121,7 +124,7 @@ Changelog = "https://github.com/ctrl-gaurav/BeyondBench/blob/main/CHANGELOG.md"
 Paper = "https://arxiv.org/abs/2509.24210"
 
 [tool.setuptools]
-packages = ["beyondbench", "beyondbench.cli", "beyondbench.core", "beyondbench.models", "beyondbench.tasks", "beyondbench.tasks.easy", "beyondbench.tasks.medium", "beyondbench.tasks.hard", "beyondbench.utils", "beyondbench.parsers", "beyondbench.scripts", "beyondbench.serve", "beyondbench.utils.model_profiles"]
+packages = ["beyondbench", "beyondbench.cli", "beyondbench.core", "beyondbench.models", "beyondbench.tasks", "beyondbench.tasks.easy", "beyondbench.tasks.medium", "beyondbench.tasks.hard", "beyondbench.utils", "beyondbench.parsers", "beyondbench.scripts", "beyondbench.serve", "beyondbench.dashboard", "beyondbench.utils.model_profiles"]
 
 [tool.setuptools.package-data]
 beyondbench = ["configs/*.yaml", "configs/*.json", "py.typed"]
