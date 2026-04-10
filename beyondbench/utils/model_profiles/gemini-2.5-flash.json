@@ -1,0 +1,19 @@
+{
+  "model_id": "gemini-2.5-flash",
+  "boxed_rate": 0.75,
+  "explicit_rate": 0.80,
+  "code_block_rate": 0.18,
+  "cot_rate": 0.70,
+  "avg_response_length": 400,
+  "avg_token_estimate": 100,
+  "non_latin_rate": 0.00,
+  "recommended_strategies": ["boxed", "explicit_statement", "latex_math", "code_block", "fallback"],
+  "quirks": [
+    "Gemini-2.5-flash: strong instruction following, uses both boxed and explicit statements.",
+    "API backend: APIAdapter applied for role-label stripping.",
+    "Thinking mode responses may be much longer; consider stripping <think>...</think> blocks."
+  ],
+  "num_calibration_samples": 20,
+  "calibration_timestamp": 1744300000.0,
+  "profile_version": "1.0"
+}

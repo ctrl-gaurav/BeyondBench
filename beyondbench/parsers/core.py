@@ -33,7 +33,39 @@ from .strategies.fallback_strategy import FallbackStrategy
 from .model_adapters import get_adapter, BaseAdapter
 from .task_configs import ParserConfig, get_task_config
 
+# Model profile type (imported lazily to avoid circular imports at module load)
+_ModelProfile = None  # set on first use via _get_profile_type()
+
 logger = logging.getLogger(__name__)
+
+# ============================================================================
+# Parse confidence threshold (Phase 4.2.2)
+# ============================================================================
+
+#: Minimum confidence for a parse to be considered successful.
+#: Results below this threshold are logged as "low confidence".
+CONFIDENCE_THRESHOLD_LOW = 0.3
+
+#: Confidence below which results are logged as "unparseable" (no strategy
+#: returned a result above this floor).
+CONFIDENCE_THRESHOLD_UNPARSEABLE = 0.0
+
+# Per-model unparseable tracking {model_id: [total, unparseable_count]}
+_unparseable_stats: Dict[str, List[int]] = {}
+
+
+def get_unparseable_rate(model_id: str) -> float:
+    """Return the fraction of parse calls that produced no result for *model_id*."""
+    stats = _unparseable_stats.get(model_id)
+    if not stats or stats[0] == 0:
+        return 0.0
+    return stats[1] / stats[0]
+
+
+def reset_unparseable_stats() -> None:
+    """Clear accumulated unparseable statistics (useful between evaluations)."""
+    _unparseable_stats.clear()
+
 
 # ============================================================================
 # Strategy registry
@@ -222,11 +254,74 @@ class UnifiedParser:
 
         self.config = config
 
+    # ------------------------------------------------------------------ #
+    # Phase 4 helpers
+    # ------------------------------------------------------------------ #
+
+    @staticmethod
+    def _load_profile(model_id: Optional[str]) -> Optional[Any]:
+        """
+        Load a ModelProfile for *model_id*, checking built-in profiles first,
+        then the user's ~/.beyondbench/profiles/ cache.
+
+        Returns None if no profile is available.
+        """
+        if not model_id:
+            return None
+
+        # 1. Try pre-built profiles (no I/O overhead for known models)
+        try:
+            from ..utils.model_profiles import load_builtin_profile
+            data = load_builtin_profile(model_id)
+            if data is not None:
+                from ..utils.model_profiler import ModelProfile
+                return ModelProfile(**data)
+        except Exception as exc:
+            logger.debug("Built-in profile lookup failed: %s", exc)
+
+        # 2. Try user cache
+        try:
+            from ..utils.model_profiler import ModelProfiler
+            return ModelProfiler.load(model_id)
+        except Exception as exc:
+            logger.debug("Cached profile lookup failed: %s", exc)
+
+        return None
+
+    @staticmethod
+    def _apply_profile_strategies(
+        base_strategies: List[str],
+        profile: Any,
+    ) -> List[str]:
+        """
+        Reorder *base_strategies* according to a ModelProfile's recommendations.
+
+        The profile's recommended_strategies list only influences relative order
+        among strategies that are already present in *base_strategies*.  Any
+        strategy not in the profile's list keeps its original relative position.
+        """
+        if profile is None or not profile.recommended_strategies:
+            return base_strategies
+
+        # Build a priority map from the profile (lower index = higher priority)
+        priority: Dict[str, int] = {s: i for i, s in enumerate(profile.recommended_strategies)}
+
+        # Assign priorities: profile-known strategies get profile priority,
+        # unknown strategies go after them (preserving their original order).
+        base_len = len(base_strategies)
+        profile_len = len(profile.recommended_strategies)
+
+        def _sort_key(strategy: str) -> int:
+            return priority.get(strategy, profile_len + base_strategies.index(strategy))
+
+        return sorted(base_strategies, key=_sort_key)
+
     def parse(
         self,
         response: str,
         model_id: Optional[str] = None,
         adapter: Optional[BaseAdapter] = None,
+        model_profile: Optional[Any] = None,
     ) -> ParseResult:
         """
         Parse a model response using the configured strategy pipeline.
@@ -235,11 +330,19 @@ class UnifiedParser:
             response: Raw model response text.
             model_id: Model identifier for auto-selecting the right adapter.
             adapter: Pre-constructed adapter (overrides model_id).
+            model_profile: Optional ModelProfile for strategy reordering.
+                           If None and model_id is provided, a profile is
+                           automatically loaded from built-in data or cache.
 
         Returns:
             ParseResult with the best extracted value, or a failed result.
         """
         if not response or not response.strip():
+            # Track unparseable for confidence stats
+            if model_id:
+                stats = _unparseable_stats.setdefault(model_id, [0, 0])
+                stats[0] += 1
+                stats[1] += 1
             return ParseResult(value=None, confidence=0.0, strategy_used="none")
 
         # 1. Apply model-specific normalization
@@ -251,11 +354,17 @@ class UnifiedParser:
         text = text.replace('\\n', '\n').replace('\\t', ' ')
         text = re.sub(r'\r\n', '\n', text)
 
-        # 3. Run strategies in priority order
+        # 3. (Phase 4) Resolve model profile and reorder strategies
+        if model_profile is None and model_id:
+            model_profile = self._load_profile(model_id)
+
+        strategies = self._apply_profile_strategies(self.config.strategies, model_profile)
+
+        # 4. Run strategies in priority order (profile-adjusted)
         expected_type = self.config.expected_type
         results: List[ParseResult] = []
 
-        for strategy_name in self.config.strategies:
+        for strategy_name in strategies:
             strategy = _STRATEGY_INSTANCES.get(strategy_name)
             if strategy is None:
                 logger.debug("Unknown strategy: %s", strategy_name)
@@ -276,11 +385,27 @@ class UnifiedParser:
                 if result.confidence >= 0.90:
                     break
 
+        # Track per-model call count
+        if model_id:
+            stats = _unparseable_stats.setdefault(model_id, [0, 0])
+            stats[0] += 1
+
         if not results:
+            if model_id:
+                _unparseable_stats[model_id][1] += 1
+            logger.debug(
+                "Unparseable response (no strategy matched) for model=%s task_type=%s",
+                model_id, expected_type,
+            )
             return ParseResult(value=None, confidence=0.0, strategy_used="none")
 
-        # 4. Try candidates in confidence order; use first that converts successfully
-        results_sorted = sorted(results, key=lambda r: r.confidence, reverse=True)
+        # 5. Filter out low-confidence results (Phase 4.2.2)
+        viable = [r for r in results if r.confidence > CONFIDENCE_THRESHOLD_LOW]
+        if not viable:
+            viable = results  # keep all if nothing exceeds the threshold
+
+        # 6. Try candidates in confidence order; use first that converts successfully
+        results_sorted = sorted(viable, key=lambda r: r.confidence, reverse=True)
         best = None
         converted_value = None
 
@@ -296,15 +421,24 @@ class UnifiedParser:
             best = results_sorted[0]
             # For numeric/boolean types, don't return unconvertible strings
             if expected_type in ("int", "float", "boolean"):
+                if model_id:
+                    _unparseable_stats[model_id][1] += 1
                 return ParseResult(value=None, confidence=0.0, strategy_used="none")
             converted_value = best.value  # keep as string for str/auto/comparison types
 
-        # 5. Apply post-processors
+        # 7. Apply post-processors
         for proc in self.config.post_processors:
             try:
                 converted_value = proc(converted_value)
             except Exception as exc:
                 logger.debug("Post-processor failed: %s", exc)
+
+        # 8. Warn if best confidence is low
+        if best.confidence < CONFIDENCE_THRESHOLD_LOW:
+            logger.debug(
+                "Low-confidence parse (%.2f via %s) for model=%s — full response logged at DEBUG",
+                best.confidence, best.strategy_used, model_id,
+            )
 
         return ParseResult(
             value=converted_value,
@@ -380,6 +514,7 @@ def parse_response(
     response: str,
     task_name: str,
     model_id: Optional[str] = None,
+    model_profile: Optional[Any] = None,
 ) -> ParseResult:
     """
     One-shot convenience function: parse a response for a given task.
@@ -387,10 +522,11 @@ def parse_response(
     Args:
         response: Raw model response text.
         task_name: Task name for config lookup.
-        model_id: Model identifier for adapter selection.
+        model_id: Model identifier for adapter selection and profile lookup.
+        model_profile: Optional pre-loaded ModelProfile (skips auto-lookup).
 
     Returns:
         ParseResult.
     """
     parser = UnifiedParser(task_name=task_name)
-    return parser.parse(response, model_id=model_id)
+    return parser.parse(response, model_id=model_id, model_profile=model_profile)

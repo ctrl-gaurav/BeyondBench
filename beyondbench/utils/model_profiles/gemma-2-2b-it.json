@@ -1,0 +1,18 @@
+{
+  "model_id": "google/gemma-2-2b-it",
+  "boxed_rate": 0.30,
+  "explicit_rate": 0.68,
+  "code_block_rate": 0.12,
+  "cot_rate": 0.60,
+  "avg_response_length": 260,
+  "avg_token_estimate": 65,
+  "non_latin_rate": 0.01,
+  "recommended_strategies": ["explicit_statement", "boxed", "latex_math", "code_block", "fallback"],
+  "quirks": [
+    "Gemma family: <end_of_turn> tokens stripped by GemmaAdapter before parsing.",
+    "Prefers explicit 'The answer is' phrasing over boxed format."
+  ],
+  "num_calibration_samples": 20,
+  "calibration_timestamp": 1744300000.0,
+  "profile_version": "1.0"
+}

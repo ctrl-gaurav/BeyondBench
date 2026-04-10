@@ -1,0 +1,19 @@
+{
+  "model_id": "claude-sonnet-4-20250514",
+  "boxed_rate": 0.70,
+  "explicit_rate": 0.88,
+  "code_block_rate": 0.22,
+  "cot_rate": 0.75,
+  "avg_response_length": 420,
+  "avg_token_estimate": 105,
+  "non_latin_rate": 0.00,
+  "recommended_strategies": ["explicit_statement", "boxed", "latex_math", "code_block", "fallback"],
+  "quirks": [
+    "Claude Sonnet: prefers explicit statements ('The answer is X') over boxed format.",
+    "API backend: APIAdapter applied for role-label stripping.",
+    "Extended thinking mode produces very long responses with structured reasoning."
+  ],
+  "num_calibration_samples": 20,
+  "calibration_timestamp": 1744300000.0,
+  "profile_version": "1.0"
+}

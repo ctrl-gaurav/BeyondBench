@@ -1,0 +1,18 @@
+{
+  "model_id": "mistralai/Mistral-7B-Instruct-v0.3",
+  "boxed_rate": 0.35,
+  "explicit_rate": 0.72,
+  "code_block_rate": 0.10,
+  "cot_rate": 0.55,
+  "avg_response_length": 310,
+  "avg_token_estimate": 77,
+  "non_latin_rate": 0.01,
+  "recommended_strategies": ["explicit_statement", "boxed", "latex_math", "code_block", "fallback"],
+  "quirks": [
+    "Mistral family: [INST]/[/INST] artifacts possible.",
+    "Moderate boxed compliance; explicit statement is more reliable primary strategy."
+  ],
+  "num_calibration_samples": 20,
+  "calibration_timestamp": 1744300000.0,
+  "profile_version": "1.0"
+}

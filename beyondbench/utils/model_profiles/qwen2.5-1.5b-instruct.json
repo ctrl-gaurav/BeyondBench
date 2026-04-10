@@ -1,0 +1,18 @@
+{
+  "model_id": "Qwen/Qwen2.5-1.5B-Instruct",
+  "boxed_rate": 0.72,
+  "explicit_rate": 0.60,
+  "code_block_rate": 0.08,
+  "cot_rate": 0.45,
+  "avg_response_length": 210,
+  "avg_token_estimate": 52,
+  "non_latin_rate": 0.12,
+  "recommended_strategies": ["boxed", "explicit_statement", "latex_math", "code_block", "fallback"],
+  "quirks": [
+    "Qwen family: may mix Chinese characters with numeric answers.",
+    "Moderate CoT rate; boxed format is most reliable extraction target."
+  ],
+  "num_calibration_samples": 20,
+  "calibration_timestamp": 1744300000.0,
+  "profile_version": "1.0"
+}

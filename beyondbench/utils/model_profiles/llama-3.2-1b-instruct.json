@@ -1,0 +1,19 @@
+{
+  "model_id": "meta-llama/Llama-3.2-1B-Instruct",
+  "boxed_rate": 0.20,
+  "explicit_rate": 0.70,
+  "code_block_rate": 0.05,
+  "cot_rate": 0.80,
+  "avg_response_length": 420,
+  "avg_token_estimate": 105,
+  "non_latin_rate": 0.02,
+  "recommended_strategies": ["explicit_statement", "boxed", "latex_math", "code_block", "fallback"],
+  "quirks": [
+    "Llama family: verbose CoT common; [INST] artifacts possible in older checkpoints.",
+    "1B rarely uses \\boxed{}; explicit statement extraction is primary strategy.",
+    "High CoT rate: strip CoT preamble before parsing for better accuracy."
+  ],
+  "num_calibration_samples": 20,
+  "calibration_timestamp": 1744300000.0,
+  "profile_version": "1.0"
+}

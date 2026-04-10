@@ -45,6 +45,7 @@ from ..utils.parsing import (
 
 # Phase 1: Unified parser imports
 from .core import UnifiedParser, parse_response
+from .core import get_unparseable_rate, reset_unparseable_stats, CONFIDENCE_THRESHOLD_LOW
 from .task_configs import ParserConfig, get_task_config, TASK_PARSER_CONFIGS
 from .model_adapters import get_adapter
 from .settings import set_parser_mode, get_parser_mode, PARSER_MODE
@@ -90,6 +91,10 @@ __all__ = [
     "get_task_config",
     "TASK_PARSER_CONFIGS",
     "get_adapter",
+    # Phase 4: Confidence tracking
+    "get_unparseable_rate",
+    "reset_unparseable_stats",
+    "CONFIDENCE_THRESHOLD_LOW",
 
     # Unified parsing functions (preferred)
     "parse_boxed_answer",

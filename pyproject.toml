@@ -121,10 +121,11 @@ Changelog = "https://github.com/ctrl-gaurav/BeyondBench/blob/main/CHANGELOG.md"
 Paper = "https://arxiv.org/abs/2509.24210"
 
 [tool.setuptools]
-packages = ["beyondbench", "beyondbench.cli", "beyondbench.core", "beyondbench.models", "beyondbench.tasks", "beyondbench.tasks.easy", "beyondbench.tasks.medium", "beyondbench.tasks.hard", "beyondbench.utils", "beyondbench.parsers", "beyondbench.scripts", "beyondbench.serve"]
+packages = ["beyondbench", "beyondbench.cli", "beyondbench.core", "beyondbench.models", "beyondbench.tasks", "beyondbench.tasks.easy", "beyondbench.tasks.medium", "beyondbench.tasks.hard", "beyondbench.utils", "beyondbench.parsers", "beyondbench.scripts", "beyondbench.serve", "beyondbench.utils.model_profiles"]
 
 [tool.setuptools.package-data]
 beyondbench = ["configs/*.yaml", "configs/*.json", "py.typed"]
+"beyondbench.utils.model_profiles" = ["*.json"]
 
 [tool.black]
 line-length = 100

@@ -1,0 +1,18 @@
+{
+  "model_id": "Qwen/Qwen2.5-3B-Instruct",
+  "boxed_rate": 0.78,
+  "explicit_rate": 0.65,
+  "code_block_rate": 0.10,
+  "cot_rate": 0.55,
+  "avg_response_length": 280,
+  "avg_token_estimate": 70,
+  "non_latin_rate": 0.10,
+  "recommended_strategies": ["boxed", "explicit_statement", "latex_math", "code_block", "fallback"],
+  "quirks": [
+    "Qwen family: may mix Chinese characters with numeric answers.",
+    "3B produces more structured CoT than 0.5B/1.5B; boxed compliance is higher."
+  ],
+  "num_calibration_samples": 20,
+  "calibration_timestamp": 1744300000.0,
+  "profile_version": "1.0"
+}

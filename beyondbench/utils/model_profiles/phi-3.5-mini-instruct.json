@@ -1,0 +1,19 @@
+{
+  "model_id": "microsoft/Phi-3.5-mini-instruct",
+  "boxed_rate": 0.40,
+  "explicit_rate": 0.65,
+  "code_block_rate": 0.15,
+  "cot_rate": 0.50,
+  "avg_response_length": 150,
+  "avg_token_estimate": 37,
+  "non_latin_rate": 0.01,
+  "recommended_strategies": ["explicit_statement", "boxed", "code_block", "latex_math", "fallback"],
+  "quirks": [
+    "Phi family: terse outputs; single-number answers common.",
+    "Very short responses on average; fallback last-line extraction is often sufficient.",
+    "<|end|> tokens stripped by PhiAdapter before parsing."
+  ],
+  "num_calibration_samples": 20,
+  "calibration_timestamp": 1744300000.0,
+  "profile_version": "1.0"
+}

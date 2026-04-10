@@ -577,6 +577,103 @@ def results_compare(path1: str, path2: str):
 
 
 # ------------------------------------------------------------------ #
+# compare command (Phase 4)
+# ------------------------------------------------------------------ #
+
+@main.command()
+@click.option('--models', required=True,
+              help='Comma-separated list of model IDs to compare')
+@click.option('--suite', type=click.Choice(['easy', 'medium', 'hard', 'all']), default='easy',
+              show_default=True, help='Task suite')
+@click.option('--tasks', default='', help='Comma-separated task names (default: all in suite)')
+@click.option('--datapoints', type=int, default=20, show_default=True,
+              help='Datapoints per task per model')
+@click.option('--gpus', default='',
+              help='Comma-separated GPU IDs (e.g. "0,1,2").  Auto-detected if empty.')
+@click.option('--output-dir', default='./beyondbench_comparison', show_default=True,
+              help='Directory for comparison reports and per-model results')
+@click.option('--backend', type=click.Choice(['vllm', 'transformers']), default='vllm',
+              show_default=True, help='Local inference backend')
+@click.option('--gpu-memory-utilization', type=float, default=0.45, show_default=True,
+              help='GPU memory utilization per model (keep low when running many models in parallel)')
+@click.option('--seed', type=int, default=None, help='Random seed for reproducibility')
+@click.option('--store-details', is_flag=True, help='Store detailed per-example results')
+def compare(
+    models: str,
+    suite: str,
+    tasks: str,
+    datapoints: int,
+    gpus: str,
+    output_dir: str,
+    backend: str,
+    gpu_memory_utilization: float,
+    seed: Optional[int],
+    store_details: bool,
+):
+    """Compare multiple models side-by-side on the same task suite.
+
+    Runs one model per GPU in parallel and produces an accuracy matrix,
+    parse success matrix, and ranked summary table.
+
+    Examples:
+
+    \b
+    # Compare 4 Qwen variants on GPUs 0-3
+    beyondbench compare \\
+        --models "Qwen/Qwen2.5-0.5B-Instruct,Qwen/Qwen2.5-1.5B-Instruct,Qwen/Qwen2.5-3B-Instruct,Qwen/Qwen2.5-7B-Instruct" \\
+        --suite easy --datapoints 20 --gpus 0,1,2,3
+
+    \b
+    # Compare Llama and Qwen on easy suite
+    beyondbench compare \\
+        --models "meta-llama/Llama-3.2-3B-Instruct,Qwen/Qwen2.5-1.5B-Instruct" \\
+        --suite easy --datapoints 50
+    """
+    from ..utils.logging_utils import setup_logging, get_logger
+
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+    setup_logging(output_dir=str(output_path), log_level="INFO",
+                  enable_file_logging=True, enable_console_logging=True)
+    log = get_logger("CLI.compare")
+
+    model_list = [m.strip() for m in models.split(",") if m.strip()]
+    task_list = [t.strip() for t in tasks.split(",") if t.strip()]
+    gpu_list = [int(g.strip()) for g in gpus.split(",") if g.strip()] if gpus else None
+
+    if not model_list:
+        click.echo("Error: --models must specify at least one model.", err=True)
+        sys.exit(1)
+
+    log.info("Comparing %d models: %s", len(model_list), model_list)
+
+    try:
+        from ..scripts.model_comparison import ModelComparisonRunner, print_comparison_report
+
+        runner = ModelComparisonRunner(
+            models=model_list,
+            suite=suite,
+            tasks=task_list,
+            datapoints=datapoints,
+            gpus=gpu_list,
+            output_dir=output_dir,
+            backend=backend,
+            gpu_memory_utilization=gpu_memory_utilization,
+            seed=seed,
+            store_details=store_details,
+        )
+
+        report = runner.run()
+        print_comparison_report(report)
+
+        click.echo(f"\nFull report saved to {output_path / 'comparison_report.json'}")
+
+    except Exception as exc:
+        log.error("Comparison failed: %s", exc)
+        sys.exit(1)
+
+
+# ------------------------------------------------------------------ #
 # init command
 # ------------------------------------------------------------------ #
 @main.command()

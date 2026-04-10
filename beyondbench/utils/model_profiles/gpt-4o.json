@@ -1,0 +1,19 @@
+{
+  "model_id": "gpt-4o",
+  "boxed_rate": 0.90,
+  "explicit_rate": 0.85,
+  "code_block_rate": 0.20,
+  "cot_rate": 0.80,
+  "avg_response_length": 450,
+  "avg_token_estimate": 112,
+  "non_latin_rate": 0.00,
+  "recommended_strategies": ["boxed", "explicit_statement", "latex_math", "code_block", "fallback"],
+  "quirks": [
+    "GPT-4o reliably uses \\boxed{} for math answers; boxed strategy is primary.",
+    "API backend: APIAdapter applied for role-label stripping.",
+    "Very high instruction-following rate; format compliance excellent."
+  ],
+  "num_calibration_samples": 20,
+  "calibration_timestamp": 1744300000.0,
+  "profile_version": "1.0"
+}
