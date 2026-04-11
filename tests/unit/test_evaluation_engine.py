@@ -96,25 +96,43 @@ class TestValidateConfiguration:
 # ===========================================================================
 
 class TestGetAvailableTasks:
-    def test_easy_suite(self, engine):
+    """Task-count invariants — derived dynamically from ``TaskRegistry`` so
+    new phases that add tasks don't require editing these assertions.
+    """
+
+    @pytest.fixture
+    def registry_counts(self):
+        from beyondbench.core.task_registry import TaskRegistry
+        reg = TaskRegistry()
+        return {
+            "easy": len(reg.get_tasks_for_suite("easy")),
+            "medium": len(reg.get_tasks_for_suite("medium")),
+            "hard": len(reg.get_tasks_for_suite("hard")),
+        }
+
+    def test_easy_suite(self, engine, registry_counts):
         tasks = engine.get_available_tasks("easy")
         assert "easy" in tasks
-        assert len(tasks["easy"]) == 29
+        assert len(tasks["easy"]) == registry_counts["easy"]
+        assert len(tasks["easy"]) > 0
 
-    def test_medium_suite(self, engine):
+    def test_medium_suite(self, engine, registry_counts):
         tasks = engine.get_available_tasks("medium")
         assert "medium" in tasks
-        assert len(tasks["medium"]) == 5
+        assert len(tasks["medium"]) == registry_counts["medium"]
+        assert len(tasks["medium"]) > 0
 
-    def test_hard_suite(self, engine):
+    def test_hard_suite(self, engine, registry_counts):
         tasks = engine.get_available_tasks("hard")
         assert "hard" in tasks
-        assert len(tasks["hard"]) == 10
+        assert len(tasks["hard"]) == registry_counts["hard"]
+        assert len(tasks["hard"]) > 0
 
-    def test_all_suite(self, engine):
+    def test_all_suite(self, engine, registry_counts):
         tasks = engine.get_available_tasks("all")
         total = sum(len(v) for v in tasks.values())
-        assert total == 44
+        expected = sum(registry_counts.values())
+        assert total == expected
 
     def test_returns_dict(self, engine):
         result = engine.get_available_tasks("easy")
@@ -220,9 +238,11 @@ class TestErrorHandling:
         from beyondbench.core.task_registry import TaskRegistry
         from beyondbench.core.evaluation_engine import EvaluationEngine
         engine = EvaluationEngine(model_handler=mock_handler, output_dir=str(tmp_path / "empty"))
-        # Verify the engine initializes with 44 tasks available
+        # Verify the engine sees the same easy-suite count as the registry.
+        registry = TaskRegistry()
         available = engine.get_available_tasks("easy")
-        assert len(available["easy"]) == 29
+        assert len(available["easy"]) == len(registry.get_tasks_for_suite("easy"))
+        assert len(available["easy"]) > 0
 
     def test_invalid_suite_handled(self, engine):
         try:

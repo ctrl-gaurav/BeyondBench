@@ -35,7 +35,7 @@ class TaskRegistry:
     def _discover_and_register_tasks(self):
         """Discover and register all available tasks."""
 
-        # Easy suite tasks (14 core + 15 new = 29 total)
+        # Easy suite tasks (14 core + 15 scalable + 15 Phase 12 = 44 total)
         easy_tasks = [
             # Core tasks
             'sorting', 'comparison', 'sum', 'multiplication', 'odd_count', 'even_count',
@@ -46,7 +46,13 @@ class TaskRegistry:
             'second_maximum', 'range', 'index_of_maximum', 'count_negative',
             'count_unique', 'max_adjacent_difference', 'count_greater_than_previous', 'sum_of_max_indices',
             'count_palindromic', 'longest_increasing_subsequence', 'sum_of_digits', 'count_perfect_squares',
-            'alternating_sum', 'count_multiples', 'local_maxima_count'
+            'alternating_sum', 'count_multiples', 'local_maxima_count',
+
+            # Phase 12: 15 new easy tasks
+            'weighted_sum', 'running_average', 'parity_check', 'cumulative_sum',
+            'reverse_list', 'rotate_list', 'interleave_lists', 'set_intersection',
+            'set_difference', 'moving_average', 'element_frequency', 'second_minimum',
+            'variance', 'standard_deviation', 'dot_product',
         ]
 
         # Medium suite tasks (5 domains)

@@ -11,6 +11,42 @@ from click.testing import CliRunner
 from unittest.mock import MagicMock, patch
 
 
+def _extract_json_object(output: str) -> dict:
+    """Extract the first top-level JSON object from CLI output.
+
+    CliRunner (Click 8.1) merges stderr into ``result.output`` by default, and
+    the beyondbench root logger emits a ``Logging initialized`` line before
+    the command runs — so raw ``json.loads(result.output)`` can fail. This
+    helper locates the first ``{`` and walks to the matching brace, returning
+    the parsed object.
+    """
+    start = output.find("{")
+    if start == -1:
+        raise ValueError(f"No JSON object found in output: {output!r}")
+    depth = 0
+    in_string = False
+    escape = False
+    for i in range(start, len(output)):
+        ch = output[i]
+        if in_string:
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_string = False
+            continue
+        if ch == '"':
+            in_string = True
+        elif ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return json.loads(output[start:i + 1])
+    raise ValueError(f"Unterminated JSON object in output: {output!r}")
+
+
 # ===========================================================================
 # 1. CLI structure
 # ===========================================================================
@@ -131,27 +167,37 @@ class TestListTasksCommand:
     def test_list_json_format(self):
         result = self.runner.invoke(self.main, ["list-tasks", "--format", "json"])
         assert result.exit_code == 0
-        data = json.loads(result.output)
+        data = _extract_json_object(result.output)
         assert isinstance(data, dict)
         assert "easy" in data
 
-    def test_list_json_easy_has_29(self):
+    def test_list_json_easy_matches_registry(self):
+        """CLI easy-suite count must match what the registry reports."""
+        from beyondbench.core.task_registry import TaskRegistry
+        expected = len(TaskRegistry().get_tasks_for_suite("easy"))
         result = self.runner.invoke(self.main, ["list-tasks", "--format", "json"])
         assert result.exit_code == 0
-        data = json.loads(result.output)
-        assert len(data.get("easy", [])) == 29
+        data = _extract_json_object(result.output)
+        assert len(data.get("easy", [])) == expected
+        assert len(data.get("easy", [])) > 0
 
-    def test_list_json_medium_has_5(self):
+    def test_list_json_medium_matches_registry(self):
+        from beyondbench.core.task_registry import TaskRegistry
+        expected = len(TaskRegistry().get_tasks_for_suite("medium"))
         result = self.runner.invoke(self.main, ["list-tasks", "--format", "json"])
         assert result.exit_code == 0
-        data = json.loads(result.output)
-        assert len(data.get("medium", [])) == 5
+        data = _extract_json_object(result.output)
+        assert len(data.get("medium", [])) == expected
+        assert len(data.get("medium", [])) > 0
 
-    def test_list_json_hard_has_10(self):
+    def test_list_json_hard_matches_registry(self):
+        from beyondbench.core.task_registry import TaskRegistry
+        expected = len(TaskRegistry().get_tasks_for_suite("hard"))
         result = self.runner.invoke(self.main, ["list-tasks", "--format", "json"])
         assert result.exit_code == 0
-        data = json.loads(result.output)
-        assert len(data.get("hard", [])) == 10
+        data = _extract_json_object(result.output)
+        assert len(data.get("hard", [])) == expected
+        assert len(data.get("hard", [])) > 0
 
     def test_list_includes_sum(self):
         result = self.runner.invoke(self.main, ["list-tasks"])

@@ -66,6 +66,19 @@ from .median_parsing import parse_median_answer
 from .mode_parsing import parse_mode_answer
 from .subtraction_parsing import parse_subtraction_answer
 
+# Phase 12: New list/scalar parsers
+from .list_parsing_helpers import parse_list_answer
+from .running_average_parsing import parse_running_average_answer
+from .cumulative_sum_parsing import parse_cumulative_sum_answer
+from .reverse_list_parsing import parse_reverse_list_answer
+from .rotate_list_parsing import parse_rotate_list_answer
+from .interleave_lists_parsing import parse_interleave_lists_answer
+from .set_intersection_parsing import parse_set_intersection_answer
+from .set_difference_parsing import parse_set_difference_answer
+from .moving_average_parsing import parse_moving_average_answer
+from .parity_check_parsing import parse_parity_check_answer
+from .element_frequency_parsing import parse_element_frequency_answer
+
 # Phase 2: New easy task parsers (15 newer easy tasks)
 from .second_maximum_parsing import parse_second_maximum_answer
 from .range_parsing import parse_range_answer
@@ -126,6 +139,19 @@ __all__ = [
     "parse_median_answer",
     "parse_mode_answer",
     "parse_subtraction_answer",
+
+    # Phase 12: New list/scalar parsers
+    "parse_list_answer",
+    "parse_running_average_answer",
+    "parse_cumulative_sum_answer",
+    "parse_reverse_list_answer",
+    "parse_rotate_list_answer",
+    "parse_interleave_lists_answer",
+    "parse_set_intersection_answer",
+    "parse_set_difference_answer",
+    "parse_moving_average_answer",
+    "parse_parity_check_answer",
+    "parse_element_frequency_answer",
 
     # Phase 2: Newer easy task parsers
     "parse_second_maximum_answer",

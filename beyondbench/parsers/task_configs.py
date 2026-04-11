@@ -201,6 +201,106 @@ TASK_PARSER_CONFIGS: dict[str, ParserConfig] = {
         description="Count of local maxima in a list",
     ),
 
+    # ============================================================================
+    # Phase 12: 15 new easy tasks
+    # ============================================================================
+
+    # --- Scalar int/float tasks ---
+    "weighted_sum": ParserConfig(
+        expected_type="int",
+        strategies=["boxed", "explicit_statement", "code_block", "latex_math", "fallback"],
+        tolerance=0,
+        description="Weighted sum: sum of i * a[i-1] for 1-indexed positions",
+    ),
+    "second_minimum": ParserConfig(
+        expected_type="int",
+        strategies=["boxed", "explicit_statement", "code_block", "latex_math", "fallback"],
+        tolerance=0,
+        description="Second smallest distinct element",
+    ),
+    "dot_product": ParserConfig(
+        expected_type="int",
+        strategies=["boxed", "explicit_statement", "code_block", "latex_math", "fallback"],
+        tolerance=0,
+        description="Dot product of two equal-length lists",
+    ),
+    "variance": ParserConfig(
+        expected_type="float",
+        strategies=["boxed", "explicit_statement", "latex_math", "code_block", "fallback"],
+        tolerance=1e-2,
+        description="Population variance",
+    ),
+    "standard_deviation": ParserConfig(
+        expected_type="float",
+        strategies=["boxed", "explicit_statement", "latex_math", "code_block", "fallback"],
+        tolerance=1e-2,
+        description="Population standard deviation",
+    ),
+
+    # --- String tasks ---
+    "parity_check": ParserConfig(
+        expected_type="str",
+        strategies=["boxed", "explicit_statement", "fallback"],
+        tolerance=0,
+        description="Product parity: 'even' or 'odd'",
+    ),
+
+    # --- List tasks ---
+    "running_average": ParserConfig(
+        expected_type="list",
+        strategies=["boxed", "list", "explicit_statement", "code_block", "json", "fallback"],
+        tolerance=1e-4,
+        description="Running (cumulative) average list",
+    ),
+    "cumulative_sum": ParserConfig(
+        expected_type="list",
+        strategies=["boxed", "list", "explicit_statement", "code_block", "json", "fallback"],
+        tolerance=0,
+        description="Cumulative (prefix) sum list",
+    ),
+    "reverse_list": ParserConfig(
+        expected_type="list",
+        strategies=["boxed", "list", "explicit_statement", "code_block", "json", "fallback"],
+        tolerance=0,
+        description="Reversed list",
+    ),
+    "rotate_list": ParserConfig(
+        expected_type="list",
+        strategies=["boxed", "list", "explicit_statement", "code_block", "json", "fallback"],
+        tolerance=0,
+        description="Right-rotated list by k positions",
+    ),
+    "interleave_lists": ParserConfig(
+        expected_type="list",
+        strategies=["boxed", "list", "explicit_statement", "code_block", "json", "fallback"],
+        tolerance=0,
+        description="Interleaved two lists element by element",
+    ),
+    "set_intersection": ParserConfig(
+        expected_type="list",
+        strategies=["boxed", "list", "explicit_statement", "code_block", "json", "fallback"],
+        tolerance=0,
+        description="Sorted set intersection of two lists",
+    ),
+    "set_difference": ParserConfig(
+        expected_type="list",
+        strategies=["boxed", "list", "explicit_statement", "code_block", "json", "fallback"],
+        tolerance=0,
+        description="Sorted set difference: elements in list1 not in list2",
+    ),
+    "moving_average": ParserConfig(
+        expected_type="list",
+        strategies=["boxed", "list", "explicit_statement", "code_block", "json", "fallback"],
+        tolerance=1e-4,
+        description="k-window moving average list",
+    ),
+    "element_frequency": ParserConfig(
+        expected_type="list",
+        strategies=["boxed", "list", "explicit_statement", "code_block", "json", "fallback"],
+        tolerance=0,
+        description="Frequency table [[val, count], ...] sorted by val",
+    ),
+
     # --- List task ---
     "sorting": ParserConfig(
         expected_type="list",

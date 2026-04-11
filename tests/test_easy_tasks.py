@@ -17,7 +17,7 @@ class TestEasyTaskDataGeneration:
 
     def test_all_easy_tasks_registered(self, registry):
         tasks = registry.get_tasks_for_suite("easy")
-        assert len(tasks) == 29
+        assert len(tasks) == 44
 
     @pytest.mark.parametrize("task_name", [
         "sorting", "sum", "multiplication", "odd_count", "even_count",
@@ -28,6 +28,11 @@ class TestEasyTaskDataGeneration:
         "sum_of_max_indices", "count_palindromic", "longest_increasing_subsequence",
         "sum_of_digits", "count_perfect_squares", "alternating_sum",
         "count_multiples", "local_maxima_count",
+        # Phase 12: 15 new easy tasks
+        "weighted_sum", "running_average", "parity_check", "cumulative_sum",
+        "reverse_list", "rotate_list", "interleave_lists", "set_intersection",
+        "set_difference", "moving_average", "element_frequency", "second_minimum",
+        "variance", "standard_deviation", "dot_product",
     ])
     def test_easy_task_class_importable(self, registry, task_name):
         """Each easy task class should be importable."""

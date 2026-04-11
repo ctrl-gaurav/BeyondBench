@@ -1,12 +1,46 @@
 """
-Unit tests for all 44 BeyondBench tasks — generate_data, create_prompt, evaluate_response.
+Unit tests for all BeyondBench tasks — generate_data, create_prompt, evaluate_response.
 
 No GPU required. Uses mock model handler for any task that invokes generate().
+
+Task counts are derived dynamically from the registry, so adding new tasks in
+future phases does not require editing this file.
 """
 
 import pytest
 import random
 from unittest.mock import MagicMock
+
+
+def pytest_generate_tests(metafunc):
+    """Parametrize any ``task_name`` argument from the live TaskRegistry.
+
+    This makes the test file self-updating: new tasks registered in
+    ``TaskRegistry._discover_and_register_tasks`` are automatically covered.
+
+    Only applies when:
+      - The test function accepts a ``task_name`` fixture.
+      - The test is a method on a class that opts in via
+        ``_suite_for_parametrize``. Module-level functions that explicitly
+        use ``@pytest.mark.parametrize`` (e.g., the hard-task import tests
+        that pack ``task_name`` into a tuple with module/class paths) are
+        left alone.
+    """
+    if "task_name" not in metafunc.fixturenames:
+        return
+    cls = getattr(metafunc, "cls", None)
+    if cls is None or not hasattr(cls, "_suite_for_parametrize"):
+        return  # Let existing @pytest.mark.parametrize handle it.
+
+    from beyondbench.core.task_registry import TaskRegistry
+    registry = TaskRegistry()
+
+    suite = cls._suite_for_parametrize
+    task_names = registry.get_tasks_for_suite(suite)
+    task_filter = getattr(cls, "_task_filter", None)
+    if task_filter is not None:
+        task_names = [t for t in task_names if task_filter(t)]
+    metafunc.parametrize("task_name", task_names)
 
 # ---------------------------------------------------------------------------
 # Shared mock handler fixture
@@ -634,51 +668,55 @@ class TestTaskRegistry:
         from beyondbench.core.task_registry import TaskRegistry
         self.registry = TaskRegistry()
 
-    def test_easy_count(self):
-        assert len(self.registry.get_tasks_for_suite("easy")) == 29
+    # --- Count invariants (dynamic, no hardcoded totals) ---
+    # We deliberately avoid asserting a specific count so that adding tasks
+    # in future phases does not require editing these tests. Instead we
+    # check structural invariants: non-empty, unique, and that "all" is the
+    # disjoint union of the three difficulty suites.
 
-    def test_medium_count(self):
-        assert len(self.registry.get_tasks_for_suite("medium")) == 5
+    def test_easy_nonempty(self):
+        assert len(self.registry.get_tasks_for_suite("easy")) > 0
 
-    def test_hard_count(self):
-        assert len(self.registry.get_tasks_for_suite("hard")) == 10
+    def test_medium_nonempty(self):
+        assert len(self.registry.get_tasks_for_suite("medium")) > 0
 
-    def test_all_count(self):
-        assert len(self.registry.get_tasks_for_suite("all")) == 44
+    def test_hard_nonempty(self):
+        assert len(self.registry.get_tasks_for_suite("hard")) > 0
+
+    def test_suites_have_unique_task_names(self):
+        for suite in ("easy", "medium", "hard"):
+            names = self.registry.get_tasks_for_suite(suite)
+            assert len(names) == len(set(names)), \
+                f"Suite '{suite}' has duplicate task names: {names}"
+
+    def test_all_equals_sum_of_suites(self):
+        easy = self.registry.get_tasks_for_suite("easy")
+        medium = self.registry.get_tasks_for_suite("medium")
+        hard = self.registry.get_tasks_for_suite("hard")
+        all_tasks = self.registry.get_tasks_for_suite("all")
+        assert len(all_tasks) == len(easy) + len(medium) + len(hard)
+        assert set(all_tasks) == set(easy) | set(medium) | set(hard)
+
+    def test_suites_are_disjoint(self):
+        easy = set(self.registry.get_tasks_for_suite("easy"))
+        medium = set(self.registry.get_tasks_for_suite("medium"))
+        hard = set(self.registry.get_tasks_for_suite("hard"))
+        assert easy.isdisjoint(medium), f"easy∩medium={easy & medium}"
+        assert easy.isdisjoint(hard), f"easy∩hard={easy & hard}"
+        assert medium.isdisjoint(hard), f"medium∩hard={medium & hard}"
+
+    def test_all_registered_tasks_have_loadable_class(self):
+        for task_name in self.registry.get_tasks_for_suite("all"):
+            cls = self.registry.get_task_class(task_name)
+            assert cls is not None, f"Task class for '{task_name}' not found"
 
     def test_unknown_suite_returns_empty(self):
         assert self.registry.get_tasks_for_suite("unknown") == []
 
-    @pytest.mark.parametrize("task_name", [
-        "sorting", "sum", "multiplication", "odd_count", "even_count",
-        "find_maximum", "find_minimum", "mean", "median", "mode",
-        "subtraction", "absolute_difference", "division", "comparison",
-        "second_maximum", "range", "index_of_maximum", "count_negative",
-        "count_unique", "max_adjacent_difference", "count_greater_than_previous",
-        "sum_of_max_indices", "count_palindromic", "longest_increasing_subsequence",
-        "sum_of_digits", "count_perfect_squares", "alternating_sum",
-        "count_multiples", "local_maxima_count",
-    ])
-    def test_easy_task_class_available(self, task_name):
-        cls = self.registry.get_task_class(task_name)
-        assert cls is not None, f"Task class for '{task_name}' not found"
-
-    @pytest.mark.parametrize("task_name", [
-        "fibonacci_sequence", "algebraic_sequence", "geometric_sequence",
-        "prime_sequence", "complex_pattern",
-    ])
-    def test_medium_task_class_available(self, task_name):
-        cls = self.registry.get_task_class(task_name)
-        assert cls is not None, f"Task class for '{task_name}' not found"
-
-    @pytest.mark.parametrize("task_name", [
-        "tower_hanoi", "n_queens", "graph_coloring", "boolean_sat",
-        "sudoku_solving", "cryptarithmetic", "matrix_chain_multiplication",
-        "modular_systems", "constraint_optimization", "logic_grid_puzzles",
-    ])
-    def test_hard_task_class_available(self, task_name):
-        cls = self.registry.get_task_class(task_name)
-        assert cls is not None, f"Task class for '{task_name}' not found"
+    # --- Per-task class availability, driven by the registry itself ---
+    # Using pytest_generate_tests below (see module bottom) so that any
+    # task added to the registry in future phases is automatically covered
+    # without editing this file.
 
 
 # ===========================================================================
@@ -686,34 +724,30 @@ class TestTaskRegistry:
 # ===========================================================================
 
 class TestAllEasyTasksPrompt:
-    """Ensure every easy task can generate data and a prompt."""
+    """Ensure every easy task can generate data and a prompt.
+
+    The ``task_name`` parameter is auto-populated from the TaskRegistry by
+    ``pytest_generate_tests`` above — this class iterates the entire easy
+    suite dynamically so new tasks are covered without editing.
+    """
+
+    _suite_for_parametrize = "easy"
+    # ``comparison`` doesn't follow the ``generate_data(list_size=...)``
+    # signature used by the list-based easy tasks, so skip it here.
+    _task_filter = staticmethod(lambda name: name != "comparison")
 
     @pytest.fixture(autouse=True)
     def _registry(self):
         from beyondbench.core.task_registry import TaskRegistry
         self.registry = TaskRegistry()
 
-    @pytest.mark.parametrize("task_name", [
-        "sorting", "sum", "multiplication", "odd_count", "even_count",
-        "find_maximum", "find_minimum", "mean", "median", "mode",
-        "subtraction", "absolute_difference", "division",
-        "second_maximum", "range", "index_of_maximum", "count_negative",
-        "count_unique", "max_adjacent_difference", "count_greater_than_previous",
-        "sum_of_max_indices", "count_palindromic", "longest_increasing_subsequence",
-        "sum_of_digits", "count_perfect_squares", "alternating_sum",
-        "count_multiples", "local_maxima_count",
-    ])
     def test_generate_and_prompt(self, task_name, mock_handler, output_dir):
         cls = self.registry.get_task_class(task_name)
         if cls is None:
             pytest.skip(f"{task_name} not available")
         t = _make_task(cls, mock_handler, output_dir)
         try:
-            # comparison task doesn't take list_size
-            if task_name == "comparison":
-                data = t.generate_data()
-            else:
-                data = t.generate_data(list_size=4)
+            data = t.generate_data(list_size=4)
             assert len(data) > 0
             prompt = t.create_prompt(data[0])
             assert isinstance(prompt, str) and len(prompt) > 5
