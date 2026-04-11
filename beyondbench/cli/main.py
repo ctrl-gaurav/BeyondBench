@@ -24,9 +24,73 @@ except PackageNotFoundError:
     from .. import __version__ as _VERSION
 
 
+class CLIContext:
+    """Shared CLI state: verbosity, output mode, logger.
+
+    Populated by the top-level group and consumed by subcommands via
+    ``@click.pass_obj``. Subcommands that do not opt into the context object
+    can still read it from ``click.get_current_context().obj``.
+    """
+
+    def __init__(self) -> None:
+        self.verbose: bool = False
+        self.quiet: bool = False
+        self.json_mode: bool = False
+
+    @property
+    def log_level(self) -> str:
+        if self.quiet:
+            return "ERROR"
+        if self.verbose:
+            return "DEBUG"
+        return "INFO"
+
+    def echo(self, message: str, *, err: bool = False) -> None:
+        """Print a human-facing line, suppressed in --quiet and --json modes."""
+        if self.quiet or self.json_mode:
+            return
+        click.echo(message, err=err)
+
+    def emit_json(self, payload: Any) -> None:
+        """Emit a machine-readable JSON payload to stdout.
+
+        Always prints regardless of --quiet; used by subcommands when
+        --json is active to return structured output.
+        """
+        click.echo(json.dumps(payload, indent=2, default=str))
+
+
+def _get_cli_ctx() -> "CLIContext":
+    """Fetch the shared CLIContext from the active click context.
+
+    Returns a fresh default if no context is active (e.g. unit tests
+    calling helpers directly).
+    """
+    try:
+        ctx = click.get_current_context(silent=True)
+        if ctx is not None and isinstance(ctx.obj, CLIContext):
+            return ctx.obj
+    except RuntimeError:
+        pass
+    return CLIContext()
+
+
 @click.group()
 @click.version_option(version=_VERSION, prog_name="beyondbench")
-def main():
+@click.option(
+    "--verbose", "-v", is_flag=True, default=False,
+    help="Enable verbose output (DEBUG log level, extra diagnostics).",
+)
+@click.option(
+    "--quiet", "-q", is_flag=True, default=False,
+    help="Suppress non-essential output (ERROR log level only).",
+)
+@click.option(
+    "--json", "json_mode", is_flag=True, default=False,
+    help="Machine-readable JSON output mode for supported commands.",
+)
+@click.pass_context
+def main(ctx: click.Context, verbose: bool, quiet: bool, json_mode: bool) -> None:
     """BeyondBench: Comprehensive LLM Reasoning Evaluation Framework
 
     Evaluate language model reasoning capabilities across easy, medium, and hard
@@ -38,8 +102,29 @@ def main():
       10 hard suite tasks with 68 variations
       Multi-backend support (vLLM, Transformers, OpenAI, Gemini)
       Robust parsing and comprehensive metrics
+
+    Global flags:
+      --verbose / -v  more logging (DEBUG)
+      --quiet / -q    suppress human-facing output
+      --json          emit structured JSON for supported commands
     """
-    pass
+    if verbose and quiet:
+        raise click.UsageError("--verbose and --quiet are mutually exclusive")
+
+    cli_ctx = CLIContext()
+    cli_ctx.verbose = verbose
+    cli_ctx.quiet = quiet
+    cli_ctx.json_mode = json_mode
+    ctx.obj = cli_ctx
+
+    # Propagate log level into the shared logger and the BEYONDBENCH_LOG_LEVEL
+    # env var so any subprocess/worker we spawn inherits it.
+    os.environ["BEYONDBENCH_LOG_LEVEL"] = cli_ctx.log_level
+    try:
+        setup_logging(level=cli_ctx.log_level)
+    except Exception:
+        # Logging init is best-effort; never crash the CLI on logger setup.
+        pass
 
 
 @main.command()
@@ -104,6 +189,12 @@ def main():
 @click.option('--dashboard-port', type=int, default=7860, show_default=True,
               help='Port for the live dashboard (requires --dashboard)')
 
+# Pre-flight Validation (Phase 9.2.1)
+@click.option('--skip-validation', is_flag=True, default=False,
+              help='Skip pre-flight model validation (HF existence, GPU memory, deps)')
+@click.option('--validation-warn-only', is_flag=True, default=False,
+              help='Treat all pre-flight validation issues as warnings instead of errors')
+
 def evaluate(**kwargs):
     """
     Run comprehensive evaluation on specified tasks.
@@ -142,6 +233,14 @@ def evaluate(**kwargs):
 
     # Validate configuration
     config = validate_and_prepare_config(kwargs)
+
+    # Pre-flight model validation (Phase 9.2.1)
+    _run_preflight_validation(
+        kwargs,
+        skip=kwargs.get('skip_validation', False),
+        warn_only=kwargs.get('validation_warn_only', False),
+        logger=logger,
+    )
 
     # Apply parser mode globally
     parser_mode = config.get('parser_mode', 'unified')
@@ -307,10 +406,19 @@ def evaluate(**kwargs):
 @main.command()
 @click.option('--suite', type=click.Choice(['easy', 'medium', 'hard', 'all']), default='all', help='Task suite to list')
 @click.option('--format', 'output_format', type=click.Choice(['table', 'json', 'yaml']), default='table', help='Output format')
-def list_tasks(suite: str, output_format: str):
-    """List available tasks in each suite."""
+@click.pass_obj
+def list_tasks(cli_ctx: "CLIContext", suite: str, output_format: str):
+    """List available tasks in each suite.
+
+    When the global ``--json`` flag is set, output is forced to JSON
+    regardless of ``--format``.
+    """
 
     logger = get_logger("CLI")
+
+    # Global --json overrides per-command --format
+    if cli_ctx is not None and cli_ctx.json_mode:
+        output_format = 'json'
 
     try:
         from ..core.task_registry import TaskRegistry
@@ -333,11 +441,18 @@ def list_tasks(suite: str, output_format: str):
 
 @main.command()
 @click.argument('config_file', type=click.Path(exists=True))
-def run_config(config_file: str):
+@click.option('--skip-validation', is_flag=True, default=False,
+              help='Skip pre-flight model validation (HF existence, GPU memory, deps)')
+@click.option('--validation-warn-only', is_flag=True, default=False,
+              help='Treat all pre-flight validation issues as warnings instead of errors')
+def run_config(config_file: str, skip_validation: bool, validation_warn_only: bool):
     """Run evaluation from a YAML or JSON configuration file.
 
     The config file should have top-level keys: model, evaluation, output,
     and optionally performance. Keys are flattened and mapped to CLI params.
+
+    Environment variables (``BEYONDBENCH_*``) and any ``.env`` file in the
+    current directory are applied on top of the file values.
 
     Example:
 
@@ -348,20 +463,17 @@ def run_config(config_file: str):
     logger = get_logger("CLI")
 
     try:
-        with open(config_file, 'r', encoding='utf-8') as f:
-            if config_file.endswith('.yaml') or config_file.endswith('.yml'):
-                import yaml
-                config = yaml.safe_load(f)
-            else:
-                config = json.load(f)
-
-        # Validate against schema if jsonschema is available
-        _validate_config(config)
+        # Use the env-var + .env-aware loader so overrides apply transparently.
+        from ..configs import load_and_validate_config
+        config = load_and_validate_config(config_file)
 
         logger.info(f"Running evaluation from config: {config_file}")
 
         # Flatten nested config into flat CLI-compatible kwargs
         flat = _flatten_config(config)
+        # Propagate skip flags into the evaluate invocation
+        flat['skip_validation'] = skip_validation
+        flat['validation_warn_only'] = validation_warn_only
 
         # Invoke the evaluate command with flattened params
         ctx = click.Context(evaluate)
@@ -374,9 +486,9 @@ def run_config(config_file: str):
         sys.exit(1)
 
 
-@main.command()
+@main.command(name="task-info")
 @click.argument('task_name')
-def info(task_name: str):
+def task_info_cmd(task_name: str):
     """Show detailed information about a specific task.
 
     Displays the task suite, description, and available parameters using
@@ -385,7 +497,7 @@ def info(task_name: str):
     Example:
 
     \b
-      beyondbench info sorting
+      beyondbench task-info sorting
     """
     try:
         from rich.console import Console
@@ -437,6 +549,946 @@ def info(task_name: str):
         click.echo(f"  Type:        {task_info['type']}")
         click.echo(f"  Available:   {'Yes' if task_info['available'] else 'No'}")
         click.echo(f"  Description: {task_info['description']}")
+
+
+# ------------------------------------------------------------------ #
+# info command — system information (Phase 10)
+# ------------------------------------------------------------------ #
+
+@main.command()
+@click.pass_obj
+def info(cli_ctx: "CLIContext"):
+    """Show system information: GPUs, Python, backends, and package version.
+
+    With the global ``--json`` flag, emits a structured JSON payload
+    suitable for scripts and CI.
+
+    Example:
+
+    \b
+      beyondbench info
+      beyondbench --json info
+    """
+    json_mode = bool(cli_ctx and cli_ctx.json_mode)
+    payload: Dict[str, Any] = {}
+
+    try:
+        from rich.console import Console
+        from rich.panel import Panel
+        from rich.table import Table
+        from rich import box as rbox
+        console = None if json_mode else Console()
+    except ImportError:
+        console = None  # type: ignore
+
+    def _echo_section(title: str, rows: list, *, key: Optional[str] = None):
+        # Always record into payload for JSON mode.
+        if key is not None:
+            # Strip Rich markup for the JSON payload so downstream tools
+            # don't see leaked formatting codes.
+            import re as _re
+            clean = [
+                (k, _re.sub(r"\[/?[a-zA-Z0-9 _]+\]", "", str(v)))
+                for k, v in rows
+            ]
+            payload[key] = dict(clean)
+        if json_mode:
+            return
+        if console:
+            t = Table(show_header=False, box=rbox.SIMPLE, padding=(0, 1))
+            t.add_column("Key", style="bold cyan", min_width=28)
+            t.add_column("Value")
+            for k, v in rows:
+                t.add_row(k, str(v))
+            console.print(Panel(t, title=f"[bold]{title}[/bold]", border_style="blue"))
+        else:
+            click.echo(f"\n{title}")
+            click.echo("-" * 40)
+            for k, v in rows:
+                click.echo(f"  {k:<28} {v}")
+
+    # ── Package info ────────────────────────────────────────────────
+    pkg_rows = [("Version", _VERSION)]
+    try:
+        import importlib.metadata as _im
+        dist = _im.metadata("beyondbench")
+        pkg_rows.append(("Author", dist.get("Author-email", "—")))
+        pkg_rows.append(("License", dist.get("License", "—")))
+    except Exception:
+        pass
+    _echo_section("BeyondBench", pkg_rows, key="package")
+
+    # ── Python / platform ───────────────────────────────────────────
+    import platform, sys as _sys
+    py_rows = [
+        ("Python", _sys.version.split()[0]),
+        ("Platform", platform.platform()),
+        ("Architecture", platform.machine()),
+    ]
+    _echo_section("Python / Platform", py_rows, key="platform")
+
+    # ── GPU info ────────────────────────────────────────────────────
+    gpu_rows = []
+    try:
+        import subprocess, re
+        result = subprocess.run(
+            ["nvidia-smi", "--query-gpu=index,name,memory.total,memory.free,utilization.gpu",
+             "--format=csv,noheader,nounits"],
+            capture_output=True, text=True, timeout=5
+        )
+        if result.returncode == 0:
+            for line in result.stdout.strip().splitlines():
+                idx, name, mem_total, mem_free, util = [x.strip() for x in line.split(",")]
+                used_mb = int(mem_total) - int(mem_free)
+                gpu_rows.append((
+                    f"GPU {idx}: {name}",
+                    f"{used_mb} / {mem_total} MiB  ({util}% util)"
+                ))
+        else:
+            gpu_rows.append(("CUDA GPUs", "nvidia-smi not available"))
+    except Exception as e:
+        gpu_rows.append(("CUDA GPUs", f"Detection failed: {e}"))
+    _echo_section("GPUs", gpu_rows, key="gpus")
+
+    # ── Backend availability ─────────────────────────────────────────
+    backend_rows = []
+    for pkg, label in [
+        ("vllm", "vLLM"),
+        ("transformers", "Transformers (HuggingFace)"),
+        ("openai", "OpenAI SDK"),
+        ("google.generativeai", "Google Generative AI (Gemini)"),
+        ("anthropic", "Anthropic SDK"),
+        ("torch", "PyTorch"),
+        ("gradio", "Gradio (dashboard)"),
+        ("fastapi", "FastAPI (server)"),
+        ("rich", "Rich (CLI formatting)"),
+        ("jsonschema", "jsonschema (config validation)"),
+    ]:
+        try:
+            mod = __import__(pkg)
+            ver = getattr(mod, "__version__", "installed")
+            backend_rows.append((label, f"[green]✓[/green] {ver}" if console else f"OK  {ver}"))
+        except ImportError:
+            backend_rows.append((label, "[red]✗ not installed[/red]" if console else "MISSING"))
+    _echo_section("Backends & Dependencies", backend_rows, key="backends")
+
+    # ── Config presets ──────────────────────────────────────────────
+    from ..configs import list_presets
+    preset_rows = [(name, str(path)) for name, path in list_presets().items()]
+    if preset_rows:
+        _echo_section("Available Config Presets", preset_rows, key="presets")
+
+    # ── Env var overrides ──────────────────────────────────────────
+    from ..configs import get_env_overrides
+    overrides = get_env_overrides()
+    if overrides:
+        import json as _json
+        env_rows = [("Active overrides", _json.dumps(overrides, indent=2))]
+        _echo_section("Environment Variable Overrides (BEYONDBENCH_*)", env_rows, key="env_overrides")
+        payload["env_overrides_raw"] = overrides
+
+    if json_mode:
+        click.echo(json.dumps(payload, indent=2, default=str))
+
+
+# ------------------------------------------------------------------ #
+# doctor command — diagnose issues (Phase 10)
+# ------------------------------------------------------------------ #
+
+@main.command()
+@click.pass_obj
+def doctor(cli_ctx: "CLIContext"):
+    """Diagnose common setup issues: CUDA, vLLM, imports, API keys.
+
+    Runs a series of checks and reports which pass or fail, with
+    suggested fixes for any problems.
+
+    With the global ``--json`` flag, emits a structured JSON payload and
+    exits with status 1 if any checks fail.
+
+    Example:
+
+    \b
+      beyondbench doctor
+      beyondbench --json doctor
+    """
+    json_mode = bool(cli_ctx and cli_ctx.json_mode)
+    try:
+        from rich.console import Console
+        from rich.table import Table
+        from rich import box as rbox
+        console = None if json_mode else Console()
+        _OK    = "[bold green]PASS[/bold green]"
+        _WARN  = "[bold yellow]WARN[/bold yellow]"
+        _FAIL  = "[bold red]FAIL[/bold red]"
+    except ImportError:
+        console = None  # type: ignore
+        _OK    = "PASS"
+        _WARN  = "WARN"
+        _FAIL  = "FAIL"
+
+    checks: list[tuple[str, str, str]] = []  # (label, status, note)
+
+    def _add(label: str, status: str, note: str = ""):
+        checks.append((label, status, note))
+
+    # ── CUDA ────────────────────────────────────────────────────────
+    try:
+        import subprocess
+        r = subprocess.run(["nvidia-smi"], capture_output=True, timeout=5)
+        if r.returncode == 0:
+            _add("nvidia-smi available", _OK)
+        else:
+            _add("nvidia-smi available", _FAIL, "Install NVIDIA drivers")
+    except Exception:
+        _add("nvidia-smi available", _FAIL, "NVIDIA drivers or nvidia-smi not found")
+
+    try:
+        import torch
+        if torch.cuda.is_available():
+            n = torch.cuda.device_count()
+            _add("PyTorch CUDA", _OK, f"{n} GPU(s) visible")
+        else:
+            _add("PyTorch CUDA", _WARN,
+                 "torch.cuda.is_available()=False — install CUDA toolkit or use CPU backend")
+    except ImportError:
+        _add("PyTorch CUDA", _WARN, "torch not installed — run: pip install torch")
+
+    # ── vLLM ────────────────────────────────────────────────────────
+    try:
+        import vllm  # noqa: F401
+        _add("vLLM import", _OK, getattr(vllm, "__version__", "installed"))
+    except ImportError:
+        _add("vLLM import", _WARN,
+             "vLLM not installed — run: pip install beyondbench[vllm]  (required for local models)")
+
+    # ── Transformers ────────────────────────────────────────────────
+    try:
+        import transformers  # noqa: F401
+        _add("transformers import", _OK, transformers.__version__)
+    except ImportError:
+        _add("transformers import", _WARN,
+             "transformers not installed — run: pip install transformers")
+
+    # ── API packages ────────────────────────────────────────────────
+    for pkg, label, extra in [
+        ("openai", "OpenAI SDK", "openai"),
+        ("google.generativeai", "Google GenerativeAI", "gemini"),
+        ("anthropic", "Anthropic SDK", "anthropic"),
+    ]:
+        try:
+            __import__(pkg)
+            _add(f"{label} import", _OK)
+        except ImportError:
+            _add(f"{label} import", _WARN,
+                 f"Optional — run: pip install beyondbench[{extra}]")
+
+    # ── API keys in environment ──────────────────────────────────────
+    for env_var, label in [
+        ("OPENAI_API_KEY", "OpenAI API key"),
+        ("GEMINI_API_KEY", "Gemini API key"),
+        ("ANTHROPIC_API_KEY", "Anthropic API key"),
+    ]:
+        if os.environ.get(env_var):
+            _add(f"{label} ({env_var})", _OK, "Set")
+        else:
+            _add(f"{label} ({env_var})", _WARN,
+                 f"Not set — export {env_var}=<your-key>  (only needed for API models)")
+
+    # ── Core imports ────────────────────────────────────────────────
+    for dotted, label in [
+        ("beyondbench.core.evaluation_engine", "EvaluationEngine"),
+        ("beyondbench.models.model_handler", "ModelHandler"),
+        ("beyondbench.core.task_registry", "TaskRegistry"),
+        ("beyondbench.parsers.core", "UnifiedParser"),
+    ]:
+        try:
+            __import__(dotted)
+            _add(f"Core import: {label}", _OK)
+        except Exception as exc:
+            _add(f"Core import: {label}", _FAIL, str(exc))
+
+    # ── Config schema ───────────────────────────────────────────────
+    try:
+        import jsonschema  # noqa: F401
+        _add("jsonschema (config validation)", _OK)
+    except ImportError:
+        _add("jsonschema (config validation)", _WARN,
+             "Optional — run: pip install jsonschema")
+
+    # ── Rich (CLI formatting) ────────────────────────────────────────
+    try:
+        import rich  # noqa: F401
+        _add("rich (CLI formatting)", _OK)
+    except ImportError:
+        _add("rich (CLI formatting)", _WARN, "run: pip install rich")
+
+    # Normalize statuses for summary counts (strip rich markup)
+    def _status_word(s: str) -> str:
+        if "FAIL" in s:
+            return "FAIL"
+        if "WARN" in s:
+            return "WARN"
+        if "PASS" in s or "OK" in s:
+            return "PASS"
+        return s
+
+    fail_count = sum(1 for _, s, _ in checks if _status_word(s) == "FAIL")
+    warn_count = sum(1 for _, s, _ in checks if _status_word(s) == "WARN")
+    pass_count = len(checks) - fail_count - warn_count
+
+    # ── JSON output mode ─────────────────────────────────────────────
+    if json_mode:
+        click.echo(json.dumps(
+            {
+                "checks": [
+                    {"label": label, "status": _status_word(status), "note": note}
+                    for label, status, note in checks
+                ],
+                "summary": {
+                    "total": len(checks),
+                    "passed": pass_count,
+                    "warnings": warn_count,
+                    "failed": fail_count,
+                },
+            },
+            indent=2,
+        ))
+        if fail_count:
+            sys.exit(1)
+        return
+
+    # ── Print results ────────────────────────────────────────────────
+    if console:
+        from rich.panel import Panel
+        table = Table(show_header=True, box=rbox.SIMPLE, padding=(0, 1))
+        table.add_column("Check", style="bold", min_width=40)
+        table.add_column("Status", justify="center", min_width=8)
+        table.add_column("Notes")
+        for label, status, note in checks:
+            table.add_row(label, status, note)
+        console.print(Panel(table, title="[bold]BeyondBench Doctor[/bold]", border_style="cyan"))
+        summary_color = "red" if fail_count else ("yellow" if warn_count else "green")
+        console.print(
+            f"[{summary_color}]"
+            f"Results: {len(checks)} checks — "
+            f"{fail_count} failed, {warn_count} warnings, "
+            f"{pass_count} passed"
+            f"[/{summary_color}]"
+        )
+    else:
+        click.echo("\nBeyondBench Doctor\n" + "=" * 50)
+        for label, status, note in checks:
+            click.echo(f"  [{_status_word(status)}] {label}" + (f"  — {note}" if note else ""))
+        click.echo(f"\nResults: {len(checks)} checks — "
+                   f"{fail_count} failed, {warn_count} warnings, {pass_count} passed")
+
+
+# ------------------------------------------------------------------ #
+# benchmark command — quick pre-configured run (Phase 10)
+# ------------------------------------------------------------------ #
+
+@main.command()
+@click.option("--model-id", default="Qwen/Qwen2.5-1.5B-Instruct", show_default=True,
+              help="Model to benchmark")
+@click.option("--backend", type=click.Choice(["vllm", "transformers"]), default="vllm",
+              show_default=True, help="Inference backend")
+@click.option("--cuda-device", default="cuda:0", show_default=True, help="GPU to use")
+@click.option("--gpu-memory-utilization", type=float, default=0.45, show_default=True,
+              help="GPU memory utilization (keep low for a quick benchmark)")
+@click.option("--datapoints", type=int, default=50, show_default=True,
+              help="Datapoints per task")
+@click.option("--output-dir", default="./beyondbench_results/benchmark", show_default=True,
+              help="Output directory")
+@click.option("--store-details", is_flag=True, help="Store per-example details")
+def benchmark(
+    model_id: str,
+    backend: str,
+    cuda_device: str,
+    gpu_memory_utilization: float,
+    datapoints: int,
+    output_dir: str,
+    store_details: bool,
+):
+    """Run a quick pre-configured benchmark on the easy suite.
+
+    Runs the easy task suite with sensible defaults and saves results.
+    Useful for sanity-checking a new model or environment.
+
+    Examples:
+
+    \b
+    # Quick benchmark with default Qwen model
+    beyondbench benchmark
+
+    \b
+    # Benchmark a custom model
+    beyondbench benchmark --model-id Qwen/Qwen2.5-3B-Instruct --gpu-memory-utilization 0.5
+    """
+    # Reuse the evaluate command via ctx.invoke
+    ctx = click.get_current_context()
+    ctx.invoke(
+        evaluate,
+        model_id=model_id,
+        tasks=(),
+        suite="easy",
+        backend=backend,
+        api_provider=None,
+        api_key=None,
+        cuda_device=cuda_device,
+        tensor_parallel_size=1,
+        gpu_memory_utilization=gpu_memory_utilization,
+        trust_remote_code=False,
+        no_chat_template=False,
+        temperature=0.7,
+        top_p=0.9,
+        max_tokens=4096,
+        seed=42,
+        reasoning_effort="medium",
+        thinking_budget=1024,
+        datapoints=datapoints,
+        folds=1,
+        list_sizes=None,
+        range_min=-100,
+        range_max=100,
+        output_dir=output_dir,
+        store_details=store_details,
+        log_level="INFO",
+        batch_size=1,
+        max_retries=3,
+        timeout=300,
+        parser="unified",
+        parallel=False,
+        gpus="auto",
+        strategy="auto",
+        launch_dashboard_flag=False,
+        dashboard_port=7860,
+    )
+
+
+# ------------------------------------------------------------------ #
+# export command — CSV / Excel export (Phase 10)
+# ------------------------------------------------------------------ #
+
+@main.command()
+@click.argument("results_dir", default="./beyondbench_results",
+                type=click.Path())
+@click.option("--format", "export_format",
+              type=click.Choice(["csv", "excel", "xlsx", "json"]),
+              default="csv", show_default=True,
+              help="Export format")
+@click.option("--output", "-o", default="", help="Output file path (auto-named if omitted)")
+def export(results_dir: str, export_format: str, output: str):
+    """Export evaluation results to CSV, Excel, or JSON.
+
+    RESULTS_DIR should contain a final_results.json file (searched recursively).
+
+    Examples:
+
+    \b
+    # Export to CSV
+    beyondbench export ./beyondbench_results --format csv
+
+    \b
+    # Export to Excel
+    beyondbench export ./beyondbench_results --format excel -o my_results.xlsx
+    """
+    import json as _json
+    from pathlib import Path as _Path
+
+    rdir = _Path(results_dir)
+
+    # Find results file
+    if (rdir / "final_results.json").exists():
+        results_path = rdir / "final_results.json"
+    else:
+        candidates = sorted(rdir.rglob("final_results.json"),
+                            key=lambda p: p.stat().st_mtime, reverse=True)
+        if not candidates:
+            click.echo(f"Error: No final_results.json found in {results_dir}", err=True)
+            sys.exit(1)
+        results_path = candidates[0]
+
+    with open(results_path, "r", encoding="utf-8") as f:
+        data = _json.load(f)
+
+    # Build flat rows from task_results
+    task_results = data.get("task_results", {})
+    summary = data.get("summary", {})
+    model_id = data.get("model_id", summary.get("model_id", "unknown"))
+
+    rows = []
+    for task_name, task_result in task_results.items():
+        row: Dict[str, Any] = {"model_id": model_id, "task": task_name}
+        if isinstance(task_result, list) and task_result:
+            accs = [r.get("accuracy", 0) for r in task_result]
+            row["accuracy"] = sum(accs) / len(accs)
+            row["n_folds"] = len(task_result)
+            # Aggregate token usage across folds
+            total_in = sum(r.get("total_input_tokens", 0) for r in task_result)
+            total_out = sum(r.get("total_output_tokens", 0) for r in task_result)
+            row["total_input_tokens"] = total_in
+            row["total_output_tokens"] = total_out
+            row["parse_success_rate"] = sum(
+                r.get("parse_success_rate", 0) for r in task_result
+            ) / len(task_result)
+        elif isinstance(task_result, dict):
+            ts = task_result.get("summary", task_result)
+            row["accuracy"] = ts.get("avg_accuracy", ts.get("overall_accuracy", 0))
+            row["n_folds"] = 1
+            row["total_input_tokens"] = ts.get("total_input_tokens", 0)
+            row["total_output_tokens"] = ts.get("total_output_tokens", 0)
+            row["parse_success_rate"] = ts.get("parse_success_rate", 0)
+        rows.append(row)
+
+    if not rows:
+        click.echo("No task results found to export.", err=True)
+        sys.exit(1)
+
+    # Determine output path
+    fmt_norm = "xlsx" if export_format in ("excel", "xlsx") else export_format
+    if output:
+        out_path = _Path(output)
+    else:
+        out_path = results_path.parent / f"results.{fmt_norm}"
+
+    if fmt_norm == "csv":
+        import csv
+        with open(out_path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=rows[0].keys())
+            writer.writeheader()
+            writer.writerows(rows)
+        click.echo(f"Exported {len(rows)} rows to {out_path}")
+
+    elif fmt_norm == "xlsx":
+        try:
+            import openpyxl
+            from openpyxl import Workbook
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "BeyondBench Results"
+            headers = list(rows[0].keys())
+            ws.append(headers)
+            for row in rows:
+                ws.append([row.get(h, "") for h in headers])
+            # Auto-width columns
+            for col_cells in ws.columns:
+                max_len = max(len(str(c.value or "")) for c in col_cells)
+                ws.column_dimensions[col_cells[0].column_letter].width = min(max_len + 2, 40)
+            wb.save(out_path)
+            click.echo(f"Exported {len(rows)} rows to {out_path}")
+        except ImportError:
+            click.echo(
+                "Error: openpyxl is required for Excel export.\n"
+                "Install with: pip install openpyxl", err=True
+            )
+            sys.exit(1)
+
+    elif fmt_norm == "json":
+        with open(out_path, "w", encoding="utf-8") as f:
+            _json.dump(rows, f, indent=2, ensure_ascii=False, default=str)
+        click.echo(f"Exported {len(rows)} rows to {out_path}")
+
+
+# ------------------------------------------------------------------ #
+# install-completion command — shell completion (Phase 10)
+# ------------------------------------------------------------------ #
+
+@main.command(name="install-completion")
+@click.argument("shell", type=click.Choice(["bash", "zsh", "fish"]))
+@click.option("--output", "-o", default="", help="Output file path (prints to stdout if omitted)")
+def install_completion(shell: str, output: str):
+    """Generate and optionally install shell completion scripts.
+
+    Supported shells: bash, zsh, fish.
+
+    Examples:
+
+    \b
+    # Print bash completion to stdout
+    beyondbench install-completion bash
+
+    \b
+    # Install zsh completion
+    beyondbench install-completion zsh -o ~/.zsh/completions/_beyondbench
+
+    \b
+    # Install fish completion
+    beyondbench install-completion fish -o ~/.config/fish/completions/beyondbench.fish
+    """
+    scripts = {
+        "bash": _BASH_COMPLETION,
+        "zsh": _ZSH_COMPLETION,
+        "fish": _FISH_COMPLETION,
+    }
+    script = scripts[shell]
+
+    if output:
+        out_path = Path(output)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(out_path, "w", encoding="utf-8") as f:
+            f.write(script)
+        click.echo(f"Completion script written to {out_path}")
+        if shell == "bash":
+            click.echo("Add to ~/.bashrc:  source " + str(out_path))
+        elif shell == "zsh":
+            click.echo("Add the directory to fpath in ~/.zshrc:  fpath=(" +
+                       str(out_path.parent) + " $fpath)")
+        elif shell == "fish":
+            click.echo(f"Restart fish or run: source {out_path}")
+    else:
+        click.echo(script)
+
+
+# Shell completion scripts
+_BASH_COMPLETION = """\
+# BeyondBench bash completion
+# Source this file or add to ~/.bashrc:
+#   source <(beyondbench install-completion bash)
+
+_beyondbench_completion() {
+    local IFS=$'\\n'
+    local response
+
+    response=$(env COMP_WORDS="${COMP_WORDS[*]}" COMP_CWORD=$COMP_CWORD \
+               _BEYONDBENCH_COMPLETE=bash_complete $1)
+
+    for completion in $response; do
+        IFS=',' read type value <<< "$completion"
+        if [[ $type == 'dir' ]]; then
+            COMPREPLY=()
+            compopt -o dirnames
+        elif [[ $type == 'file' ]]; then
+            COMPREPLY=()
+            compopt -o default
+        elif [[ $type == 'plain' ]]; then
+            COMPREPLY+=($value)
+        fi
+    done
+
+    return 0
+}
+
+_beyondbench_completion_setup() {
+    complete -o nosort -F _beyondbench_completion beyondbench
+}
+
+_beyondbench_completion_setup;
+"""
+
+_ZSH_COMPLETION = """\
+#compdef beyondbench
+# BeyondBench zsh completion
+# Add to ~/.zshrc or place in a directory in $fpath
+
+_beyondbench_completion() {
+    local -a completions
+    local -a completions_with_descriptions
+    local -a response
+    (( ! $+commands[beyondbench] )) && return 1
+
+    response=("${(@f)$(env COMP_WORDS="${words[*]}" COMP_CWORD=$((CURRENT-1)) \
+              _BEYONDBENCH_COMPLETE=zsh_complete beyondbench)}")
+
+    for type message in ${response}; do
+        if [[ "$type" == "dir" ]]; then
+            _path_files -/
+        elif [[ "$type" == "file" ]]; then
+            _path_files -f
+        elif [[ "$type" == "plain" ]]; then
+            completions+=($message)
+        elif [[ "$type" == "multiline" ]]; then
+            completions_with_descriptions+=($message)
+        fi
+    done
+
+    if [ -n "$completions_with_descriptions" ]; then
+        _describe -V unsorted completions_with_descriptions -U
+    fi
+
+    if [ -n "$completions" ]; then
+        compadd -U -V unsorted -a completions
+    fi
+}
+
+if [[ $zsh_eval_context == *loadautofunc* ]]; then
+    _beyondbench_completion "$@"
+else
+    compdef _beyondbench_completion beyondbench
+fi
+"""
+
+_FISH_COMPLETION = """\
+# BeyondBench fish completion
+# Place in ~/.config/fish/completions/beyondbench.fish
+
+function _beyondbench_completion
+    set -l response (env _BEYONDBENCH_COMPLETE=fish_complete COMP_WORDS=(commandline -cp) \
+                     COMP_CWORD=(commandline -t) beyondbench)
+
+    for completion in $response
+        set -l metadata (string split "," $completion)
+        if test $metadata[1] = "dir"
+            __fish_complete_directories $metadata[2]
+        else if test $metadata[1] = "file"
+            __fish_complete_path $metadata[2]
+        else if test $metadata[1] = "plain"
+            echo $metadata[2]
+        end
+    end
+end
+
+complete --no-files --command beyondbench --arguments "(_beyondbench_completion)"
+complete -f -c beyondbench -n "__fish_use_subcommand" -a "evaluate"    -d "Run evaluation"
+complete -f -c beyondbench -n "__fish_use_subcommand" -a "info"         -d "System information"
+complete -f -c beyondbench -n "__fish_use_subcommand" -a "doctor"       -d "Diagnose issues"
+complete -f -c beyondbench -n "__fish_use_subcommand" -a "benchmark"    -d "Quick benchmark"
+complete -f -c beyondbench -n "__fish_use_subcommand" -a "export"       -d "Export results"
+complete -f -c beyondbench -n "__fish_use_subcommand" -a "list-tasks"   -d "List tasks"
+complete -f -c beyondbench -n "__fish_use_subcommand" -a "task-info"    -d "Task details"
+complete -f -c beyondbench -n "__fish_use_subcommand" -a "compare"      -d "Compare models"
+complete -f -c beyondbench -n "__fish_use_subcommand" -a "report"       -d "Generate report"
+complete -f -c beyondbench -n "__fish_use_subcommand" -a "dashboard"    -d "Launch dashboard"
+complete -f -c beyondbench -n "__fish_use_subcommand" -a "serve"        -d "API server"
+complete -f -c beyondbench -n "__fish_use_subcommand" -a "wizard"       -d "Interactive wizard"
+complete -f -c beyondbench -n "__fish_use_subcommand" -a "run-config"   -d "Run from config file"
+complete -f -c beyondbench -n "__fish_use_subcommand" -a "init"         -d "Create config file"
+complete -f -c beyondbench -n "__fish_use_subcommand" -a "install-completion" -d "Install shell completion"
+complete -f -c beyondbench -n "__fish_use_subcommand" -a "profile-model"    -d "Profile model output behavior"
+"""
+
+
+# ------------------------------------------------------------------ #
+# profile-model command — run calibration and print/save a ModelProfile
+# ------------------------------------------------------------------ #
+@main.command(name="profile-model")
+@click.option("--model-id", required=True,
+              help="HuggingFace model path or API model name")
+@click.option("--backend", type=click.Choice(["vllm", "transformers", "openai", "gemini", "anthropic"]),
+              default="vllm", show_default=True,
+              help="Model backend to use for calibration generation")
+@click.option("--api-provider", type=click.Choice(["openai", "gemini", "anthropic"]),
+              default=None, help="API provider (auto-detected from model-id if omitted)")
+@click.option("--api-key", default=None, help="API key (or set OPENAI_API_KEY / GEMINI_API_KEY / ANTHROPIC_API_KEY)")
+@click.option("--cuda-device", default="cuda:0", show_default=True,
+              help="CUDA device for local backends")
+@click.option("--gpu-memory-utilization", type=float, default=0.45, show_default=True,
+              help="vLLM GPU memory utilization ratio")
+@click.option("--tensor-parallel-size", type=int, default=1, show_default=True,
+              help="vLLM tensor-parallel size")
+@click.option("--trust-remote-code", is_flag=True, default=False,
+              help="Allow remote code execution when loading the model")
+@click.option("--profile-dir", default=None,
+              help="Directory to store profiles (default: ~/.beyondbench/profiles/)")
+@click.option("--max-tokens", type=int, default=512, show_default=True,
+              help="Token budget per calibration prompt")
+@click.option("--force", is_flag=True, default=False,
+              help="Re-run calibration even if a cached profile exists")
+@click.option("--no-save", is_flag=True, default=False,
+              help="Do not persist the profile to disk (analysis only)")
+@click.pass_obj
+def profile_model(
+    cli_ctx: "CLIContext",
+    model_id: str,
+    backend: str,
+    api_provider: Optional[str],
+    api_key: Optional[str],
+    cuda_device: str,
+    gpu_memory_utilization: float,
+    tensor_parallel_size: int,
+    trust_remote_code: bool,
+    profile_dir: Optional[str],
+    max_tokens: int,
+    force: bool,
+    no_save: bool,
+):
+    """Profile a model's output patterns for adaptive parsing.
+
+    Runs a short calibration prompt set against the model and measures how
+    it formats answers (boxed, explicit, code-block, CoT), language mix,
+    and average response length. The resulting ``ModelProfile`` is saved
+    to ``~/.beyondbench/profiles/`` (override with ``--profile-dir``) and
+    used by the UnifiedParser to adapt parsing strategy order per model.
+
+    Examples:
+
+    \b
+      # Profile a local HF model with vLLM
+      beyondbench profile-model --model-id Qwen/Qwen2.5-3B-Instruct
+
+    \b
+      # Re-profile ignoring the cache, analysis-only
+      beyondbench profile-model --model-id gpt-4o-mini --api-provider openai --force --no-save
+
+    \b
+      # Machine-readable JSON output
+      beyondbench --json profile-model --model-id Qwen/Qwen2.5-1.5B-Instruct
+    """
+    from ..utils.model_profiler import ModelProfiler, ModelProfile
+    from dataclasses import asdict
+
+    json_mode = bool(cli_ctx and cli_ctx.json_mode)
+    logger = get_logger("CLI.profile-model")
+
+    # ── 1. Check cache unless --force ───────────────────────────────
+    if not force:
+        cached = ModelProfiler.load(model_id, profile_dir)
+        if cached is not None:
+            if json_mode:
+                click.echo(json.dumps(
+                    {"cached": True, "profile": asdict(cached)},
+                    indent=2, default=str,
+                ))
+                return
+            _print_profile_rich(cached, cached_from_disk=True, cli_ctx=cli_ctx)
+            return
+
+    # ── 2. Build model handler ──────────────────────────────────────
+    try:
+        from ..models.model_handler import ModelHandler
+    except Exception as exc:
+        _handle_cli_error(exc, "model-handler import")
+        return
+
+    # Auto-detect API provider from model-id if not given explicitly
+    if api_provider is None and backend not in {"vllm", "transformers"}:
+        api_provider = _auto_detect_api_provider(model_id)
+    elif api_provider is None:
+        detected = _auto_detect_api_provider(model_id)
+        if detected is not None:
+            # Switch to API backend implicitly
+            api_provider = detected
+            backend = detected
+
+    # Resolve API key from env if needed
+    if api_provider and not api_key:
+        api_key = _auto_detect_api_key(api_provider)
+
+    handler_kwargs: Dict[str, Any] = {
+        "model_id": model_id,
+        "backend": backend if backend in {"vllm", "transformers"} else None,
+        "api_provider": api_provider,
+        "api_key": api_key,
+        "cuda_device": cuda_device,
+        "tensor_parallel_size": tensor_parallel_size,
+        "gpu_memory_utilization": gpu_memory_utilization,
+        "trust_remote_code": trust_remote_code,
+    }
+    # Drop Nones so ModelHandler uses its own defaults.
+    handler_kwargs = {k: v for k, v in handler_kwargs.items() if v is not None}
+
+    if not json_mode:
+        cli_ctx and cli_ctx.echo(
+            f"[profile-model] Calibrating {model_id} "
+            f"(backend={backend}, provider={api_provider or '-'}) ..."
+        )
+
+    try:
+        handler = ModelHandler(**handler_kwargs)
+    except Exception as exc:
+        logger.error(f"Failed to initialize model handler: {exc}")
+        if json_mode:
+            click.echo(json.dumps({"error": str(exc), "model_id": model_id}, indent=2))
+            sys.exit(1)
+        _handle_cli_error(exc, "model handler")
+        return
+
+    # ── 3. Run calibration ──────────────────────────────────────────
+    try:
+        profiler = ModelProfiler(handler, model_id=model_id)
+        profile = profiler.profile(max_tokens=max_tokens)
+    except Exception as exc:
+        logger.error(f"Calibration run failed: {exc}")
+        if json_mode:
+            click.echo(json.dumps({"error": str(exc), "model_id": model_id}, indent=2))
+            sys.exit(1)
+        _handle_cli_error(exc, "calibration")
+        return
+
+    # ── 4. Persist ──────────────────────────────────────────────────
+    saved_path: Optional[Path] = None
+    if not no_save:
+        try:
+            saved_path = profiler.save(profile, profile_dir)
+        except Exception as exc:
+            logger.warning(f"Could not save profile: {exc}")
+
+    # ── 5. Report ───────────────────────────────────────────────────
+    if json_mode:
+        payload = {
+            "cached": False,
+            "saved_path": str(saved_path) if saved_path else None,
+            "profile": asdict(profile),
+        }
+        click.echo(json.dumps(payload, indent=2, default=str))
+        return
+
+    _print_profile_rich(profile, saved_path=saved_path, cli_ctx=cli_ctx)
+
+
+def _print_profile_rich(
+    profile,
+    *,
+    saved_path: Optional[Path] = None,
+    cached_from_disk: bool = False,
+    cli_ctx: Optional["CLIContext"] = None,
+) -> None:
+    """Pretty-print a ModelProfile using Rich (falls back to plain)."""
+    if cli_ctx is None:
+        cli_ctx = _get_cli_ctx()
+    if cli_ctx.quiet:
+        return
+    try:
+        from rich.console import Console
+        from rich.table import Table
+        from rich.panel import Panel
+        from rich import box as rbox
+        console = Console()
+    except ImportError:
+        # Plain fallback
+        click.echo(f"\n=== Model Profile: {profile.model_id} ===")
+        click.echo(f"  Boxed rate:          {profile.boxed_rate:.1%}")
+        click.echo(f"  Explicit stmt rate:  {profile.explicit_rate:.1%}")
+        click.echo(f"  Code block rate:     {profile.code_block_rate:.1%}")
+        click.echo(f"  CoT rate:            {profile.cot_rate:.1%}")
+        click.echo(f"  Non-Latin rate:      {profile.non_latin_rate:.1%}")
+        click.echo(f"  Avg response length: {profile.avg_response_length:.0f} chars")
+        click.echo(f"  Recommended order:   {profile.recommended_strategies}")
+        if getattr(profile, "quirks", None):
+            click.echo("  Quirks:")
+            for q in profile.quirks:
+                click.echo(f"    - {q}")
+        if saved_path:
+            click.echo(f"  Saved to: {saved_path}")
+        click.echo()
+        return
+
+    table = Table(show_header=False, box=rbox.SIMPLE, padding=(0, 1))
+    table.add_column("Metric", style="bold cyan", min_width=22)
+    table.add_column("Value", style="white")
+    table.add_row("Model ID", profile.model_id)
+    table.add_row("Boxed rate", f"{profile.boxed_rate:.1%}")
+    table.add_row("Explicit-statement rate", f"{profile.explicit_rate:.1%}")
+    table.add_row("Code-block rate", f"{profile.code_block_rate:.1%}")
+    table.add_row("Chain-of-thought rate", f"{profile.cot_rate:.1%}")
+    table.add_row("Non-Latin rate", f"{profile.non_latin_rate:.1%}")
+    table.add_row("Avg response length", f"{profile.avg_response_length:.0f} chars")
+    table.add_row("Avg token estimate", f"{profile.avg_token_estimate:.0f} tokens")
+    table.add_row("Calibration samples", str(profile.num_calibration_samples))
+    table.add_row(
+        "Recommended strategies",
+        ", ".join(profile.recommended_strategies) if profile.recommended_strategies else "—",
+    )
+    if getattr(profile, "quirks", None):
+        table.add_row("Quirks", "\n".join(f"• {q}" for q in profile.quirks))
+    if saved_path:
+        table.add_row("Saved to", str(saved_path))
+    elif cached_from_disk:
+        table.add_row("Source", "[yellow]cached on disk[/yellow]")
+
+    border = "yellow" if cached_from_disk else "cyan"
+    title = f"[bold]Model Profile — {profile.model_id}[/bold]"
+    console.print(Panel(table, title=title, border_style=border))
 
 
 # ------------------------------------------------------------------ #
@@ -1160,19 +2212,46 @@ def chat():
 # ------------------------------------------------------------------ #
 
 def print_banner():
-    """Print stylized banner."""
-    banner = f"""
- ____                            _ ____                  _
-| __ )  ___ _   _  ___  _ __   __| | __ )  ___ _ __   ___| |__
-|  _ \\ / _ \\ | | |/ _ \\| '_ \\ / _` |  _ \\ / _ \\ '_ \\ / __| '_ \\
-| |_) |  __/ |_| | (_) | | | | (_| | |_) |  __/ | | | (__| | | |
-|____/ \\___|\\__, |\\___/|_| |_|\\__,_|____/ \\___|_| |_|\\___|_| |_|
-            |___/
+    """Print stylized banner using Rich if available, else plain ASCII."""
+    try:
+        from rich.console import Console
+        from rich.panel import Panel
+        from rich.align import Align
+        from rich import box as rbox
 
-BeyondBench Evaluation Framework v{_VERSION}
-Comprehensive LLM Reasoning Evaluation
-"""
-    click.echo(click.style(banner, fg='cyan', bold=True))
+        _banner_text = (
+            "[bold cyan]\n"
+            "██████╗ ███████╗██╗   ██╗ ██████╗ ███╗   ██╗██████╗ \n"
+            "██╔══██╗██╔════╝╚██╗ ██╔╝██╔═══██╗████╗  ██║██╔══██╗\n"
+            "██████╔╝█████╗   ╚████╔╝ ██║   ██║██╔██╗ ██║██║  ██║\n"
+            "██╔══██╗██╔══╝    ╚██╔╝  ██║   ██║██║╚██╗██║██║  ██║\n"
+            "██████╔╝███████╗   ██║   ╚██████╔╝██║ ╚████║██████╔╝\n"
+            "╚═════╝ ╚══════╝   ╚═╝    ╚═════╝ ╚═╝  ╚═══╝╚═════╝ \n"
+            "\n"
+            "██████╗ ███████╗███╗   ██╗ ██████╗██╗  ██╗\n"
+            "██╔══██╗██╔════╝████╗  ██║██╔════╝██║  ██║\n"
+            "██████╔╝█████╗  ██╔██╗ ██║██║     ███████║\n"
+            "██╔══██╗██╔══╝  ██║╚██╗██║██║     ██╔══██║\n"
+            "██████╔╝███████╗██║ ╚████║╚██████╗██║  ██║\n"
+            "╚═════╝ ╚══════╝╚═╝  ╚═══╝ ╚═════╝╚═╝  ╚═╝\n"
+            "[/bold cyan]\n"
+            f"[dim]Contamination-Resistant LLM Reasoning Evaluation — v{_VERSION}[/dim]"
+        )
+        console = Console()
+        console.print(Panel(Align.center(_banner_text), box=rbox.DOUBLE,
+                            border_style="cyan", padding=(0, 2)))
+    except ImportError:
+        banner = (
+            f"\n"
+            f" ____                            _ ____                  _\n"
+            f"| __ )  ___ _   _  ___  _ __   __| | __ )  ___ _ __   ___| |__\n"
+            f"|  _ \\ / _ \\ | | |/ _ \\| '_ \\ / _` |  _ \\ / _ \\ '_ \\ / __| '_ \\\n"
+            f"| |_) |  __/ |_| | (_) | | | | (_| | |_) |  __/ | | | (__| | | |\n"
+            f"|____/ \\___|\\__, |\\___/|_| |_|\\__,_|____/ \\___|_| |_|\\___|_| |_|\n"
+            f"            |___/\n"
+            f"\nBeyondBench Evaluation Framework v{_VERSION}\n"
+        )
+        click.echo(click.style(banner, fg='cyan', bold=True))
 
 
 def _auto_detect_api_provider(model_id: str) -> Optional[str]:
@@ -1238,7 +2317,40 @@ def _parse_list_sizes(list_sizes_str: str) -> List[int]:
 
 
 def validate_and_prepare_config(kwargs: Dict[str, Any]) -> Dict[str, Any]:
-    """Validate CLI arguments and prepare configuration."""
+    """Validate CLI arguments and prepare configuration.
+
+    Priority: CLI args > BEYONDBENCH_* env vars > defaults
+    """
+    # Apply env var overrides for fields that were not explicitly set via CLI.
+    # Click sets defaults automatically, so we detect "env-var candidates" by
+    # checking a set of BEYONDBENCH_* variables and applying them only when
+    # the CLI value matches the Click default (i.e. the user didn't override it).
+    _env_defaults = {
+        'model_id':              ('BEYONDBENCH_MODEL_ID', str, None),
+        'backend':               ('BEYONDBENCH_BACKEND', str, None),
+        'api_key':               ('BEYONDBENCH_API_KEY', str, None),
+        'api_provider':          ('BEYONDBENCH_API_PROVIDER', str, None),
+        'cuda_device':           ('BEYONDBENCH_CUDA_DEVICE', str, 'cuda:0'),
+        'gpu_memory_utilization':('BEYONDBENCH_GPU_MEMORY_UTIL', float, 0.96),
+        'output_dir':            ('BEYONDBENCH_OUTPUT_DIR', str, './beyondbench_results'),
+        'log_level':             ('BEYONDBENCH_LOG_LEVEL', str, 'INFO'),
+        'datapoints':            ('BEYONDBENCH_DATAPOINTS', int, 100),
+        'suite':                 ('BEYONDBENCH_SUITE', str, 'all'),
+        'seed':                  ('BEYONDBENCH_SEED', int, None),
+        'temperature':           ('BEYONDBENCH_TEMPERATURE', float, 0.7),
+        'max_tokens':            ('BEYONDBENCH_MAX_TOKENS', int, 32768),
+    }
+    for field, (env_var, cast, click_default) in _env_defaults.items():
+        raw = os.environ.get(env_var)
+        if raw is None:
+            continue
+        current = kwargs.get(field)
+        # Only apply if CLI value matches the default (user didn't explicitly set it)
+        if current == click_default or current is None:
+            try:
+                kwargs[field] = cast(raw)
+            except (ValueError, TypeError):
+                pass
 
     # Auto-detect API provider from model_id if not specified
     if not kwargs.get('api_provider') and not kwargs.get('backend'):
@@ -1414,6 +2526,94 @@ def _validate_config(config: Dict[str, Any]) -> None:
         )
 
 
+def _run_preflight_validation(
+    kwargs: Dict[str, Any],
+    *,
+    skip: bool = False,
+    warn_only: bool = False,
+    logger: Any = None,
+) -> None:
+    """Run Phase 9.2.1 pre-flight validation on a flat CLI kwargs dict.
+
+    Translates CLI kwargs back into the nested config shape that
+    :class:`ModelValidator` expects, runs every enabled check, and logs the
+    findings. When ``warn_only`` is False and the validator reports any
+    error-severity issues, aborts via :func:`click.BadParameter` so the
+    user sees a clean error message and a non-zero exit code.
+
+    ``skip=True`` short-circuits the whole thing — useful for CI runs where
+    network egress is blocked or GPU info is unreliable.
+    """
+    if skip:
+        if logger is not None:
+            logger.info("Pre-flight validation skipped (--skip-validation).")
+        return
+
+    try:
+        from ..configs.model_validator import ModelValidator
+    except ImportError:
+        # Validator isn't available for some reason — don't block the run.
+        if logger is not None:
+            logger.warning("Pre-flight validator unavailable; skipping checks.")
+        return
+
+    nested = {
+        "model": {
+            "model_id":               kwargs.get("model_id"),
+            "backend":                kwargs.get("backend"),
+            "api_provider":           kwargs.get("api_provider"),
+            "api_key":                kwargs.get("api_key"),
+            "cuda_device":            kwargs.get("cuda_device"),
+            "tensor_parallel_size":   kwargs.get("tensor_parallel_size"),
+            "gpu_memory_utilization": kwargs.get("gpu_memory_utilization"),
+        },
+        "evaluation": {
+            "temperature": kwargs.get("temperature"),
+            "max_tokens":  kwargs.get("max_tokens"),
+            "datapoints":  kwargs.get("datapoints"),
+            "suite":       kwargs.get("suite"),
+        },
+    }
+
+    try:
+        result = ModelValidator().validate(nested)
+    except Exception as e:  # pragma: no cover — the validator is defensive
+        if logger is not None:
+            logger.warning(f"Pre-flight validation raised unexpectedly: {e}")
+        return
+
+    # Emit every issue to the logger at the appropriate level
+    _level_for_severity = {"error": "error", "warning": "warning", "info": "info"}
+    if logger is not None:
+        if not result.issues:
+            logger.info("Pre-flight validation: all checks passed.")
+        for issue in result.issues:
+            level = _level_for_severity.get(issue.severity, "info")
+            msg = f"[pre-flight] [{issue.check}] {issue.message}"
+            if issue.suggestion:
+                msg += f"  -> {issue.suggestion}"
+            getattr(logger, level)(msg)
+
+    if result.suggested_settings and logger is not None:
+        hints = {k: v for k, v in result.suggested_settings.items() if k != "note"}
+        if hints:
+            logger.info(f"[pre-flight] Suggested settings for this model: {hints}")
+
+    # Fail fast on errors unless the user asked for warn-only mode
+    if not result.ok and not warn_only:
+        bullets = "\n".join(
+            f"  - [{i.check}] {i.message}"
+            + (f"\n      hint: {i.suggestion}" if i.suggestion else "")
+            for i in result.errors
+        )
+        raise click.BadParameter(
+            "Pre-flight model validation failed:\n"
+            f"{bullets}\n\n"
+            "Re-run with --skip-validation to bypass, or --validation-warn-only "
+            "to downgrade these to warnings."
+        )
+
+
 def _wire_bridge_to_engine(engine, data_bridge, config: Dict[str, Any]) -> None:
     """Monkey-patch EvaluationEngine.run_evaluation to emit DataBridge events.
 
@@ -1528,38 +2728,83 @@ def _handle_cli_error(exc: Exception, error_type: str = "general") -> None:
         from rich.panel import Panel
         console = Console(stderr=True)
 
+        msg = str(exc)
+        msg_lower = msg.lower()
+
         if error_type == "import":
-            msg = str(exc)
             suggestion = ""
-            if "openai" in msg.lower():
+            if "openai" in msg_lower:
                 suggestion = "pip install beyondbench[openai]"
-            elif "google" in msg.lower() or "genai" in msg.lower():
+            elif "google" in msg_lower or "genai" in msg_lower:
                 suggestion = "pip install beyondbench[gemini]"
-            elif "anthropic" in msg.lower():
+            elif "anthropic" in msg_lower:
                 suggestion = "pip install beyondbench[anthropic]"
-            elif "vllm" in msg.lower():
-                suggestion = "pip install beyondbench[vllm]"
-            elif "fastapi" in msg.lower() or "uvicorn" in msg.lower():
+            elif "vllm" in msg_lower:
+                suggestion = (
+                    "pip install beyondbench[vllm]\n\n"
+                    "  If vLLM fails to start, try:\n"
+                    "    beyondbench evaluate ... --backend transformers\n"
+                    "  or diagnose with:  beyondbench doctor"
+                )
+            elif "fastapi" in msg_lower or "uvicorn" in msg_lower:
                 suggestion = "pip install beyondbench[serve]"
+            elif "cuda" in msg_lower or "no cuda gpus" in msg_lower:
+                suggestion = (
+                    "No CUDA GPUs detected. Options:\n"
+                    "  1. Install CUDA toolkit: https://developer.nvidia.com/cuda-downloads\n"
+                    "  2. Use CPU (slow): --backend transformers\n"
+                    "  3. Use a cloud API: --api-provider openai\n"
+                    "  Diagnose with:  beyondbench doctor"
+                )
 
             lines = [f"[bold red]Import Error:[/bold red] {exc}"]
             if suggestion:
-                lines.append(f"\n[bold]Suggestion:[/bold] Install the required extra:\n  {suggestion}")
+                lines.append(f"\n[bold]Suggestion:[/bold]\n  {suggestion}")
             console.print(Panel("\n".join(lines), title="Missing Dependency", border_style="red"))
 
         elif error_type == "configuration":
-            msg = str(exc)
             lines = [f"[bold red]Configuration Error:[/bold red] {msg}"]
-            if "api_key" in msg.lower() or "api-key" in msg.lower():
+            if "api_key" in msg_lower or "api-key" in msg_lower:
                 lines.append(
                     "\n[bold]Suggestion:[/bold] Set your API key via environment variable:\n"
                     "  export OPENAI_API_KEY=sk-...\n"
                     "  export GEMINI_API_KEY=...\n"
+                    "  export ANTHROPIC_API_KEY=sk-ant-...\n"
                     "Or pass --api-key on the command line."
                 )
+            elif "model" in msg_lower and "not found" in msg_lower:
+                lines.append(
+                    "\n[bold]Suggestion:[/bold] Check the model ID on HuggingFace:\n"
+                    "  https://huggingface.co/models\n"
+                    "  Common models: Qwen/Qwen2.5-1.5B-Instruct, meta-llama/Llama-3.2-3B-Instruct"
+                )
             console.print(Panel("\n".join(lines), title="Configuration Error", border_style="red"))
+
         else:
-            console.print(f"[bold red]Error:[/bold red] {exc}")
+            # Generic error — try to give actionable hints
+            lines = [f"[bold red]Error:[/bold red] {exc}"]
+            if "cuda" in msg_lower and "out of memory" in msg_lower:
+                lines.append(
+                    "\n[bold]GPU OOM.[/bold] Try:\n"
+                    "  --gpu-memory-utilization 0.4\n"
+                    "  --tensor-parallel-size 2  (use multiple GPUs)\n"
+                    "  Use a smaller model"
+                )
+            elif "vllm" in msg_lower and ("failed" in msg_lower or "error" in msg_lower):
+                lines.append(
+                    "\n[bold]vLLM failed.[/bold] Try:\n"
+                    "  beyondbench evaluate ... --backend transformers\n"
+                    "  pip install --upgrade vllm\n"
+                    "  beyondbench doctor"
+                )
+            elif "not found" in msg_lower and ("model" in msg_lower or "repo" in msg_lower):
+                lines.append(
+                    "\n[bold]Model not found.[/bold] Check spelling or try:\n"
+                    "  Qwen/Qwen2.5-1.5B-Instruct\n"
+                    "  meta-llama/Llama-3.2-3B-Instruct\n"
+                    "  Ensure you have access to gated models (HF_TOKEN env var)"
+                )
+            console.print(Panel("\n".join(lines), title="Error", border_style="red"))
 
     except ImportError:
         click.echo(f"Error ({error_type}): {exc}", err=True)
@@ -1567,19 +2812,89 @@ def _handle_cli_error(exc: Exception, error_type: str = "general") -> None:
     sys.exit(1)
 
 
-def print_tasks_table(tasks: Dict[str, List[str]]):
-    """Print tasks in a formatted table."""
+_DIFFICULTY_STYLE = {
+    "easy": ("Easy", "green"),
+    "medium": ("Medium", "yellow"),
+    "hard": ("Hard", "red"),
+}
 
-    click.echo("\nAvailable Tasks by Suite\n")
+
+def print_tasks_table(tasks: Dict[str, List[str]]):
+    """Print tasks as Rich tables with description + difficulty columns.
+
+    Falls back to plain click.echo output when Rich is unavailable so the CLI
+    remains functional on minimal installs.
+    """
+    try:
+        from rich.console import Console
+        from rich.table import Table
+        from rich import box as rbox
+    except ImportError:
+        click.echo("\nAvailable Tasks by Suite\n")
+        for suite_name, task_list in tasks.items():
+            click.echo(click.style(
+                f"{suite_name.upper()} SUITE ({len(task_list)} tasks)",
+                fg='green', bold=True,
+            ))
+            click.echo("-" * 50)
+            for i, task in enumerate(task_list, 1):
+                click.echo(f"  {i:2d}. {task}")
+            click.echo()
+        return
+
+    # Lazy import the registry so we can fetch per-task descriptions.
+    try:
+        from ..core.task_registry import TaskRegistry
+        registry = TaskRegistry()
+    except Exception:
+        registry = None
+
+    console = Console()
+    console.print()
+    console.print("[bold cyan]Available Tasks by Suite[/bold cyan]")
 
     for suite_name, task_list in tasks.items():
-        click.echo(click.style(f"{suite_name.upper()} SUITE ({len(task_list)} tasks)", fg='green', bold=True))
-        click.echo("-" * 50)
+        diff_label, diff_color = _DIFFICULTY_STYLE.get(
+            suite_name.lower(), (suite_name.title(), "cyan"),
+        )
+        title = (
+            f"[bold {diff_color}]{suite_name.upper()} SUITE[/bold {diff_color}] "
+            f"([dim]{len(task_list)} tasks[/dim])"
+        )
+
+        table = Table(
+            title=title,
+            box=rbox.SIMPLE_HEAD,
+            header_style=f"bold {diff_color}",
+            show_lines=False,
+            padding=(0, 1),
+            expand=False,
+        )
+        table.add_column("#", justify="right", style="dim", width=4)
+        table.add_column("Task", style="bold white", min_width=24, overflow="fold")
+        table.add_column("Difficulty", justify="center", width=12)
+        table.add_column("Description", style="white", overflow="fold")
 
         for i, task in enumerate(task_list, 1):
-            click.echo(f"  {i:2d}. {task}")
+            description = ""
+            if registry is not None:
+                try:
+                    info = registry.get_task_info(task) or {}
+                    description = str(info.get("description") or "").strip()
+                except Exception:
+                    description = ""
+            if not description:
+                description = f"{task.replace('_', ' ').title()} task"
 
-        click.echo()
+            table.add_row(
+                str(i),
+                task,
+                f"[{diff_color}]{diff_label}[/{diff_color}]",
+                description,
+            )
+
+        console.print(table)
+        console.print()
 
 
 def print_results_summary(results: Dict[str, Any]):

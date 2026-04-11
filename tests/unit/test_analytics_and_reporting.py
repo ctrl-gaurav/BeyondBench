@@ -1,5 +1,5 @@
 """
-Unit tests for Phase 7 (Token & Cost Analytics) and Phase 8 (Reporting).
+Unit tests for Token & Cost Analytics and Reporting subsystems.
 
 Tests cover:
 - TokenCounter: counting, per-request tracking, analytics, per-task analytics
@@ -18,6 +18,32 @@ from typing import Any, Dict, List
 from unittest.mock import patch
 
 import pytest
+
+
+# ---------------------------------------------------------------------------
+# Optional plotting backend detection
+# ---------------------------------------------------------------------------
+# Visualizer/report-chart tests need at least one plotting backend (plotly or
+# matplotlib). The [dev] extra intentionally stays slim — install [viz] to run
+# these tests. Skipped gracefully otherwise so CI without viz extras stays green.
+
+def _has_plotting_backend() -> bool:
+    try:
+        import plotly  # noqa: F401
+        return True
+    except ImportError:
+        pass
+    try:
+        import matplotlib  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
+_NO_PLOTTING_REASON = "no plotting backend installed (pip install '.[viz]')"
+requires_plotting = pytest.mark.skipif(
+    not _has_plotting_backend(), reason=_NO_PLOTTING_REASON
+)
 
 
 # ---------------------------------------------------------------------------
@@ -519,6 +545,7 @@ class TestReportGenerator:
         assert report["summary"]["total_tasks"] == 2
 
 
+@requires_plotting
 class TestVisualizer:
     """Tests for the Visualizer chart generation."""
 
@@ -683,6 +710,7 @@ class TestReportCLI:
         ])
         assert result.exit_code != 0
 
+    @requires_plotting
     def test_report_with_charts_dir(self, results_file, tmp_dir):
         from click.testing import CliRunner
         from beyondbench.cli.main import main

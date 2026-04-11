@@ -10,6 +10,74 @@ import traceback
 from tqdm import tqdm
 from typing import List, Dict, Any, Optional, Tuple
 
+
+# ------------------------------------------------------------------ #
+# Lazy GPU utilization sampler for progress bars.
+# We use a module-level cached GPUUtilizationSampler so repeated
+# set_postfix() calls during a fold don't pay the nvidia-smi cost more
+# than once per ~2 seconds. Lives here (rather than result_aggregator)
+# so single-GPU evaluation paths can share it.
+# ------------------------------------------------------------------ #
+_GPU_SAMPLER = None
+_GPU_LAST_SAMPLE_TIME: float = 0.0
+_GPU_LAST_SAMPLE: Dict[int, Dict[str, int]] = {}
+_GPU_SAMPLE_INTERVAL = 2.0  # seconds — throttle nvidia-smi calls
+
+
+def _progress_gpu_postfix() -> str:
+    """Return a short `GPU0 73%/18.1GB` string for tqdm.set_postfix.
+
+    Throttled: calls nvidia-smi at most once every ``_GPU_SAMPLE_INTERVAL``
+    seconds. Returns an empty string on CPU boxes or when nvidia-smi is
+    unavailable so callers can unconditionally concatenate it.
+    """
+    global _GPU_SAMPLER, _GPU_LAST_SAMPLE_TIME, _GPU_LAST_SAMPLE
+
+    if os.environ.get("BEYONDBENCH_DISABLE_GPU_POSTFIX") == "1":
+        return ""
+
+    now = time.time()
+    if now - _GPU_LAST_SAMPLE_TIME < _GPU_SAMPLE_INTERVAL and _GPU_LAST_SAMPLE:
+        snap = _GPU_LAST_SAMPLE
+    else:
+        if _GPU_SAMPLER is None:
+            try:
+                from .result_aggregator import GPUUtilizationSampler
+                _GPU_SAMPLER = GPUUtilizationSampler()
+            except Exception:
+                _GPU_SAMPLER = False  # type: ignore[assignment]
+        if _GPU_SAMPLER is False or _GPU_SAMPLER is None:
+            return ""
+        if not getattr(_GPU_SAMPLER, "available", False):
+            return ""
+        try:
+            snap = _GPU_SAMPLER.sample_once()
+        except Exception:
+            return ""
+        _GPU_LAST_SAMPLE = snap
+        _GPU_LAST_SAMPLE_TIME = now
+
+    if not snap:
+        return ""
+    # Only show the active/visible GPUs (CUDA_VISIBLE_DEVICES) to keep the
+    # postfix short during multi-GPU runs.
+    visible = os.environ.get("CUDA_VISIBLE_DEVICES", "")
+    allowed: Optional[set] = None
+    if visible:
+        try:
+            allowed = {int(x) for x in visible.split(",") if x.strip().isdigit()}
+        except Exception:
+            allowed = None
+
+    parts = []
+    for gid in sorted(snap):
+        if allowed is not None and gid not in allowed:
+            continue
+        info = snap[gid]
+        mem_used_gib = info.get("mem_used_mib", 0) / 1024.0
+        parts.append(f"G{gid}:{info.get('util', 0)}%/{mem_used_gib:.1f}GB")
+    return " ".join(parts)
+
 # Add these imports for proper token counting
 try:
     import tiktoken
@@ -635,7 +703,11 @@ class BaseTask(ABC):
                 # Update progress bar
                 if len(fold_results) > 0:
                     current_accuracy = sum(r.get('accuracy', 0) for r in fold_results) / len(fold_results)
-                    progress_bar.set_postfix({'acc': f"{current_accuracy:.3f}"})
+                    _postfix = {'acc': f"{current_accuracy:.3f}"}
+                    _gpu_s = _progress_gpu_postfix()
+                    if _gpu_s:
+                        _postfix['gpu'] = _gpu_s
+                    progress_bar.set_postfix(_postfix)
 
             except Exception as e:
                 logging.error(f"❌ Error processing sample {i}: {e}")
@@ -740,10 +812,14 @@ class BaseTask(ABC):
                 # Update progress bar with current stats
                 if len(fold_results) > 0:
                     current_accuracy = sum(r.get('accuracy', 0) for r in fold_results) / len(fold_results)
-                    progress_bar.set_postfix({
+                    _postfix = {
                         'acc': f"{current_accuracy:.3f}",
-                        'fails': consecutive_failures
-                    })
+                        'fails': consecutive_failures,
+                    }
+                    _gpu_s = _progress_gpu_postfix()
+                    if _gpu_s:
+                        _postfix['gpu'] = _gpu_s
+                    progress_bar.set_postfix(_postfix)
 
             except KeyboardInterrupt:
                 logging.info("⏹️  Evaluation interrupted by user")

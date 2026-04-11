@@ -3,7 +3,14 @@ import os
 import sys
 from datetime import datetime
 
-def setup_logging(output_dir=None, log_level="INFO", enable_file_logging=True, enable_console_logging=True, level=None):
+def setup_logging(
+    output_dir=None,
+    log_level="INFO",
+    enable_file_logging=True,
+    enable_console_logging=True,
+    level=None,
+    stream=None,
+):
     """Set up logging to file and console with enhanced error handling.
 
     Args:
@@ -12,6 +19,10 @@ def setup_logging(output_dir=None, log_level="INFO", enable_file_logging=True, e
         enable_file_logging: Whether to log to a file.
         enable_console_logging: Whether to log to console.
         level: Alias for log_level (for convenience).
+        stream: Console stream to use. Defaults to ``sys.stderr`` so that
+            CLI ``--json`` output on stdout is not contaminated by log
+            lines. Pass ``sys.stdout`` explicitly to restore the old
+            behavior.
     """
     if level is not None:
         log_level = level
@@ -40,9 +51,10 @@ def setup_logging(output_dir=None, log_level="INFO", enable_file_logging=True, e
         file_handler.setFormatter(formatter)
         logging.root.addHandler(file_handler)
 
-    # Console handler (if enabled)
+    # Console handler (if enabled). Defaults to stderr so --json stdout
+    # remains clean machine-readable output.
     if enable_console_logging:
-        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler = logging.StreamHandler(stream if stream is not None else sys.stderr)
         console_handler.setLevel(log_level_obj)
         console_handler.setFormatter(formatter)
         logging.root.addHandler(console_handler)

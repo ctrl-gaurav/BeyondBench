@@ -1,5 +1,5 @@
 """
-Phase 4 tests: Model Behavior Profiling & Per-Model Parsing.
+Tests for Model Behavior Profiling & Per-Model Parsing.
 
 These are unit tests (no GPU required). They use synthetic responses and
 mock handlers to verify profiling logic and profile-driven parsing.

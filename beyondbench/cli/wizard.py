@@ -468,8 +468,7 @@ Set these before running evaluations:
 
 ## For More Information
 
-- GitHub: https://github.com/beyondbench/beyondbench
-- Documentation: https://docs.beyondbench.org
+- Contact: gks@vt.edu
 - Paper: See main.tex in this repository
     """
 

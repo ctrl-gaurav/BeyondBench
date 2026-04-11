@@ -1,0 +1,40 @@
+# BeyondBench Paper-Quality Preset
+#
+# Publication-grade evaluation: 500 datapoints, all suites, 5 folds, seed=42.
+# Produces statistically robust results suitable for research papers.
+#
+# Usage:
+#   beyondbench run-config beyondbench/configs/paper_quality.yaml
+#
+# NOTE: This can take several hours. Use --parallel for faster execution:
+#   beyondbench run-config paper_quality.yaml  # or add parallel: true below
+
+model:
+  model_id: "meta-llama/Llama-3.2-3B-Instruct"
+  backend: "vllm"
+  cuda_device: "cuda:0"
+  tensor_parallel_size: 1
+  gpu_memory_utilization: 0.92
+  trust_remote_code: false
+
+evaluation:
+  suite: "all"
+  datapoints: 500
+  folds: 5
+  list_sizes: [8, 16, 32, 64]
+  temperature: 0.0
+  top_p: 1.0
+  max_tokens: 32768
+  seed: 42
+  range_min: -100
+  range_max: 100
+
+output:
+  output_dir: "./beyondbench_results/paper_quality"
+  store_details: true
+  log_level: "INFO"
+
+performance:
+  batch_size: 1
+  max_retries: 3
+  timeout: 600

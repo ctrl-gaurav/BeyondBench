@@ -7,11 +7,131 @@ identical in format to single-GPU evaluation output.
 """
 
 import logging
+import shutil
+import subprocess
 import threading
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger("ResultAggregator")
+
+
+# ------------------------------------------------------------------ #
+# GPUUtilizationSampler
+# ------------------------------------------------------------------ #
+
+class GPUUtilizationSampler:
+    """Best-effort background sampler for per-GPU utilization + memory.
+
+    Uses ``nvidia-smi`` (fast, no GPU drivers/Python bindings needed). Sampling
+    runs in a daemon thread; public API is ``sample()`` which returns the most
+    recent snapshot dict:
+
+        { gpu_id: {"util": 73, "mem_used_mib": 18542, "mem_total_mib": 24564} }
+
+    If ``nvidia-smi`` is unavailable or sampling fails, ``sample()`` returns
+    an empty dict — callers should treat that as "no GPU info" without
+    erroring out. Designed to be safe for CPU-only boxes and CI.
+    """
+
+    def __init__(self, interval_seconds: float = 2.0) -> None:
+        self._interval = max(0.5, float(interval_seconds))
+        self._latest: Dict[int, Dict[str, int]] = {}
+        self._lock = threading.Lock()
+        self._stop_event = threading.Event()
+        self._thread: Optional[threading.Thread] = None
+        self._available: bool = shutil.which("nvidia-smi") is not None
+
+    @property
+    def available(self) -> bool:
+        return self._available
+
+    def start(self) -> None:
+        if not self._available or (self._thread and self._thread.is_alive()):
+            return
+        self._stop_event.clear()
+        self._thread = threading.Thread(
+            target=self._run, name="gpu-util-sampler", daemon=True,
+        )
+        self._thread.start()
+
+    def stop(self) -> None:
+        self._stop_event.set()
+        if self._thread and self._thread.is_alive():
+            self._thread.join(timeout=2.0)
+
+    def sample(self) -> Dict[int, Dict[str, int]]:
+        with self._lock:
+            return {gid: dict(snap) for gid, snap in self._latest.items()}
+
+    def sample_once(self) -> Dict[int, Dict[str, int]]:
+        """Synchronous one-shot sample. Useful when you don't want a thread."""
+        return self._query()
+
+    def _run(self) -> None:
+        while not self._stop_event.is_set():
+            try:
+                snap = self._query()
+                with self._lock:
+                    self._latest = snap
+            except Exception as exc:
+                # Never crash; simply degrade to no data.
+                logger.debug("GPU sampler query failed: %s", exc)
+            self._stop_event.wait(timeout=self._interval)
+
+    @staticmethod
+    def _query() -> Dict[int, Dict[str, int]]:
+        """Run nvidia-smi once and parse into a dict."""
+        try:
+            result = subprocess.run(
+                [
+                    "nvidia-smi",
+                    "--query-gpu=index,utilization.gpu,memory.used,memory.total",
+                    "--format=csv,noheader,nounits",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=3,
+            )
+        except Exception:
+            return {}
+        if result.returncode != 0:
+            return {}
+
+        out: Dict[int, Dict[str, int]] = {}
+        for line in result.stdout.strip().splitlines():
+            parts = [p.strip() for p in line.split(",")]
+            if len(parts) < 4:
+                continue
+            try:
+                gpu_id = int(parts[0])
+                util = int(parts[1])
+                mem_used = int(parts[2])
+                mem_total = int(parts[3])
+            except ValueError:
+                continue
+            out[gpu_id] = {
+                "util": util,
+                "mem_used_mib": mem_used,
+                "mem_total_mib": mem_total,
+            }
+        return out
+
+
+def summarize_gpu_utilization(snapshot: Dict[int, Dict[str, int]]) -> str:
+    """Render a GPU snapshot as a compact string for tqdm postfix / logs.
+
+    Example: ``"GPU0 73%/18.1GB GPU1 45%/9.2GB"``. Returns an empty string
+    when the snapshot is empty so callers can safely concatenate.
+    """
+    if not snapshot:
+        return ""
+    parts = []
+    for gid in sorted(snapshot):
+        snap = snapshot[gid]
+        mem_used_gib = snap.get("mem_used_mib", 0) / 1024.0
+        parts.append(f"GPU{gid} {snap.get('util', 0)}%/{mem_used_gib:.1f}GB")
+    return " ".join(parts)
 
 
 # ------------------------------------------------------------------ #
@@ -25,7 +145,7 @@ class ProgressTracker:
     A background thread renders a rich multi-row table every 2 seconds.
     """
 
-    def __init__(self, gpu_ids: List[int]):
+    def __init__(self, gpu_ids: List[int], *, sample_gpu_util: bool = True):
         self._lock = threading.Lock()
         self._status: Dict[int, Dict[str, Any]] = {
             gpu_id: {
@@ -44,6 +164,10 @@ class ProgressTracker:
         self._stop_event = threading.Event()
         self._console = None  # lazy-init
         self._live = None     # rich Live context
+        # Background GPU utilization sampler (opt-out via sample_gpu_util=False)
+        self._gpu_sampler: Optional[GPUUtilizationSampler] = (
+            GPUUtilizationSampler() if sample_gpu_util else None
+        )
 
     # ---- public update API called from worker threads ----------------
 
@@ -72,6 +196,12 @@ class ProgressTracker:
     def start(self):
         """Start background rendering thread with rich Live display."""
         self._stop_event.clear()
+        # Start GPU util sampler in the background (noop if no nvidia-smi)
+        if self._gpu_sampler is not None:
+            try:
+                self._gpu_sampler.start()
+            except Exception:
+                pass
         try:
             from rich.console import Console
             from rich.live import Live
@@ -95,6 +225,11 @@ class ProgressTracker:
         self._stop_event.set()
         if self._render_thread and self._render_thread.is_alive():
             self._render_thread.join(timeout=5)
+        if self._gpu_sampler is not None:
+            try:
+                self._gpu_sampler.stop()
+            except Exception:
+                pass
         if self._live:
             try:
                 self._live.update(self._build_table())
@@ -103,6 +238,15 @@ class ProgressTracker:
                 pass
         else:
             self._log_status()
+
+    def gpu_snapshot(self) -> Dict[int, Dict[str, int]]:
+        """Public: latest GPU util/memory snapshot for the worker GPUs.
+
+        Empty dict if sampling is disabled or ``nvidia-smi`` isn't available.
+        """
+        if self._gpu_sampler is None:
+            return {}
+        return self._gpu_sampler.sample()
 
     # ---- rendering ---------------------------------------------------
 
@@ -127,11 +271,15 @@ class ProgressTracker:
         with self._lock:
             snapshot = {gid: dict(st) for gid, st in self._status.items()}
 
+        gpu_snap = self.gpu_snapshot()
+
         table = Table(title="GPU Evaluation Progress", show_lines=False)
         table.add_column("GPU", style="bold cyan", width=5)
         table.add_column("Task", style="white", min_width=28)
         table.add_column("Progress", justify="right", width=12)
         table.add_column("Accuracy", justify="right", width=10)
+        table.add_column("Util", justify="right", width=7)
+        table.add_column("Memory", justify="right", width=14)
         table.add_column("Status", justify="center", width=8)
 
         for gpu_id in sorted(snapshot):
@@ -147,7 +295,25 @@ class ProgressTracker:
             else:
                 status_str = f"[yellow]{elapsed:.0f}s[/yellow]"
 
-            table.add_row(str(gpu_id), st["task"], progress_str, acc_str, status_str)
+            gpu_info = gpu_snap.get(gpu_id, {})
+            util_val = gpu_info.get("util")
+            mem_used = gpu_info.get("mem_used_mib")
+            mem_total = gpu_info.get("mem_total_mib")
+            if util_val is None:
+                util_str = "-"
+                mem_str = "-"
+            else:
+                util_color = "green" if util_val >= 50 else ("yellow" if util_val >= 10 else "dim")
+                util_str = f"[{util_color}]{util_val}%[/{util_color}]"
+                if mem_used is not None and mem_total:
+                    mem_str = f"{mem_used / 1024.0:.1f}/{mem_total / 1024.0:.1f}GB"
+                else:
+                    mem_str = "-"
+
+            table.add_row(
+                str(gpu_id), st["task"], progress_str, acc_str,
+                util_str, mem_str, status_str,
+            )
 
         return table
 
@@ -155,11 +321,20 @@ class ProgressTracker:
         """Fallback when rich is not available."""
         with self._lock:
             snapshot = {gid: dict(st) for gid, st in self._status.items()}
+        gpu_snap = self.gpu_snapshot()
         for gpu_id in sorted(snapshot):
             st = snapshot[gpu_id]
+            gpu_info = gpu_snap.get(gpu_id, {})
+            util_part = ""
+            if gpu_info:
+                util_part = (
+                    f" util={gpu_info.get('util', 0)}%"
+                    f" mem={gpu_info.get('mem_used_mib', 0) / 1024.0:.1f}GB"
+                )
             logger.info(
                 f"GPU {gpu_id}: {st['task']} "
                 f"{st['completed']}/{st['total']} acc={st['accuracy']:.3f}"
+                f"{util_part}"
             )
 
 

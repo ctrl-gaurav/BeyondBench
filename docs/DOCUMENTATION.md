@@ -511,4 +511,4 @@ jobs:
 
 ---
 
-For more examples and advanced usage patterns, see our [GitHub repository](https://github.com/beyondbench/beyondbench) and [API documentation](https://docs.beyondbench.org).
+For more examples and advanced usage patterns, see the paper and this repository. For questions, contact gks@vt.edu.

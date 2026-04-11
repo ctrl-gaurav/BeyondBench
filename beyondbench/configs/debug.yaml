@@ -1,0 +1,34 @@
+# BeyondBench Debug Preset
+#
+# Minimal run for debugging: 2 datapoints, single task (sum), verbose logging,
+# full detail storage.  Runs in seconds.
+#
+# Usage:
+#   beyondbench run-config beyondbench/configs/debug.yaml
+
+model:
+  model_id: "Qwen/Qwen2.5-0.5B-Instruct"
+  backend: "vllm"
+  cuda_device: "cuda:0"
+  gpu_memory_utilization: 0.30
+  trust_remote_code: false
+
+evaluation:
+  suite: "easy"
+  tasks: ["sum"]
+  datapoints: 2
+  folds: 1
+  list_sizes: [4]
+  temperature: 0.0
+  top_p: 1.0
+  max_tokens: 512
+
+output:
+  output_dir: "./beyondbench_results/debug"
+  store_details: true
+  log_level: "DEBUG"
+
+performance:
+  batch_size: 1
+  max_retries: 1
+  timeout: 60

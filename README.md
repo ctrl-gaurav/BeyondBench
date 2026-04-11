@@ -7,6 +7,8 @@
 [![Paper](https://img.shields.io/badge/📄_Paper-ArXiv%3A2509.24210-red?style=for-the-badge&logo=arxiv)](https://arxiv.org/abs/2509.24210)
 [![Conference](https://img.shields.io/badge/🏆_ICLR-2026-blue?style=for-the-badge)](https://iclr.cc/)
 [![PyPI](https://img.shields.io/pypi/v/beyondbench.svg?style=for-the-badge&logo=pypi&logoColor=white)](https://pypi.org/project/beyondbench/)
+[![Downloads](https://img.shields.io/pepy/dt/beyondbench?style=for-the-badge&logo=pypi&logoColor=white&label=Downloads)](https://pepy.tech/project/beyondbench)
+[![Monthly Downloads](https://img.shields.io/pypi/dm/beyondbench?style=for-the-badge&logo=pypi&logoColor=white&label=Downloads%2Fmonth)](https://pypi.org/project/beyondbench/)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python&logoColor=white)](https://pypi.org/project/beyondbench/)
 [![CI](https://img.shields.io/github/actions/workflow/status/ctrl-gaurav/BeyondBench/test.yml?branch=main&style=for-the-badge&logo=github&label=CI)](https://github.com/ctrl-gaurav/BeyondBench/actions/workflows/test.yml)
 [![License](https://img.shields.io/badge/License-Apache_2.0-green.svg?style=for-the-badge)](LICENSE)

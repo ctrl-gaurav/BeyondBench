@@ -1,0 +1,36 @@
+# BeyondBench Quick-Test Preset
+#
+# Fast validation run: 5 datapoints, easy suite, 1 fold.
+# Takes ~2 minutes on a single GPU with a small model.
+#
+# Usage:
+#   beyondbench run-config beyondbench/configs/quick_test.yaml
+#
+# Override model via env:
+#   BEYONDBENCH_MODEL_ID=Qwen/Qwen2.5-1.5B-Instruct beyondbench run-config quick_test.yaml
+
+model:
+  model_id: "Qwen/Qwen2.5-1.5B-Instruct"
+  backend: "vllm"
+  cuda_device: "cuda:0"
+  gpu_memory_utilization: 0.45
+  trust_remote_code: false
+
+evaluation:
+  suite: "easy"
+  datapoints: 5
+  folds: 1
+  list_sizes: [8]
+  temperature: 0.7
+  top_p: 0.9
+  max_tokens: 4096
+
+output:
+  output_dir: "./beyondbench_results/quick_test"
+  store_details: false
+  log_level: "INFO"
+
+performance:
+  batch_size: 1
+  max_retries: 2
+  timeout: 120
