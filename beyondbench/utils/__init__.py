@@ -26,9 +26,12 @@ try:
 
     from .logging_utils import get_logger, setup_logging
     from .error_handler import ErrorHandler
-    from .token_counter import TokenCounter
+    from .token_counter import TokenCounter, TokenUsage, TokenAnalytics
     from .stats_tracker import StatsTracker
     from .report_generator import ReportGenerator, generate_final_report
+    from .cost_tracker import CostTracker, CostReport, TaskCost
+    from .request_logger import RequestLogger, RequestEntry
+    from .visualizer import Visualizer
     from .shared_utils import (
         values_are_close,
         round_if_close_to_int,
@@ -90,7 +93,15 @@ __all__ = [
     "setup_logging",
     "ErrorHandler",
     "TokenCounter",
+    "TokenUsage",
+    "TokenAnalytics",
     "StatsTracker",
     "ReportGenerator",
-    "generate_final_report"
+    "generate_final_report",
+    "CostTracker",
+    "CostReport",
+    "TaskCost",
+    "RequestLogger",
+    "RequestEntry",
+    "Visualizer",
 ]

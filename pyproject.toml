@@ -99,6 +99,8 @@ viz = [
     "matplotlib>=3.9.0",
     "seaborn>=0.13.0",
     "tabulate>=0.9.0",
+    "plotly>=5.20.0",
+    "kaleido>=0.2.1",
 ]
 serve = [
     "fastapi>=0.115.0",

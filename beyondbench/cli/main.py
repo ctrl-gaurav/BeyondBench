@@ -958,6 +958,187 @@ def dashboard(port: int, results_dir: str, compare_files: str, share: bool):
 
 
 # ------------------------------------------------------------------ #
+# report command (Phase 8)
+# ------------------------------------------------------------------ #
+@main.command()
+@click.option('--results-dir', default='./beyondbench_results', show_default=True,
+              help='Directory containing final_results.json (searched recursively)')
+@click.option('--results-file', default='', help='Direct path to a final_results.json file')
+@click.option('--format', 'report_format',
+              type=click.Choice(['html', 'markdown', 'md', 'pdf', 'latex', 'all']),
+              default='html', show_default=True, help='Report output format')
+@click.option('--output', default='', help='Output file path (auto-named if omitted)')
+@click.option('--compare', 'compare_paths', default='',
+              help='Comma-separated paths to additional final_results.json files for model comparison')
+@click.option('--charts-dir', default='', help='Directory to save individual chart files (html by default)')
+@click.option('--chart-format', type=click.Choice(['html', 'png', 'svg']), default='html',
+              show_default=True, help='Format for individual chart files')
+def report(
+    results_dir: str,
+    results_file: str,
+    report_format: str,
+    output: str,
+    compare_paths: str,
+    charts_dir: str,
+    chart_format: str,
+):
+    """Generate a comprehensive evaluation report from past results.
+
+    Reads a final_results.json produced by ``beyondbench evaluate`` and outputs
+    HTML (with interactive charts), Markdown, PDF, or LaTeX.
+
+    Examples:
+
+    \b
+    # Generate HTML report from the default results directory
+    beyondbench report --results-dir ./beyondbench_results --format html
+
+    \b
+    # Generate Markdown report from a specific file
+    beyondbench report --results-file ./results/final_results.json --format markdown
+
+    \b
+    # Generate all formats and save charts
+    beyondbench report --results-dir ./results --format all --charts-dir ./charts
+
+    \b
+    # Compare two runs
+    beyondbench report --results-dir ./run_a \\
+        --compare ./run_b/final_results.json --format html
+    """
+    from ..utils.logging_utils import setup_logging, get_logger
+    from ..utils.report_generator import ReportGenerator
+
+    setup_logging(log_level="INFO", enable_console_logging=True, enable_file_logging=False)
+    log = get_logger("CLI.report")
+
+    # ------------------------------------------------------------------
+    # Locate main results file
+    # ------------------------------------------------------------------
+    results_path: Optional[Path] = None
+
+    if results_file:
+        results_path = Path(results_file)
+    else:
+        rdir = Path(results_dir)
+        if not rdir.exists():
+            click.echo(f"Error: Results directory does not exist: {results_dir}", err=True)
+            sys.exit(1)
+        # Search for final_results.json
+        candidates = sorted(rdir.rglob("final_results.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+        if not candidates:
+            click.echo(f"Error: No final_results.json found in {results_dir}", err=True)
+            sys.exit(1)
+        results_path = candidates[0]
+        if len(candidates) > 1:
+            log.info(f"Multiple result files found; using most recent: {results_path}")
+
+    if not results_path.exists():
+        click.echo(f"Error: Results file not found: {results_path}", err=True)
+        sys.exit(1)
+
+    with open(results_path, "r", encoding="utf-8") as f:
+        results = json.load(f)
+
+    log.info(f"Loaded results from {results_path}")
+
+    # ------------------------------------------------------------------
+    # Load comparison results
+    # ------------------------------------------------------------------
+    compare_results: List[Dict[str, Any]] = []
+    if compare_paths:
+        for cp in compare_paths.split(","):
+            cp = cp.strip()
+            if not cp:
+                continue
+            cpath = Path(cp)
+            if cpath.is_dir():
+                # Find final_results.json inside dir
+                candidates = sorted(cpath.rglob("final_results.json"))
+                if candidates:
+                    cpath = candidates[0]
+            if cpath.exists():
+                with open(cpath, "r", encoding="utf-8") as f:
+                    compare_results.append(json.load(f))
+                log.info(f"Loaded comparison results from {cpath}")
+            else:
+                log.warning(f"Comparison file not found: {cpath}")
+
+    # ------------------------------------------------------------------
+    # Determine output directory and filenames
+    # ------------------------------------------------------------------
+    out_dir = Path(output).parent if output else results_path.parent
+    generator = ReportGenerator(output_dir=str(out_dir))
+
+    # ------------------------------------------------------------------
+    # Generate reports
+    # ------------------------------------------------------------------
+    formats_to_generate = (
+        ["html", "markdown", "latex", "pdf"] if report_format == "all" else [report_format]
+    )
+
+    generated: Dict[str, Optional[str]] = {}
+    for fmt in formats_to_generate:
+        fmt_norm = "markdown" if fmt == "md" else fmt
+        # Determine output filename
+        if output and report_format != "all":
+            out_file = Path(output).name
+        else:
+            ext = {"html": "html", "markdown": "md", "latex": "tex", "pdf": "pdf"}.get(fmt_norm, fmt_norm)
+            out_file = f"report.{ext}"
+
+        if fmt_norm == "html":
+            path = generator.save_html_report(
+                results, filename=out_file, compare_results=compare_results or None
+            )
+        elif fmt_norm == "markdown":
+            path = generator.save_markdown_report(
+                results, filename=out_file, compare_results=compare_results or None
+            )
+        elif fmt_norm == "latex":
+            path = generator.save_latex_report(results, filename=out_file)
+        elif fmt_norm == "pdf":
+            path = generator.save_pdf_report(results, filename=out_file)
+        else:
+            log.warning(f"Unknown format: {fmt}")
+            continue
+
+        generated[fmt_norm] = path
+        if path:
+            click.echo(f"  {fmt_norm.upper()}: {path}")
+
+    # ------------------------------------------------------------------
+    # Generate charts (optional)
+    # ------------------------------------------------------------------
+    if charts_dir:
+        try:
+            from ..utils.visualizer import Visualizer
+            viz = Visualizer()
+            charts_output = Path(charts_dir)
+            charts_output.mkdir(parents=True, exist_ok=True)
+
+            figs = {
+                "accuracy_by_task": viz.plot_accuracy_by_task(results),
+                "accuracy_by_suite": viz.plot_accuracy_by_suite(results),
+            }
+            if compare_results:
+                results_map = {results.get("model_id", "Model A"): results}
+                for i, cr in enumerate(compare_results):
+                    results_map[cr.get("model_id", f"Model {i+2}")] = cr
+                figs["model_comparison"] = viz.plot_model_comparison(results_map)
+                figs["radar_chart"] = viz.plot_radar_chart(results_map)
+
+            saved = viz.save_all(figs, charts_output, fmt=chart_format)
+            for name, path in saved.items():
+                if path:
+                    click.echo(f"  Chart [{name}]: {path}")
+        except Exception as e:
+            log.warning(f"Chart generation failed: {e}")
+
+    click.echo(f"\nReport generation complete. Files in: {out_dir.resolve()}")
+
+
+# ------------------------------------------------------------------ #
 # wizard and chat (unchanged)
 # ------------------------------------------------------------------ #
 @main.command()
