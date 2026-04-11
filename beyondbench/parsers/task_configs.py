@@ -352,6 +352,68 @@ TASK_PARSER_CONFIGS: dict[str, ParserConfig] = {
         description="Next term in complex pattern sequence",
     ),
 
+    # Phase 13: 10 new medium tasks
+    "arithmetic_progression": ParserConfig(
+        expected_type="int",
+        strategies=["boxed", "sequence", "explicit_statement", "code_block", "latex_math", "fallback"],
+        tolerance=0,
+        description="Next term in an arithmetic progression",
+    ),
+    "harmonic_sequence": ParserConfig(
+        expected_type="float",
+        strategies=["boxed", "sequence", "explicit_statement", "latex_math", "code_block", "fallback"],
+        tolerance=1e-3,
+        description="Next term in a harmonic sequence (fraction or decimal)",
+    ),
+    "collatz_sequence": ParserConfig(
+        expected_type="int",
+        strategies=["boxed", "sequence", "explicit_statement", "code_block", "latex_math", "fallback"],
+        tolerance=0,
+        description="Next term in a Collatz sequence",
+    ),
+    "polynomial_evaluation": ParserConfig(
+        expected_type="int",
+        strategies=["boxed", "sequence", "explicit_statement", "code_block", "latex_math", "fallback"],
+        tolerance=0,
+        description="Polynomial evaluated at a given integer",
+    ),
+    "matrix_operations": ParserConfig(
+        expected_type="float",
+        strategies=["boxed", "explicit_statement", "code_block", "fallback"],
+        tolerance=1e-3,
+        description="2x2 matrix multiply, determinant, or inverse",
+    ),
+    "number_base_conversion": ParserConfig(
+        expected_type="str",
+        strategies=["boxed", "explicit_statement", "fallback"],
+        tolerance=0,
+        description="Number base conversion (decimal/binary/hex)",
+    ),
+    "logical_operations": ParserConfig(
+        expected_type="boolean",
+        strategies=["boxed", "explicit_statement", "fallback"],
+        tolerance=0,
+        description="Boolean expression evaluation",
+    ),
+    "pattern_completion": ParserConfig(
+        expected_type="int",
+        strategies=["boxed", "sequence", "explicit_statement", "code_block", "latex_math", "fallback"],
+        tolerance=0,
+        description="Next term in a standard numeric pattern",
+    ),
+    "gcd_lcm": ParserConfig(
+        expected_type="int",
+        strategies=["boxed", "sequence", "explicit_statement", "code_block", "latex_math", "fallback"],
+        tolerance=0,
+        description="GCD or LCM of 2-3 integers",
+    ),
+    "combinatorics": ParserConfig(
+        expected_type="int",
+        strategies=["boxed", "sequence", "explicit_statement", "code_block", "latex_math", "fallback"],
+        tolerance=0,
+        description="Permutation P(n,r) or combination C(n,r)",
+    ),
+
     # ============================================================================
     # Hard Suite Tasks (10 tasks)
     # ============================================================================

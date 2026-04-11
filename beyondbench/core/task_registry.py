@@ -55,10 +55,14 @@ class TaskRegistry:
             'variance', 'standard_deviation', 'dot_product',
         ]
 
-        # Medium suite tasks (5 domains)
+        # Medium suite tasks (5 original + 10 Phase 13 = 15 total)
         medium_tasks = [
             'fibonacci_sequence', 'algebraic_sequence', 'geometric_sequence',
-            'prime_sequence', 'complex_pattern'
+            'prime_sequence', 'complex_pattern',
+            # Phase 13 additions
+            'arithmetic_progression', 'harmonic_sequence', 'collatz_sequence',
+            'polynomial_evaluation', 'matrix_operations', 'number_base_conversion',
+            'logical_operations', 'pattern_completion', 'gcd_lcm', 'combinatorics',
         ]
 
         # Hard suite tasks (10 domains)
