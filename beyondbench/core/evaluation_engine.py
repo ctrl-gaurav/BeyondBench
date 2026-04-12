@@ -129,6 +129,7 @@ class EvaluationEngine:
                     'max_tokens': eval_params.get('max_tokens', 32768),
                     'seed': eval_params.get('seed'),
                     'prompt_style': eval_params.get('prompt_style', None),
+                    'contamination_resistance': eval_params.get('contamination_resistance', 'off'),
                 }
 
                 # Check if task uses **kwargs (accepts arbitrary params)

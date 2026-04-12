@@ -195,6 +195,13 @@ def main(ctx: click.Context, verbose: bool, quiet: bool, json_mode: bool) -> Non
               help='Prompt style variant for all tasks (concise/detailed/few_shot/cot). '
                    'Omit to use each task\'s built-in prompt (default behaviour).')
 
+# Contamination Resistance (Phase 16)
+@click.option('--contamination-resistance', type=click.Choice(['off', 'low', 'medium', 'high']),
+              default='off', show_default=True,
+              help='Contamination resistance level: noise injection + prompt rephrasing. '
+                   'off = no changes (default), low = minor formatting, '
+                   'medium = add context, high = distractors + heavy rephrasing.')
+
 # Pre-flight Validation (Phase 9.2.1)
 @click.option('--skip-validation', is_flag=True, default=False,
               help='Skip pre-flight model validation (HF existence, GPU memory, deps)')
@@ -2406,7 +2413,9 @@ def validate_and_prepare_config(kwargs: Dict[str, Any]) -> Dict[str, Any]:
         'temperature': kwargs['temperature'],
         'top_p': kwargs['top_p'],
         'max_tokens': kwargs['max_tokens'],
+        'seed': kwargs.get('seed'),
         'prompt_style': kwargs.get('prompt_style', None),
+        'contamination_resistance': kwargs.get('contamination_resistance', 'off'),
     }
 
     # Process tasks - handle both comma-separated strings and multiple values

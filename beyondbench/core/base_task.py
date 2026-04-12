@@ -128,6 +128,7 @@ class BaseTask(ABC):
         self.max_tokens = max_tokens
         self.seed = seed
         self.prompt_style = kwargs.get('prompt_style', None)
+        self.contamination_resistance = kwargs.get('contamination_resistance', 'off')
 
         # Retry configuration
         self.max_retries = max_retries  # Maximum number of retries per sample
@@ -326,16 +327,27 @@ class BaseTask(ABC):
           Falls back to ``create_prompt`` if the task or style is not registered.
         """
         if self.prompt_style is None:
-            return self.create_prompt(data_point)
+            prompt = self.create_prompt(data_point)
+        else:
+            try:
+                from ..prompts import get_prompt_library
+                lib = get_prompt_library()
+                tmpl = lib.get(self.task_name, self.prompt_style)
+                prompt = tmpl.render(data=str(data_point))
+            except Exception:
+                # Graceful fallback: use original create_prompt so evaluation never breaks
+                prompt = self.create_prompt(data_point)
 
-        try:
-            from ..prompts import get_prompt_library
-            lib = get_prompt_library()
-            tmpl = lib.get(self.task_name, self.prompt_style)
-            return tmpl.render(data=str(data_point))
-        except Exception:
-            # Graceful fallback: use original create_prompt so evaluation never breaks
-            return self.create_prompt(data_point)
+        # Apply noise injection if contamination resistance is enabled
+        if self.contamination_resistance and self.contamination_resistance != 'off':
+            try:
+                from .noise_injector import NoiseInjector
+                injector = NoiseInjector(level=self.contamination_resistance, seed=self.seed)
+                prompt = injector.inject(prompt, data_point)
+            except Exception as _ni_err:
+                logging.warning(f"Noise injection failed ({_ni_err}); using original prompt")
+
+        return prompt
 
     def save_detailed_results(self, results, test_case_id, fold):
         """Save detailed results for each test case and fold"""
@@ -720,6 +732,13 @@ class BaseTask(ABC):
                         "ground_truth": ground_truth
                     })
 
+                # Add fingerprint
+                try:
+                    from .fingerprint import fingerprint_instance
+                    eval_result['fingerprint'] = fingerprint_instance(data_point, self.task_name, self.seed)
+                except Exception:
+                    pass
+
                 fold_results.append(eval_result)
 
                 # Update progress bar
@@ -828,6 +847,13 @@ class BaseTask(ABC):
                     if consecutive_failures >= self.max_consecutive_failures:
                         logging.error(f"❌ Stopping evaluation due to {consecutive_failures} consecutive failures")
                         break
+
+                # Add fingerprint
+                try:
+                    from .fingerprint import fingerprint_instance
+                    eval_result['fingerprint'] = fingerprint_instance(data_point, self.task_name, self.seed)
+                except Exception:
+                    pass
 
                 fold_results.append(eval_result)
 
