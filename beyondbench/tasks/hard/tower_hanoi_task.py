@@ -316,18 +316,22 @@ class TowerHanoiSolver:
             TowerHanoiSolver._hanoi_recursive(n-1, aux, tgt, src, moves)
     
     @staticmethod
-    def validate_solution(moves: List[Move], num_disks: int) -> Tuple[bool, str, Dict[str, Any]]:
+    def validate_solution(moves: List[Move], num_disks: int, source: str = 'A', target: str = 'C') -> Tuple[bool, str, Dict[str, Any]]:
         """Enhanced validation with detailed diagnostics"""
         if not moves:
             return False, "No moves provided", {}
-        
-        # Initialize state
+
+        # Determine auxiliary peg
+        all_pegs = {'A', 'B', 'C'}
+        auxiliary = (all_pegs - {source, target}).pop()
+
+        # Initialize state with randomized peg assignment
         state = TowerState({
-            'A': list(range(num_disks, 0, -1)),
-            'B': [],
-            'C': []
+            source: list(range(num_disks, 0, -1)),
+            auxiliary: [],
+            target: []
         })
-        
+
         diagnostics = {
             'total_moves': len(moves),
             'optimal_moves': (2**num_disks) - 1,
@@ -335,24 +339,24 @@ class TowerHanoiSolver:
             'error_move': None,
             'final_state': None
         }
-        
+
         # Execute moves
         for i, move in enumerate(moves):
             if not state.is_valid_move(move.from_peg, move.to_peg):
                 diagnostics['error_move'] = i + 1
                 diagnostics['final_state'] = str(state)
                 return False, f"Invalid move {i+1}: {move}. State: {state}", diagnostics
-            
+
             if not state.make_move(move.from_peg, move.to_peg):
                 diagnostics['error_move'] = i + 1
                 diagnostics['final_state'] = str(state)
                 return False, f"Failed to execute move {i+1}: {move}", diagnostics
-            
+
             diagnostics['move_history'].append(str(state))
-        
-        # Check if solved
+
+        # Check if solved — all disks on target peg
         diagnostics['final_state'] = str(state)
-        if state.is_solved('C', num_disks):
+        if state.is_solved(target, num_disks):
             efficiency = diagnostics['optimal_moves'] / len(moves) if moves else 0
             return True, f"Solved in {len(moves)} moves (optimal: {diagnostics['optimal_moves']}, efficiency: {efficiency:.2f})", diagnostics
         else:
@@ -403,27 +407,43 @@ class RobustTowerHanoiTask(BaseTask):
         return len(prompt) // 4
     
     def generate_problem(self, num_disks: int) -> Dict[str, Any]:
-        """Generate Tower of Hanoi problem"""
+        """Generate Tower of Hanoi problem with randomized peg assignment."""
+        # Randomize source/target pegs for contamination resistance
+        pegs = ['A', 'B', 'C']
+        random.shuffle(pegs)
+        source, auxiliary, target = pegs
+
         initial_state = TowerState({
-            'A': list(range(num_disks, 0, -1)),
-            'B': [],
-            'C': []
+            source: list(range(num_disks, 0, -1)),
+            auxiliary: [],
+            target: []
         })
-        
-        solution_moves = TowerHanoiSolver.solve(num_disks)
-        
+
+        solution_moves = TowerHanoiSolver.solve(num_disks, source=source, target=target, auxiliary=auxiliary)
+
         return {
             'num_disks': num_disks,
+            'source_peg': source,
+            'target_peg': target,
+            'auxiliary_peg': auxiliary,
             'initial_state': initial_state.pegs,
             'solution_moves': [(m.disk, m.from_peg, m.to_peg) for m in solution_moves],
             'num_optimal_moves': len(solution_moves)
         }
     
     def create_prompt(self, problem: Dict[str, Any]) -> str:
-        """Create enhanced prompt"""
+        """Create enhanced prompt with randomized peg labels."""
         initial = problem['initial_state']
         num_disks = problem['num_disks']
-        
+        source = problem.get('source_peg', 'A')
+        target = problem.get('target_peg', 'C')
+
+        # Build peg state lines dynamically for all pegs
+        peg_lines = []
+        for peg in sorted(initial.keys()):
+            peg_lines.append(f"Peg {peg}: {initial[peg]}")
+        peg_state = "\n".join(peg_lines)
+
         prompt = f"""Solve this Tower of Hanoi puzzle with {num_disks} disks.
 
 RULES:
@@ -431,12 +451,10 @@ RULES:
 2. A larger disk cannot be placed on top of a smaller disk
 3. Only the topmost disk on any peg can be moved
 
-INITIAL STATE:
-Peg A: {initial['A']} (disk 1 is smallest, disk {num_disks} is largest)
-Peg B: {initial['B']}
-Peg C: {initial['C']}
+INITIAL STATE (disk 1 is smallest, disk {num_disks} is largest):
+{peg_state}
 
-GOAL: Move all disks from Peg A to Peg C.
+GOAL: Move all disks from Peg {source} to Peg {target}.
 
 Provide the complete sequence of moves. You can use any of these formats:
 - "Move disk X from peg Y to peg Z"
@@ -445,11 +463,11 @@ Provide the complete sequence of moves. You can use any of these formats:
 - "Transfer disk X from Y to Z"
 
 <answer>
-Move disk 1 from peg A to peg C
-Move disk 2 from peg A to peg B
+Move disk 1 from peg {source} to peg {target}
+Move disk 2 from peg {source} to peg ...
 ...
 </answer>"""
-        
+
         return prompt
     
     def parse_response(self, response: str, problem: Dict[str, Any]) -> Dict[str, Any]:
@@ -459,7 +477,9 @@ Move disk 2 from peg A to peg B
             
             if parsing_result.moves:
                 is_correct, validation_msg, diagnostics = TowerHanoiSolver.validate_solution(
-                    parsing_result.moves, problem['num_disks']
+                    parsing_result.moves, problem['num_disks'],
+                    source=problem.get('source_peg', 'A'),
+                    target=problem.get('target_peg', 'C'),
                 )
             else:
                 is_correct = False
@@ -615,21 +635,27 @@ class TowerHanoiTask(BaseTask):
         
         data = []
         for _ in range(self.num_samples):
-            # Generate Tower of Hanoi problem
+            # Generate Tower of Hanoi problem with randomized pegs
             num_disks = list_size
+            pegs = ['A', 'B', 'C']
+            random.shuffle(pegs)
+            source, auxiliary, target = pegs
+
             initial_state = {
-                'A': list(range(num_disks, 0, -1)),  # [3, 2, 1] for 3 disks
-                'B': [],
-                'C': []
+                source: list(range(num_disks, 0, -1)),
+                auxiliary: [],
+                target: []
             }
-            
-            # Calculate optimal solution
-            optimal_moves = self._solve_hanoi(num_disks, 'A', 'C', 'B')
-            
+
+            # Calculate optimal solution with randomized pegs
+            optimal_moves = self._solve_hanoi(num_disks, source, target, auxiliary)
+
             data_point = {
                 'num_disks': num_disks,
+                'source_peg': source,
+                'target_peg': target,
+                'auxiliary_peg': auxiliary,
                 'initial_state': initial_state,
-                'target_peg': 'C',
                 'optimal_moves': optimal_moves,
                 'optimal_move_count': len(optimal_moves),
                 'answer': optimal_moves  # For evaluation
@@ -654,24 +680,31 @@ class TowerHanoiTask(BaseTask):
         return moves
     
     def create_prompt(self, data_point):
-        """Create Tower of Hanoi prompt"""
+        """Create Tower of Hanoi prompt with randomized peg labels."""
         num_disks = data_point['num_disks']
         initial_state = data_point['initial_state']
-        
+        source = data_point.get('source_peg', 'A')
+        target = data_point.get('target_peg', 'C')
+
+        # Build peg state lines dynamically
+        peg_lines = []
+        for peg in sorted(initial_state.keys()):
+            suffix = " (bottom to top)" if initial_state[peg] else ""
+            peg_lines.append(f"Peg {peg}: {initial_state[peg]}{suffix}")
+        peg_state = "\n".join(peg_lines)
+
         prompt = f"""Tower of Hanoi Problem:
 
-You have {num_disks} disks of different sizes on peg A, arranged from largest (bottom) to smallest (top).
-Your goal is to move all disks to peg C, following these rules:
+You have {num_disks} disks of different sizes on peg {source}, arranged from largest (bottom) to smallest (top).
+Your goal is to move all disks to peg {target}, following these rules:
 1. You can only move one disk at a time
 2. You can only move the top disk from a peg
 3. A larger disk cannot be placed on top of a smaller disk
 
 Initial state:
-Peg A: {initial_state['A']} (bottom to top)
-Peg B: {initial_state['B']}
-Peg C: {initial_state['C']}
+{peg_state}
 
-Target: Move all disks to peg C
+Target: Move all disks to peg {target}
 
 Please provide the sequence of moves needed to solve this puzzle. Format each move as:
 "Move disk X from Y to Z"

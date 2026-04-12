@@ -436,9 +436,9 @@ class NQueensTask(BaseTask):
         if self.seed is not None:
             random.seed(self.seed)
         
-        board_size = list_size if list_size is not None else random.choice(self.board_sizes)
         data = []
         for _ in range(self.num_samples):
+            board_size = list_size if list_size is not None else random.choice(self.board_sizes)
             problem = self.generate_problem(board_size)
             if problem['has_solution']:  # Only include solvable problems
                 data.append(problem)
@@ -507,11 +507,12 @@ class NQueensTask(BaseTask):
         return len(prompt) // 4
     
     def generate_problem(self, n: int) -> Dict[str, Any]:
-        """Generate an N-Queens problem"""
+        """Generate an N-Queens problem with randomized reference solution."""
         solutions = NQueensSolver.solve_nqueens(n)
         total_solutions = len(solutions)
-        reference_solution = solutions[0] if solutions else None
-        
+        # Randomly select a reference solution for contamination resistance
+        reference_solution = random.choice(solutions) if solutions else None
+
         return {
             'n': n,
             'total_solutions': total_solutions,

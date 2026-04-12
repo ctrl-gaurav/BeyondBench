@@ -145,8 +145,9 @@ class FibonacciSequenceTask(BaseTask):
                 sequence = self._generate_fibonacci(a, b, sequence_length + 2)
                 
             elif seq_type == 'lucas':
-                # Lucas sequence: starts with 2, 1 then follows Fibonacci rule
-                sequence = self._generate_fibonacci(2, 1, sequence_length + 2)
+                # Lucas-like sequence: randomize the scale for contamination resistance
+                scale = random.choice([1, 2, 3])
+                sequence = self._generate_fibonacci(2 * scale, 1 * scale, sequence_length + 2)
                 
             elif seq_type == 'tribonacci':
                 # Tribonacci: sum of three previous terms
@@ -167,9 +168,9 @@ class FibonacciSequenceTask(BaseTask):
                 sequence = self._generate_alternating_fibonacci(a, b, sequence_length + 2)
                 
             elif seq_type == 'scaled_fibonacci':
-                # Fibonacci multiplied by a constant
-                a, b = 1, 1
-                scale = random.choice([2, 3, 5])
+                # Fibonacci multiplied by a constant with randomized start
+                a, b = random.randint(1, 3), random.randint(1, 3)
+                scale = random.choice([2, 3, 5, 7])
                 sequence = self._generate_scaled_fibonacci(a, b, scale, sequence_length + 2)
             
             # Create data point with correct ground truth

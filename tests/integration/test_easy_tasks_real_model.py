@@ -223,7 +223,11 @@ def test_easy_task_returns_accuracy_field(task_name, module_path, class_name, mo
     try:
         sig = inspect.signature(task.generate_data)
         if "list_size" in sig.parameters:
-            data = task.generate_data(list_size=4)
+            try:
+                data = task.generate_data(list_size=4)
+            except ValueError:
+                # Some tasks require specific list_size (e.g., absolute_difference needs 2)
+                data = task.generate_data(list_size=2)
         else:
             data = task.generate_data()
         if not data:

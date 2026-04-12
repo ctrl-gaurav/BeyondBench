@@ -254,7 +254,9 @@ def extract_from_final_answer(text: str) -> Optional[str]:
             result = matches[-1].strip()
             # Skip if the match is too long (likely explanation, not answer)
             if result and len(result) < 100:
-                return result
+                # Validate: must contain a digit, bracket, or boolean keyword
+                if re.search(r'\d|[\[\(]|true|false', result):
+                    return result
 
     return None
 
@@ -269,8 +271,10 @@ def extract_from_explicit_statements(text: str, expected_type: str) -> Optional[
         ]
     elif expected_type == "number":
         patterns = [
-            r'(?:the |my |final )?(?:answer|result|value|number|count|sum|difference|product|quotient|total|average|mean|median|mode|maximum|minimum|max|min) (?:is|would be|will be|becomes|equals)[:\s]+([^\n\.]+)',
+            r'(?:the |my |final )?(?:answer|result|value|number|count|sum|difference|product|quotient|total|average|mean|median|mode|maximum|minimum|max|min|length|output|score|index|range|variance|std|deviation) (?:is|would be|will be|becomes|equals)[:\s]+([^\n\.]+)',
+            r'(?:has a |with a )?(?:length|count|value|size) (?:of|is|=)[:\s]+([^\n\.]+)',
             r'(?:equals|is equal to|amounts to|totals|sums to)[:\s]+([^\n\.]+)',
+            r'(?:output|result)[:\s]+(\d+(?:\.\d+)?)',
             r'= ([+-]?\d+(?:\.\d+)?)',
         ]
     elif expected_type == "boolean":
@@ -290,7 +294,10 @@ def extract_from_explicit_statements(text: str, expected_type: str) -> Optional[
     for pattern in patterns:
         matches = re.findall(pattern, text.lower())
         if matches:
-            return matches[-1].strip()
+            result = matches[-1].strip()
+            # Skip matches that contain code block markers or look like garbage
+            if result and not result.startswith('```') and re.search(r'\d', result):
+                return result
 
     return None
 
@@ -343,6 +350,8 @@ def extract_from_code_blocks(text: str, expected_type: str) -> Optional[str]:
                     r'return\s+([^;\n]+)',
                     r'print\s*\(\s*["\']?([^"\')\n]+)["\']?\s*\)',
                     r'>>> ([^\n]+)',  # Python REPL output
+                    r'#\s*[Oo]utput[:\s]+(\S+)',  # # Output: 5
+                    r'[Oo]utput[:\s]+(\d+(?:\.\d+)?)',  # Output: 5
                 ]
 
                 for code_pattern in code_patterns:

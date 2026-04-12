@@ -628,30 +628,36 @@ class LogicGridGenerator:
         # Create a carefully crafted problem with known unique solution
         if size == 3:
             categories = ["people", "pets", "colors"]
+            people = ["Alice", "Bob", "Carol"]
+            pets = ["cat", "dog", "bird"]
+            colors = ["red", "blue", "green"]
+            # Shuffle for contamination resistance
+            random.shuffle(pets)
+            random.shuffle(colors)
             entities = {
-                "people": ["Alice", "Bob", "Carol"],
-                "pets": ["cat", "dog", "bird"],
-                "colors": ["red", "blue", "green"]
+                "people": people,
+                "pets": pets,
+                "colors": colors,
             }
-            
+
             solution = {
-                "Alice": {"people": "Alice", "pets": "cat", "colors": "red"},
-                "Bob": {"people": "Bob", "pets": "dog", "colors": "blue"},
-                "Carol": {"people": "Carol", "pets": "bird", "colors": "green"}
+                people[0]: {"people": people[0], "pets": pets[0], "colors": colors[0]},
+                people[1]: {"people": people[1], "pets": pets[1], "colors": colors[1]},
+                people[2]: {"people": people[2], "pets": pets[2], "colors": colors[2]},
             }
-            
+
             if difficulty == "easy":
                 constraints = [
-                    Constraint("direct", "Alice has a cat", ["Alice", "cat"], "Alice -> pets: cat"),
-                    Constraint("direct", "Bob has the blue color", ["Bob", "blue"], "Bob -> colors: blue"),
-                    Constraint("negative", "Carol does not have a dog", ["Carol", "dog"], "Carol -> NOT pets: dog")
+                    Constraint("direct", f"{people[0]} has a {pets[0]}", [people[0], pets[0]], f"{people[0]} -> pets: {pets[0]}"),
+                    Constraint("direct", f"{people[1]} has the {colors[1]} color", [people[1], colors[1]], f"{people[1]} -> colors: {colors[1]}"),
+                    Constraint("negative", f"{people[2]} does not have a {pets[1]}", [people[2], pets[1]], f"{people[2]} -> NOT pets: {pets[1]}")
                 ]
             else:
                 constraints = [
-                    Constraint("conditional", "The person with the cat has the red color", ["cat", "red"], "pets: cat -> colors: red"),
-                    Constraint("negative", "Alice does not have the dog", ["Alice", "dog"], "Alice -> NOT pets: dog"),
-                    Constraint("negative", "Bob does not have the green color", ["Bob", "green"], "Bob -> NOT colors: green"),
-                    Constraint("direct", "Carol has a bird", ["Carol", "bird"], "Carol -> pets: bird")
+                    Constraint("conditional", f"The person with the {pets[0]} has the {colors[0]} color", [pets[0], colors[0]], f"pets: {pets[0]} -> colors: {colors[0]}"),
+                    Constraint("negative", f"{people[0]} does not have the {pets[1]}", [people[0], pets[1]], f"{people[0]} -> NOT pets: {pets[1]}"),
+                    Constraint("negative", f"{people[1]} does not have the {colors[2]} color", [people[1], colors[2]], f"{people[1]} -> NOT colors: {colors[2]}"),
+                    Constraint("direct", f"{people[2]} has a {pets[2]}", [people[2], pets[2]], f"{people[2]} -> pets: {pets[2]}")
                 ]
             
         else:  # size 4 or 5
@@ -659,32 +665,38 @@ class LogicGridGenerator:
             entities = {
                 "people": LogicGridGenerator.PEOPLE_NAMES[:size],
                 "ages": LogicGridGenerator.AGES[:size],
-                "jobs": LogicGridGenerator.JOBS[:size]
+                "jobs": LogicGridGenerator.JOBS[:size],
             }
-            
-            # Create a systematic solution
+
+            # Shuffle non-people entity lists for contamination resistance
+            ages_shuffled = entities["ages"][:]
+            jobs_shuffled = entities["jobs"][:]
+            random.shuffle(ages_shuffled)
+            random.shuffle(jobs_shuffled)
+
+            # Create a randomized solution
             solution = {}
             for i, person in enumerate(entities["people"]):
                 solution[person] = {
                     "people": person,
-                    "ages": entities["ages"][i],
-                    "jobs": entities["jobs"][i]
+                    "ages": ages_shuffled[i],
+                    "jobs": jobs_shuffled[i],
                 }
             
-            # Create systematic constraints
+            # Create systematic constraints using shuffled assignments
             constraints = []
             for i, person in enumerate(entities["people"][:2]):  # First two people get direct constraints
                 constraints.append(Constraint(
-                    "direct", 
-                    f"{person} is {entities['ages'][i]} years old",
-                    [person, entities["ages"][i]],
-                    f"{person} -> ages: {entities['ages'][i]}"
+                    "direct",
+                    f"{person} is {ages_shuffled[i]} years old",
+                    [person, ages_shuffled[i]],
+                    f"{person} -> ages: {ages_shuffled[i]}"
                 ))
-            
+
             # Add negative constraints for variety
             for i in range(1, min(3, size)):
                 person = entities["people"][i]
-                wrong_job = entities["jobs"][(i + 1) % size]
+                wrong_job = jobs_shuffled[(i + 1) % size]
                 constraints.append(Constraint(
                     "negative",
                     f"{person} is not {LogicGridGenerator._article(wrong_job)} {wrong_job}",

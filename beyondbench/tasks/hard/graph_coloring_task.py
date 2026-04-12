@@ -299,22 +299,20 @@ class GraphGenerator:
         """Generate dense random graph with high chromatic number"""
         if n < 4:
             return GraphGenerator.generate_complete_graph(n)
-        
+
         edges = []
         edge_probability = 0.6  # High density to force many colors
-        
-        # Use deterministic pseudo-random to ensure reproducibility
+
+        # Use random module for seed-dependent generation
         for i in range(n):
             for j in range(i + 1, n):
-                # Use a hash-like function for deterministic "randomness"
-                hash_val = (i * 17 + j * 31) % 100
-                if hash_val < edge_probability * 100:
+                if random.random() < edge_probability:
                     edges.append((i, j))
-        
+
         # Estimate chromatic number based on clique number and density
         # For dense random graphs, chromatic number is typically high
         chromatic_number = max(3, min(int(n * edge_probability * 0.8) + 1, n))
-        
+
         return edges, chromatic_number
 
 class GraphColoringSolver:

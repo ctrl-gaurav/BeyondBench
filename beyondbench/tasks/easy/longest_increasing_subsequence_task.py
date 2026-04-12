@@ -29,9 +29,10 @@ class LongestIncreasingSubsequenceTask(BaseTask):
 
     def create_prompt(self, data_point):
         """Create prompt for longest increasing subsequence task"""
-        return (f"Find the length of the longest increasing subsequence in {data_point}. "
-                f"A subsequence maintains relative order but elements don't need to be consecutive.\n\n"
-                f"Your final answer must be in the format \\boxed{{length}} at the end of your response.")
+        return (f"Find the length of the longest strictly increasing subsequence in the list {data_point}. "
+                f"A subsequence maintains relative order but elements need not be consecutive.\n\n"
+                f"Provide ONLY the integer length as your answer. "
+                f"Your final answer must be in the format \\boxed{{answer}} at the end.")
 
     def _calculate_lis_length(self, arr):
         """Calculate the length of the longest increasing subsequence using dynamic programming"""

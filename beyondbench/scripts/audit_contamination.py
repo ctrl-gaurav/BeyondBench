@@ -50,7 +50,7 @@ def _generate_task_data(task_class, seed: int, output_dir: str = "/tmp/bb_audit"
         "model_handler": stub,
         "output_dir": output_dir,
         "num_folds": 1,
-        "num_samples": 5,
+        "num_samples": 10,
         "store_details": False,
         "temperature": 0.7,
         "top_p": 0.9,
@@ -60,26 +60,26 @@ def _generate_task_data(task_class, seed: int, output_dir: str = "/tmp/bb_audit"
         "contamination_resistance": "off",
     }
 
-    # Add range params if needed
+    # Add range params if needed — use a wide range to avoid fingerprint collisions
     if "min_val" in init_params or accepts_kwargs:
-        common_kwargs["min_val"] = 1
+        common_kwargs["min_val"] = -50
         common_kwargs["max_val"] = 100
 
-    # Hard task defaults
+    # Hard task defaults — values must match what each task actually accepts
     hard_defaults = {
-        "board_sizes": [4],
-        "num_disks_list": [3],
+        "board_sizes": [4, 5, 6],
+        "num_disks_list": [3, 4, 5],
         "num_variables_list": [4],
         "sat_types_list": ["random_k"],
         "clause_ratios_list": [3.0],
-        "graph_types": ["random"],
+        "graph_types": ["dense_random"],
         "num_vertices_list": [5],
-        "grid_sizes": [3],
+        "grid_sizes": [4],
         "difficulty_levels": ["easy"],
         "word_lengths": [3],
         "puzzle_types": ["addition"],
         "num_equations_list": [2],
-        "constraint_types": ["standard"],
+        "constraint_types": ["basic"],
         "matrix_counts_list": [3],
         "dimension_patterns": ["uniform"],
         "num_projects_list": [3],
@@ -88,6 +88,14 @@ def _generate_task_data(task_class, seed: int, output_dir: str = "/tmp/bb_audit"
     for param, default in hard_defaults.items():
         if param in init_params:
             common_kwargs[param] = default
+
+    # Per-task overrides for params that share names but expect different values
+    task_overrides: Dict[str, Dict[str, Any]] = {
+        "SudokuTask": {"constraint_types": ["standard"]},
+    }
+    class_name = task_class.__name__
+    if class_name in task_overrides:
+        common_kwargs.update(task_overrides[class_name])
 
     if accepts_kwargs:
         filtered = common_kwargs
