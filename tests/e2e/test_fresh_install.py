@@ -170,10 +170,10 @@ class TestBasicEvaluationSmoke:
         assert result.value == 42
 
     def test_task_registry_loads(self):
-        """Task registry should load all 44 tasks."""
+        """Task registry should load all 79 tasks."""
         from beyondbench.core.task_registry import TaskRegistry
         registry = TaskRegistry()
-        assert len(registry.get_tasks_for_suite("all")) == 44
+        assert len(registry.get_tasks_for_suite("all")) == 79
 
 
 # ===========================================================================
@@ -234,7 +234,7 @@ class TestFreshVenvInstall:
 import beyondbench
 from beyondbench.core.task_registry import TaskRegistry
 r = TaskRegistry()
-assert len(r.get_tasks_for_suite('all')) == 44
+assert len(r.get_tasks_for_suite('all')) == 79
 print('SMOKE_OK')
 """
         result = subprocess.run(

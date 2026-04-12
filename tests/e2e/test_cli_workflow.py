@@ -2,7 +2,7 @@
 E2E tests — CLI workflow: list-tasks, evaluate (with real model), serve endpoint.
 
 Tests:
-  1. beyondbench list-tasks → verify all 44 tasks listed
+  1. beyondbench list-tasks → verify all 79 tasks listed
   2. beyondbench evaluate --suite easy --tasks sum --datapoints 5 → verify results file
   3. beyondbench serve → verify FastAPI /health endpoint responds
 """
@@ -68,27 +68,27 @@ class TestListTasksCLI:
         result = _run_cli("list-tasks")
         assert "hard" in result.stdout.lower()
 
-    def test_list_tasks_json_has_44_total(self):
+    def test_list_tasks_json_has_79_total(self):
         result = _run_cli("list-tasks", "--format", "json")
         assert result.returncode == 0
         data = json.loads(result.stdout)
         total = sum(len(v) for v in data.values())
-        assert total == 44, f"Expected 44 tasks, got {total}"
+        assert total == 79, f"Expected 79 tasks, got {total}"
 
-    def test_list_tasks_json_easy_29(self):
+    def test_list_tasks_json_easy_44(self):
         result = _run_cli("list-tasks", "--format", "json")
         data = json.loads(result.stdout)
-        assert len(data.get("easy", [])) == 29
+        assert len(data.get("easy", [])) == 44
 
-    def test_list_tasks_json_medium_5(self):
+    def test_list_tasks_json_medium_15(self):
         result = _run_cli("list-tasks", "--format", "json")
         data = json.loads(result.stdout)
-        assert len(data.get("medium", [])) == 5
+        assert len(data.get("medium", [])) == 15
 
-    def test_list_tasks_json_hard_10(self):
+    def test_list_tasks_json_hard_20(self):
         result = _run_cli("list-tasks", "--format", "json")
         data = json.loads(result.stdout)
-        assert len(data.get("hard", [])) == 10
+        assert len(data.get("hard", [])) == 20
 
     def test_list_tasks_includes_sum(self):
         result = _run_cli("list-tasks")
