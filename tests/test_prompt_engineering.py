@@ -68,13 +68,13 @@ class TestPromptLibrary:
         tasks = lib.list_tasks()
         assert len(tasks) == 79
 
-    def test_all_tasks_have_three_styles(self):
+    def test_all_tasks_have_four_styles(self):
         from beyondbench.prompts import PromptLibrary
         lib = PromptLibrary()
         missing = []
         for task in lib.list_tasks():
             styles = lib.get_available_styles(task)
-            for s in ("concise", "detailed", "few_shot"):
+            for s in ("concise", "detailed", "few_shot", "cot"):
                 if s not in styles:
                     missing.append(f"{task}/{s}")
         assert missing == [], f"Missing prompt styles: {missing}"
@@ -101,14 +101,14 @@ class TestPromptLibrary:
         from beyondbench.prompts import PromptLibrary
         lib = PromptLibrary()
         with pytest.raises(KeyError, match="No prompt style"):
-            lib.get("sum", "cot")  # cot is not registered in task_prompts.py
+            lib.get("sum", "nonexistent_style_xyz")  # unknown style should raise
 
     def test_all_prompts_contain_boxed_answer(self):
         from beyondbench.prompts import PromptLibrary
         lib = PromptLibrary()
         bad = []
         for task in lib.list_tasks():
-            for style in ("concise", "detailed", "few_shot"):
+            for style in ("concise", "detailed", "few_shot", "cot"):
                 tmpl = lib.get(task, style)
                 rendered = tmpl.render(data="[1, 2, 3]")
                 if "\\boxed{answer}" not in rendered and "\\boxed{{answer}}" not in rendered:
@@ -135,7 +135,7 @@ class TestPromptLibrary:
         from beyondbench.prompts import PromptLibrary
         lib = PromptLibrary()
         for task in lib.list_tasks():
-            for style in ("concise", "detailed", "few_shot"):
+            for style in ("concise", "detailed", "few_shot", "cot"):
                 tmpl = lib.get(task, style)
                 result = tmpl.render(data="[1, 2]")
                 assert len(result) > 10, f"{task}/{style} rendered to empty string"

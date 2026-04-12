@@ -330,16 +330,55 @@ class BaseTask(ABC):
           ``create_prompt`` (fully backwards-compatible).
         * When ``prompt_style`` is set → looks up the template from
           ``PromptLibrary`` and renders it with ``data=str(data_point)``.
+          For ``few_shot`` style, dynamic examples are prepended from
+          ``FewShotGenerator`` when available (contamination-safe).
           Falls back to ``create_prompt`` if the task or style is not registered.
         """
+        # Resolve model_id for model-family prompt hints
+        _model_id = getattr(self.model_handler, 'model_id', None) if self.model_handler else None
+
         if self.prompt_style is None:
             prompt = self.create_prompt(data_point)
         else:
             try:
-                from ..prompts import get_prompt_library
+                from ..prompts import get_prompt_library, FewShotGenerator
                 lib = get_prompt_library()
-                tmpl = lib.get(self.task_name, self.prompt_style)
-                prompt = tmpl.render(data=str(data_point))
+
+                if self.prompt_style == "few_shot":
+                    # Generate dynamic few-shot examples instead of using
+                    # static ones baked into the template.
+                    try:
+                        gen = FewShotGenerator(seed=self.seed)
+                        dynamic_examples = gen.generate(
+                            self.task_name,
+                            n=2,
+                            call_index=hash(str(data_point)) % 100000,
+                        )
+                    except Exception:
+                        dynamic_examples = ""
+
+                    if dynamic_examples:
+                        # Use the concise template as the question body,
+                        # prepend dynamic examples.
+                        try:
+                            base_tmpl = lib.get(self.task_name, "concise")
+                        except KeyError:
+                            base_tmpl = lib.get(self.task_name, "few_shot")
+                        question = base_tmpl.render(
+                            data=str(data_point), model_id=_model_id,
+                        )
+                        prompt = dynamic_examples + "\n\n" + question
+                    else:
+                        # Fall back to static few-shot template
+                        tmpl = lib.get(self.task_name, "few_shot")
+                        prompt = tmpl.render(
+                            data=str(data_point), model_id=_model_id,
+                        )
+                else:
+                    tmpl = lib.get(self.task_name, self.prompt_style)
+                    prompt = tmpl.render(
+                        data=str(data_point), model_id=_model_id,
+                    )
             except Exception:
                 # Graceful fallback: use original create_prompt so evaluation never breaks
                 prompt = self.create_prompt(data_point)

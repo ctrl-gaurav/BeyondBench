@@ -53,13 +53,24 @@ def output_dir(tmp_path_factory):
     return str(tmp_path_factory.mktemp("integration_hard"))
 
 
-def _run_hard_task(task_class, handler, output_dir, datapoints=3):
-    """Run a hard task; return (parse_rate, accuracy)."""
-    task = task_class(
+def _make_hard_task(task_class, handler, output_dir, datapoints=2, **overrides):
+    """Instantiate a hard task, adapting to its constructor signature.
+
+    Many hard tasks have custom __init__ signatures (e.g. board_sizes,
+    num_variables_list) instead of the standard min_val/max_val.  We inspect
+    the constructor and supply sensible defaults.
+    """
+    sig = inspect.signature(task_class.__init__)
+    params = set(sig.parameters.keys()) - {"self"}
+    has_kwargs = any(
+        p.kind == inspect.Parameter.VAR_KEYWORD
+        for p in sig.parameters.values()
+    )
+
+    # Common args every hard task accepts
+    common = dict(
         model_handler=handler,
         output_dir=output_dir,
-        min_val=1,
-        max_val=10,
         num_folds=1,
         num_samples=datapoints,
         store_details=False,
@@ -68,6 +79,48 @@ def _run_hard_task(task_class, handler, output_dir, datapoints=3):
         max_tokens=2048,
         seed=42,
     )
+
+    # Defaults for custom hard-task parameters
+    custom_defaults = dict(
+        board_sizes=[4, 5],
+        graph_types=["cycle"],
+        num_vertices_list=[4],
+        num_variables_list=[3],
+        clause_ratios_list=[2.0],
+        sat_types_list=["2-SAT"],
+        num_disks_list=[3],
+        difficulty_levels=["easy"],
+        puzzle_types=["addition"],
+        word_lengths=[3],
+        constraint_types=["linear"],
+        num_projects_list=[3],
+        grid_sizes=[3],
+        num_equations_list=[2],
+        dimension_patterns=["small"],
+        matrix_counts_list=[3],
+    )
+
+    if has_kwargs or "min_val" in params:
+        # Standard BaseTask constructor or accepts **kwargs
+        common.update(min_val=1, max_val=10)
+    else:
+        # Provide only the parameters this class actually accepts
+        for k, v in custom_defaults.items():
+            if k in params:
+                common[k] = v
+
+    common.update(overrides)
+
+    # Filter to only accepted params (avoid TypeErrors)
+    if not has_kwargs:
+        common = {k: v for k, v in common.items() if k in params}
+
+    return task_class(**common)
+
+
+def _run_hard_task(task_class, handler, output_dir, datapoints=3):
+    """Run a hard task; return (parse_rate, accuracy)."""
+    task = _make_hard_task(task_class, handler, output_dir, datapoints=datapoints)
 
     data = None
     for attempt in [
@@ -163,15 +216,7 @@ def test_hard_task_generates_non_trivial_prompt(task_name, module_path, class_na
     except (ImportError, AttributeError) as e:
         pytest.skip(f"Cannot import {class_name}: {e}")
 
-    task = cls(
-        model_handler=model_handler,
-        output_dir=output_dir,
-        min_val=1, max_val=10,
-        num_folds=1, num_samples=2,
-        store_details=False,
-        temperature=0.1, top_p=0.95, max_tokens=512,
-        seed=42,
-    )
+    task = _make_hard_task(cls, model_handler, output_dir)
     data = None
     for attempt in [{"list_size": 4}, {"grid_sizes": [4]}, {}]:
         try:
@@ -199,15 +244,7 @@ def test_hard_task_evaluate_response_has_accuracy(task_name, module_path, class_
     except (ImportError, AttributeError) as e:
         pytest.skip(f"Cannot import {class_name}: {e}")
 
-    task = cls(
-        model_handler=model_handler,
-        output_dir=output_dir,
-        min_val=1, max_val=10,
-        num_folds=1, num_samples=2,
-        store_details=False,
-        temperature=0.1, top_p=0.95, max_tokens=512,
-        seed=42,
-    )
+    task = _make_hard_task(cls, model_handler, output_dir)
     data = None
     for attempt in [{"list_size": 4}, {"grid_sizes": [4]}, {}]:
         try:

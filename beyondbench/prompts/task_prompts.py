@@ -1486,3 +1486,472 @@ _reg("edit_distance", "few_shot",
      "Example 2: 'cat' → 'cat': 0 operations → \\boxed{{0}}\n\n"
      "Now compute edit distance: {data}\n"
      "Answer: \\boxed{{answer}}")
+
+
+# ===========================================================================
+# CHAIN-OF-THOUGHT (CoT) PROMPTS — all 79 tasks
+# ===========================================================================
+# CoT prompts instruct the model to reason step by step before giving
+# the final \\boxed{{answer}}.  This generally improves accuracy on
+# harder tasks at the cost of more tokens.
+# ===========================================================================
+
+# --- EASY ---
+_reg("sum", "cot",
+     "Think step by step.\n\n"
+     "Sum these numbers: {data}\n\n"
+     "Show your reasoning, then write your final answer as \\boxed{{answer}}.")
+
+_reg("sorting", "cot",
+     "Think step by step.\n\n"
+     "Sort this list in ascending order: {data}\n\n"
+     "Show your reasoning, then write the sorted list as \\boxed{{answer}}.")
+
+_reg("comparison", "cot",
+     "Think step by step.\n\n"
+     "Compare these two numbers: {data}\n\n"
+     "Determine if the first is 'greater', 'less', or 'equal' to the second. "
+     "Show your reasoning, then write your answer as \\boxed{{answer}}.")
+
+_reg("multiplication", "cot",
+     "Think step by step.\n\n"
+     "Multiply these numbers: {data}\n\n"
+     "Show your work, then write the product as \\boxed{{answer}}.")
+
+_reg("odd_count", "cot",
+     "Think step by step.\n\n"
+     "Count the odd numbers in: {data}\n\n"
+     "Check each number. Show your reasoning, then write the count as \\boxed{{answer}}.")
+
+_reg("even_count", "cot",
+     "Think step by step.\n\n"
+     "Count the even numbers in: {data}\n\n"
+     "Check each number. Show your reasoning, then write the count as \\boxed{{answer}}.")
+
+_reg("absolute_difference", "cot",
+     "Think step by step.\n\n"
+     "Find the absolute difference between these two numbers: {data}\n\n"
+     "Compute |a - b|. Show your reasoning, then write your answer as \\boxed{{answer}}.")
+
+_reg("division", "cot",
+     "Think step by step.\n\n"
+     "Divide the first number by the second: {data}\n\n"
+     "Round to 2 decimal places if needed. Show your work, then write the quotient as \\boxed{{answer}}.")
+
+_reg("find_maximum", "cot",
+     "Think step by step.\n\n"
+     "Find the maximum value in: {data}\n\n"
+     "Scan through all elements. Show your reasoning, then write the maximum as \\boxed{{answer}}.")
+
+_reg("find_minimum", "cot",
+     "Think step by step.\n\n"
+     "Find the minimum value in: {data}\n\n"
+     "Scan through all elements. Show your reasoning, then write the minimum as \\boxed{{answer}}.")
+
+_reg("mean", "cot",
+     "Think step by step.\n\n"
+     "Calculate the mean of: {data}\n\n"
+     "Sum all values and divide by count. Show your work, then write the mean as \\boxed{{answer}}.")
+
+_reg("median", "cot",
+     "Think step by step.\n\n"
+     "Find the median of: {data}\n\n"
+     "Sort the values first, then find the middle element. Show your reasoning, "
+     "then write the median as \\boxed{{answer}}.")
+
+_reg("mode", "cot",
+     "Think step by step.\n\n"
+     "Find the mode (most frequent value) in: {data}\n\n"
+     "Count each value's frequency. Show your reasoning, then write the mode as \\boxed{{answer}}.")
+
+_reg("range", "cot",
+     "Think step by step.\n\n"
+     "Find the range (max - min) of: {data}\n\n"
+     "Identify the max and min, then subtract. Show your reasoning, "
+     "then write the range as \\boxed{{answer}}.")
+
+_reg("subtraction", "cot",
+     "Think step by step.\n\n"
+     "Subtract the second from the first: {data}\n\n"
+     "Show your work, then write the difference as \\boxed{{answer}}.")
+
+_reg("sum_of_digits", "cot",
+     "Think step by step.\n\n"
+     "Find the sum of digits of: {data}\n\n"
+     "Break the number into individual digits and add them. "
+     "Show your work, then write the sum as \\boxed{{answer}}.")
+
+_reg("count_unique", "cot",
+     "Think step by step.\n\n"
+     "Count the unique values in: {data}\n\n"
+     "Identify duplicates and count distinct elements. "
+     "Show your reasoning, then write the count as \\boxed{{answer}}.")
+
+_reg("count_negative", "cot",
+     "Think step by step.\n\n"
+     "Count the negative numbers in: {data}\n\n"
+     "Check each number. Show your reasoning, then write the count as \\boxed{{answer}}.")
+
+_reg("index_of_maximum", "cot",
+     "Think step by step.\n\n"
+     "Find the index (0-based) of the maximum value in: {data}\n\n"
+     "Scan through all elements. Show your reasoning, "
+     "then write the index as \\boxed{{answer}}.")
+
+_reg("second_maximum", "cot",
+     "Think step by step.\n\n"
+     "Find the second largest value in: {data}\n\n"
+     "Identify the maximum, then find the next largest distinct value. "
+     "Show your reasoning, then write it as \\boxed{{answer}}.")
+
+_reg("second_minimum", "cot",
+     "Think step by step.\n\n"
+     "Find the second smallest value in: {data}\n\n"
+     "Identify the minimum, then find the next smallest distinct value. "
+     "Show your reasoning, then write it as \\boxed{{answer}}.")
+
+_reg("reverse_list", "cot",
+     "Think step by step.\n\n"
+     "Reverse this list: {data}\n\n"
+     "Show your reasoning, then write the reversed list as \\boxed{{answer}}.")
+
+_reg("cumulative_sum", "cot",
+     "Think step by step.\n\n"
+     "Compute the cumulative sum of: {data}\n\n"
+     "At each position, sum all elements from the start up to that position. "
+     "Show your work, then write the cumulative sum list as \\boxed{{answer}}.")
+
+_reg("alternating_sum", "cot",
+     "Think step by step.\n\n"
+     "Compute the alternating sum of: {data}\n\n"
+     "Alternate between adding (+) and subtracting (-) each element starting with +. "
+     "Show your work, then write the result as \\boxed{{answer}}.")
+
+_reg("dot_product", "cot",
+     "Think step by step.\n\n"
+     "Compute the dot product of these two vectors: {data}\n\n"
+     "Multiply corresponding elements and sum. "
+     "Show your work, then write the dot product as \\boxed{{answer}}.")
+
+_reg("weighted_sum", "cot",
+     "Think step by step.\n\n"
+     "Compute the weighted sum: {data}\n\n"
+     "Multiply each value by its weight and sum. "
+     "Show your work, then write the result as \\boxed{{answer}}.")
+
+_reg("parity_check", "cot",
+     "Think step by step.\n\n"
+     "Determine if this number is even or odd: {data}\n\n"
+     "Check divisibility by 2. Show your reasoning, "
+     "then write 'even' or 'odd' as \\boxed{{answer}}.")
+
+_reg("count_multiples", "cot",
+     "Think step by step.\n\n"
+     "Count the multiples of k in this list: {data}\n\n"
+     "Check each number for divisibility. Show your reasoning, "
+     "then write the count as \\boxed{{answer}}.")
+
+_reg("count_perfect_squares", "cot",
+     "Think step by step.\n\n"
+     "Count the perfect squares in: {data}\n\n"
+     "Check each number. Show your reasoning, then write the count as \\boxed{{answer}}.")
+
+_reg("count_palindromic", "cot",
+     "Think step by step.\n\n"
+     "Count the palindromic numbers in: {data}\n\n"
+     "A number is palindromic if it reads the same forwards and backwards. "
+     "Check each number. Show your reasoning, then write the count as \\boxed{{answer}}.")
+
+_reg("local_maxima_count", "cot",
+     "Think step by step.\n\n"
+     "Count the local maxima in: {data}\n\n"
+     "A local maximum is an element greater than both its neighbors. "
+     "Show your reasoning, then write the count as \\boxed{{answer}}.")
+
+_reg("max_adjacent_difference", "cot",
+     "Think step by step.\n\n"
+     "Find the maximum adjacent difference in: {data}\n\n"
+     "Compute |a[i+1] - a[i]| for each pair and find the maximum. "
+     "Show your reasoning, then write the result as \\boxed{{answer}}.")
+
+_reg("longest_increasing_subsequence", "cot",
+     "Think step by step.\n\n"
+     "Find the length of the longest strictly increasing subsequence in: {data}\n\n"
+     "Use dynamic programming. Show your reasoning, "
+     "then write the length as \\boxed{{answer}}.")
+
+_reg("count_greater_than_previous", "cot",
+     "Think step by step.\n\n"
+     "Count how many elements are greater than their preceding element in: {data}\n\n"
+     "Compare each element with the one before it. "
+     "Show your reasoning, then write the count as \\boxed{{answer}}.")
+
+_reg("sum_of_max_indices", "cot",
+     "Think step by step.\n\n"
+     "Find all indices where the maximum value occurs, then sum those indices: {data}\n\n"
+     "Show your reasoning, then write the sum of indices as \\boxed{{answer}}.")
+
+_reg("running_average", "cot",
+     "Think step by step.\n\n"
+     "Compute the running average at each position: {data}\n\n"
+     "At position i, average all elements from index 0 to i. "
+     "Show your work, then write the list of running averages as \\boxed{{answer}}.")
+
+_reg("moving_average", "cot",
+     "Think step by step.\n\n"
+     "Compute the moving average: {data}\n\n"
+     "For each valid window, average the elements in that window. "
+     "Show your work, then write the result as \\boxed{{answer}}.")
+
+_reg("variance", "cot",
+     "Think step by step.\n\n"
+     "Calculate the population variance of: {data}\n\n"
+     "First find the mean, then average the squared deviations. "
+     "Show your work, then write the variance as \\boxed{{answer}}.")
+
+_reg("standard_deviation", "cot",
+     "Think step by step.\n\n"
+     "Calculate the population standard deviation of: {data}\n\n"
+     "First find the variance, then take the square root. "
+     "Show your work, then write the standard deviation as \\boxed{{answer}}.")
+
+_reg("element_frequency", "cot",
+     "Think step by step.\n\n"
+     "Find the frequency of each element in: {data}\n\n"
+     "Count occurrences of each value. Show your reasoning, "
+     "then write the frequency dictionary as \\boxed{{answer}}.")
+
+_reg("set_intersection", "cot",
+     "Think step by step.\n\n"
+     "Find the intersection of these two sets: {data}\n\n"
+     "Identify elements present in both sets. "
+     "Show your reasoning, then write the intersection as \\boxed{{answer}}.")
+
+_reg("set_difference", "cot",
+     "Think step by step.\n\n"
+     "Find the set difference (first minus second): {data}\n\n"
+     "Identify elements in the first set but not the second. "
+     "Show your reasoning, then write the difference as \\boxed{{answer}}.")
+
+_reg("interleave_lists", "cot",
+     "Think step by step.\n\n"
+     "Interleave these two lists: {data}\n\n"
+     "Alternate elements from each list. "
+     "Show your reasoning, then write the interleaved list as \\boxed{{answer}}.")
+
+_reg("rotate_list", "cot",
+     "Think step by step.\n\n"
+     "Rotate this list by the given positions: {data}\n\n"
+     "Show your reasoning, then write the rotated list as \\boxed{{answer}}.")
+
+# --- MEDIUM ---
+_reg("fibonacci_sequence", "cot",
+     "Think step by step.\n\n"
+     "Compute the requested Fibonacci value: {data}\n\n"
+     "Generate the sequence starting from F(0)=0, F(1)=1, F(n)=F(n-1)+F(n-2). "
+     "Show your work, then write your answer as \\boxed{{answer}}.")
+
+_reg("prime_sequence", "cot",
+     "Think step by step.\n\n"
+     "Find the requested prime numbers: {data}\n\n"
+     "Check divisibility for each candidate. "
+     "Show your reasoning, then write your answer as \\boxed{{answer}}.")
+
+_reg("geometric_sequence", "cot",
+     "Think step by step.\n\n"
+     "Solve this geometric sequence problem: {data}\n\n"
+     "Use the formula a_n = a * r^(n-1). "
+     "Show your work, then write your answer as \\boxed{{answer}}.")
+
+_reg("arithmetic_progression", "cot",
+     "Think step by step.\n\n"
+     "Solve this arithmetic progression problem: {data}\n\n"
+     "Use the formula a_n = a + (n-1)*d. "
+     "Show your work, then write your answer as \\boxed{{answer}}.")
+
+_reg("harmonic_sequence", "cot",
+     "Think step by step.\n\n"
+     "Compute the harmonic series value: {data}\n\n"
+     "Sum 1/1 + 1/2 + 1/3 + ... "
+     "Show your work, then write your answer as \\boxed{{answer}}.")
+
+_reg("collatz_sequence", "cot",
+     "Think step by step.\n\n"
+     "Compute the Collatz sequence: {data}\n\n"
+     "If even, divide by 2. If odd, multiply by 3 and add 1. Repeat until 1. "
+     "Show each step, then write your answer as \\boxed{{answer}}.")
+
+_reg("gcd_lcm", "cot",
+     "Think step by step.\n\n"
+     "Compute GCD and/or LCM: {data}\n\n"
+     "Use the Euclidean algorithm. "
+     "Show your work, then write your answer as \\boxed{{answer}}.")
+
+_reg("polynomial_evaluation", "cot",
+     "Think step by step.\n\n"
+     "Evaluate this polynomial: {data}\n\n"
+     "Substitute the value and compute each term. "
+     "Show your work, then write the result as \\boxed{{answer}}.")
+
+_reg("number_base_conversion", "cot",
+     "Think step by step.\n\n"
+     "Convert this number between bases: {data}\n\n"
+     "Use repeated division or positional notation. "
+     "Show your work, then write the result as \\boxed{{answer}}.")
+
+_reg("matrix_operations", "cot",
+     "Think step by step.\n\n"
+     "Perform this matrix operation: {data}\n\n"
+     "Process element by element. "
+     "Show your work, then write the result matrix as \\boxed{{answer}}.")
+
+_reg("logical_operations", "cot",
+     "Think step by step.\n\n"
+     "Evaluate this logical expression: {data}\n\n"
+     "Apply the logical operator to the operands. "
+     "Show your reasoning, then write the result as \\boxed{{answer}}.")
+
+_reg("combinatorics", "cot",
+     "Think step by step.\n\n"
+     "Solve this combinatorics problem: {data}\n\n"
+     "Use the appropriate formula (C(n,r), P(n,r), or n!). "
+     "Show your work, then write the result as \\boxed{{answer}}.")
+
+_reg("pattern_completion", "cot",
+     "Think step by step.\n\n"
+     "Find the next element in this pattern: {data}\n\n"
+     "Identify the underlying rule. "
+     "Show your reasoning, then write the next element as \\boxed{{answer}}.")
+
+_reg("algebraic_sequence", "cot",
+     "Think step by step.\n\n"
+     "Solve this algebraic sequence problem: {data}\n\n"
+     "Identify the formula and apply it. "
+     "Show your work, then write your answer as \\boxed{{answer}}.")
+
+_reg("complex_pattern", "cot",
+     "Think step by step.\n\n"
+     "Analyze and continue this pattern: {data}\n\n"
+     "Look for differences, ratios, or other relationships between terms. "
+     "Show your reasoning, then write your answer as \\boxed{{answer}}.")
+
+# --- HARD ---
+_reg("shortest_path", "cot",
+     "Think step by step.\n\n"
+     "Find the shortest path in this graph: {data}\n\n"
+     "Apply Dijkstra's algorithm or examine all paths. "
+     "Show your reasoning, then write the shortest distance as \\boxed{{answer}}.")
+
+_reg("knapsack", "cot",
+     "Think step by step.\n\n"
+     "Solve this knapsack problem: {data}\n\n"
+     "Use dynamic programming. Consider each item and decide whether to include it. "
+     "Show your reasoning, then write the maximum value as \\boxed{{answer}}.")
+
+_reg("traveling_salesman", "cot",
+     "Think step by step.\n\n"
+     "Solve this traveling salesman problem: {data}\n\n"
+     "Consider all possible routes and find the minimum total distance. "
+     "Show your reasoning, then write the minimum distance as \\boxed{{answer}}.")
+
+_reg("longest_common_subsequence", "cot",
+     "Think step by step.\n\n"
+     "Find the longest common subsequence: {data}\n\n"
+     "Use dynamic programming. Build the LCS table. "
+     "Show your reasoning, then write the LCS length as \\boxed{{answer}}.")
+
+_reg("edit_distance", "cot",
+     "Think step by step.\n\n"
+     "Compute the edit (Levenshtein) distance: {data}\n\n"
+     "Count the minimum insertions, deletions, and substitutions. "
+     "Show your reasoning, then write the distance as \\boxed{{answer}}.")
+
+_reg("coin_change", "cot",
+     "Think step by step.\n\n"
+     "Solve this coin change problem: {data}\n\n"
+     "Use dynamic programming. Find the minimum coins needed. "
+     "Show your reasoning, then write the count as \\boxed{{answer}}.")
+
+_reg("interval_scheduling", "cot",
+     "Think step by step.\n\n"
+     "Solve this interval scheduling problem: {data}\n\n"
+     "Sort by end time and greedily select non-overlapping intervals. "
+     "Show your reasoning, then write the maximum count as \\boxed{{answer}}.")
+
+_reg("topological_sort", "cot",
+     "Think step by step.\n\n"
+     "Find a valid topological ordering: {data}\n\n"
+     "Process nodes with no incoming edges first. "
+     "Show your reasoning, then write the ordering as \\boxed{{answer}}.")
+
+_reg("regex_matching", "cot",
+     "Think step by step.\n\n"
+     "Determine if the string matches the regex pattern: {data}\n\n"
+     "Walk through the pattern character by character. "
+     "Show your reasoning, then write True or False as \\boxed{{answer}}.")
+
+_reg("minimax_game", "cot",
+     "Think step by step.\n\n"
+     "Evaluate this game tree using minimax: {data}\n\n"
+     "Alternate between maximizing and minimizing at each level. "
+     "Show your reasoning, then write the optimal value as \\boxed{{answer}}.")
+
+_reg("boolean_sat", "cot",
+     "Think step by step.\n\n"
+     "Evaluate this Boolean satisfiability problem: {data}\n\n"
+     "Substitute the variable values and evaluate each clause. "
+     "Show your reasoning, then write the result as \\boxed{{answer}}.")
+
+_reg("n_queens", "cot",
+     "Think step by step.\n\n"
+     "Solve this N-Queens problem: {data}\n\n"
+     "Place queens so that no two attack each other. "
+     "Show your reasoning, then write your answer as \\boxed{{answer}}.")
+
+_reg("sudoku_solving", "cot",
+     "Think step by step.\n\n"
+     "Solve this Sudoku puzzle: {data}\n\n"
+     "Apply constraint propagation and backtracking. "
+     "Show your reasoning, then write the solution as \\boxed{{answer}}.")
+
+_reg("graph_coloring", "cot",
+     "Think step by step.\n\n"
+     "Find the minimum coloring for this graph: {data}\n\n"
+     "Assign colors so no adjacent nodes share a color. "
+     "Show your reasoning, then write your answer as \\boxed{{answer}}.")
+
+_reg("tower_hanoi", "cot",
+     "Think step by step.\n\n"
+     "Solve this Tower of Hanoi problem: {data}\n\n"
+     "Move disks one at a time, never placing a larger disk on a smaller one. "
+     "Show your reasoning, then write your answer as \\boxed{{answer}}.")
+
+_reg("matrix_chain_multiplication", "cot",
+     "Think step by step.\n\n"
+     "Find the optimal matrix chain multiplication order: {data}\n\n"
+     "Use dynamic programming to minimize total scalar multiplications. "
+     "Show your reasoning, then write the minimum cost as \\boxed{{answer}}.")
+
+_reg("cryptarithmetic", "cot",
+     "Think step by step.\n\n"
+     "Solve this cryptarithmetic puzzle: {data}\n\n"
+     "Each letter represents a unique digit. "
+     "Show your reasoning, then write the solution as \\boxed{{answer}}.")
+
+_reg("constraint_optimization", "cot",
+     "Think step by step.\n\n"
+     "Solve this constrained optimization problem: {data}\n\n"
+     "Identify the feasible region and find the optimal point. "
+     "Show your reasoning, then write the optimal value as \\boxed{{answer}}.")
+
+_reg("logic_grid_puzzles", "cot",
+     "Think step by step.\n\n"
+     "Solve this logic grid puzzle: {data}\n\n"
+     "Use process of elimination with the given clues. "
+     "Show your reasoning, then write the solution as \\boxed{{answer}}.")
+
+_reg("modular_systems", "cot",
+     "Think step by step.\n\n"
+     "Solve this modular arithmetic problem: {data}\n\n"
+     "Apply modular arithmetic rules. "
+     "Show your work, then write your answer as \\boxed{{answer}}.")
