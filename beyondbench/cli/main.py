@@ -1104,6 +1104,97 @@ def export(results_dir: str, export_format: str, output: str):
 
 
 # ------------------------------------------------------------------ #
+# reproduce command — recreate evaluation from fingerprint (Phase 17)
+# ------------------------------------------------------------------ #
+
+@main.command()
+@click.argument('fingerprint')
+@click.option('--results-dir', default='./beyondbench_results',
+              help='Directory containing results with fingerprint')
+def reproduce(fingerprint: str, results_dir: str):
+    """Recreate an evaluation from its fingerprint.
+
+    Searches for a results file containing the given FINGERPRINT and
+    displays the configuration needed to reproduce it.
+
+    Examples:
+
+    \b
+    # Find and display config for a fingerprint
+    beyondbench reproduce abc123def456 --results-dir ./beyondbench_results
+    """
+    import glob as _glob
+
+    results_path = Path(results_dir)
+    if not results_path.exists():
+        click.echo(f"Error: Results directory '{results_dir}' does not exist.", err=True)
+        sys.exit(1)
+
+    # Search all JSON files for a matching fingerprint
+    json_files = sorted(results_path.rglob("*.json"))
+    found = None
+    for jf in json_files:
+        try:
+            with open(jf, encoding='utf-8') as fh:
+                data = json.load(fh)
+            if isinstance(data, dict):
+                fp = data.get('eval_fingerprint', '')
+                if fp and fp.startswith(fingerprint):
+                    found = (jf, data)
+                    break
+        except Exception:
+            continue
+
+    if found is None:
+        click.echo(f"No results file found containing fingerprint '{fingerprint}' in '{results_dir}'.")
+        click.echo("Make sure you ran the evaluation with beyondbench >= 0.3.0 (Phase 17).")
+        sys.exit(1)
+
+    result_file, result_data = found
+    click.echo(f"\nFound results: {result_file}")
+    click.echo(f"Fingerprint:   {result_data.get('eval_fingerprint', 'N/A')}\n")
+
+    # Show environment info
+    env = result_data.get('environment', {})
+    if env:
+        click.echo("Environment at time of evaluation:")
+        for k, v in env.items():
+            click.echo(f"  {k:<30} {v}")
+        click.echo()
+
+    # Show evaluation config
+    eval_cfg = result_data.get('evaluation_config', {})
+    model_info = result_data.get('model_info', {})
+    summary = result_data.get('summary', {})
+
+    model_name = model_info.get('model_name', model_info.get('model_id', 'unknown'))
+    tasks = eval_cfg.get('tasks', [])
+    suite = eval_cfg.get('suite', 'unknown')
+
+    click.echo("Evaluation configuration:")
+    click.echo(f"  model_id:     {model_name}")
+    click.echo(f"  suite:        {suite}")
+    click.echo(f"  tasks:        {', '.join(tasks) if tasks else '(all in suite)'}")
+    click.echo(f"  duration:     {summary.get('total_duration', 0):.1f}s")
+    click.echo()
+
+    # Suggest a reproduce command
+    task_flags = " ".join(f"--tasks {t}" for t in tasks) if tasks else ""
+    click.echo("To reproduce this evaluation, run:")
+    click.echo(
+        f"  beyondbench evaluate"
+        f" --model-id {model_name}"
+        f" --backend vllm"
+        f" --suite {suite}"
+        f"{' ' + task_flags if task_flags else ''}"
+        f" --seed <original-seed>"
+        f" --temperature 0.0"
+    )
+    click.echo()
+    click.echo("Note: Use --seed with the same value as the original run for full reproducibility.")
+
+
+# ------------------------------------------------------------------ #
 # install-completion command — shell completion (Phase 10)
 # ------------------------------------------------------------------ #
 

@@ -93,6 +93,10 @@ except ImportError:
     TRANSFORMERS_AVAILABLE = False
     logging.warning("transformers not available. Install with: pip install transformers")
 
+# Phase 17: centralized seed propagation — import at module level so it's patchable in tests
+from .seed_manager import set_all_seeds  # noqa: E402
+
+
 class BaseTask(ABC):
     """Abstract base class for all evaluation tasks with enhanced error handling and retry mechanisms"""
     
@@ -127,6 +131,8 @@ class BaseTask(ABC):
         self.top_p = top_p
         self.max_tokens = max_tokens
         self.seed = seed
+        # Centralized seed propagation (Phase 17)
+        set_all_seeds(self.seed)
         self.prompt_style = kwargs.get('prompt_style', None)
         self.contamination_resistance = kwargs.get('contamination_resistance', 'off')
 

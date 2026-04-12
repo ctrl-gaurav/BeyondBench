@@ -252,6 +252,27 @@ class EvaluationEngine:
         # Aggregate results
         final_results = self._aggregate_results(task_results, overall_stats, total_duration)
 
+        # Add reproducibility metadata (Phase 17)
+        try:
+            from .eval_fingerprint import compute_eval_fingerprint, get_environment_info
+            from importlib.metadata import version as _pkg_version, PackageNotFoundError
+            try:
+                beyondbench_version = _pkg_version("beyondbench")
+            except PackageNotFoundError:
+                from beyondbench import __version__ as beyondbench_version  # type: ignore[assignment]
+
+            final_results['eval_fingerprint'] = compute_eval_fingerprint(
+                model_id=str(self.model_handler.get_model_info().get('model_name', '')),
+                config=eval_params,
+                seed=eval_params.get('seed'),
+                task_list=task_list,
+                beyondbench_version=beyondbench_version,
+            )
+            final_results['environment'] = get_environment_info()
+            self.logger.info(f"🔑 Eval fingerprint: {final_results['eval_fingerprint']}")
+        except Exception as _fp_err:
+            self.logger.warning(f"Could not compute eval fingerprint: {_fp_err}")
+
         # Save results
         self._save_results(final_results)
 
