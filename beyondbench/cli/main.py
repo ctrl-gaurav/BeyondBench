@@ -189,6 +189,12 @@ def main(ctx: click.Context, verbose: bool, quiet: bool, json_mode: bool) -> Non
 @click.option('--dashboard-port', type=int, default=7860, show_default=True,
               help='Port for the live dashboard (requires --dashboard)')
 
+# Prompt Engineering (Phase 15)
+@click.option('--prompt-style', type=click.Choice(['concise', 'detailed', 'few_shot', 'cot']),
+              default=None,
+              help='Prompt style variant for all tasks (concise/detailed/few_shot/cot). '
+                   'Omit to use each task\'s built-in prompt (default behaviour).')
+
 # Pre-flight Validation (Phase 9.2.1)
 @click.option('--skip-validation', is_flag=True, default=False,
               help='Skip pre-flight model validation (HF existence, GPU memory, deps)')
@@ -2399,7 +2405,8 @@ def validate_and_prepare_config(kwargs: Dict[str, Any]) -> Dict[str, Any]:
         'range_max': kwargs['range_max'],
         'temperature': kwargs['temperature'],
         'top_p': kwargs['top_p'],
-        'max_tokens': kwargs['max_tokens']
+        'max_tokens': kwargs['max_tokens'],
+        'prompt_style': kwargs.get('prompt_style', None),
     }
 
     # Process tasks - handle both comma-separated strings and multiple values

@@ -127,7 +127,8 @@ class BaseTask(ABC):
         self.top_p = top_p
         self.max_tokens = max_tokens
         self.seed = seed
-        
+        self.prompt_style = kwargs.get('prompt_style', None)
+
         # Retry configuration
         self.max_retries = max_retries  # Maximum number of retries per sample
         self.retry_delay = 1.0  # Initial delay between retries (seconds)
@@ -314,7 +315,28 @@ class BaseTask(ABC):
     def evaluate_response(self, response, data_point):
         """Evaluate model response, to be implemented by subclasses"""
         pass
-    
+
+    def get_prompt(self, data_point) -> str:
+        """Return the prompt for *data_point*, respecting ``self.prompt_style``.
+
+        * When ``prompt_style`` is None (default) → delegates to the task's own
+          ``create_prompt`` (fully backwards-compatible).
+        * When ``prompt_style`` is set → looks up the template from
+          ``PromptLibrary`` and renders it with ``data=str(data_point)``.
+          Falls back to ``create_prompt`` if the task or style is not registered.
+        """
+        if self.prompt_style is None:
+            return self.create_prompt(data_point)
+
+        try:
+            from ..prompts import get_prompt_library
+            lib = get_prompt_library()
+            tmpl = lib.get(self.task_name, self.prompt_style)
+            return tmpl.render(data=str(data_point))
+        except Exception:
+            # Graceful fallback: use original create_prompt so evaluation never breaks
+            return self.create_prompt(data_point)
+
     def save_detailed_results(self, results, test_case_id, fold):
         """Save detailed results for each test case and fold"""
         if not self.store_details:
@@ -459,7 +481,7 @@ class BaseTask(ABC):
                             if new_data_point != data_point:
                                 logging.info("✨ Generated new data point for retry")
                                 data_point.update(new_data_point)
-                                prompt = self.create_prompt(data_point)
+                                prompt = self.get_prompt(data_point)
                         except Exception as regen_error:
                             logging.warning(f"⚠️  Failed to regenerate data point: {regen_error}")
         
@@ -578,7 +600,7 @@ class BaseTask(ABC):
 
         for i, data_point in enumerate(tqdm(data, desc="Preparing prompts")):
             try:
-                prompt = self.create_prompt(data_point)
+                prompt = self.get_prompt(data_point)
                 # Chat template is now applied centrally in ModelHandler._generate_local()
                 prompts.append(prompt)
                 data_points.append((i, data_point, prompt))
@@ -749,7 +771,7 @@ class BaseTask(ABC):
         for i, data_point in enumerate(progress_bar):
             try:
                 # Create prompt
-                prompt = self.create_prompt(data_point)
+                prompt = self.get_prompt(data_point)
 
                 # Generate response with retry mechanism
                 response, tokens, generation_success, generation_metadata = self.generate_response_with_retry(
