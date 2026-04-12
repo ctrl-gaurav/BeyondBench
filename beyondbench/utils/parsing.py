@@ -255,7 +255,7 @@ def extract_from_final_answer(text: str) -> Optional[str]:
             # Skip if the match is too long (likely explanation, not answer)
             if result and len(result) < 100:
                 # Validate: must contain a digit, bracket, or boolean keyword
-                if re.search(r'\d|[\[\(]|true|false', result):
+                if re.search(r'\d|[\[\(]|true|false|less than|greater than|equal to', result):
                     return result
 
     return None

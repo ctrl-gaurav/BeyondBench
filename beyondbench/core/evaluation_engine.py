@@ -256,6 +256,7 @@ class EvaluationEngine:
         try:
             from .eval_fingerprint import compute_eval_fingerprint, get_environment_info
             from importlib.metadata import version as _pkg_version, PackageNotFoundError
+            import datetime
             try:
                 beyondbench_version = _pkg_version("beyondbench")
             except PackageNotFoundError:
@@ -269,6 +270,8 @@ class EvaluationEngine:
                 beyondbench_version=beyondbench_version,
             )
             final_results['environment'] = get_environment_info()
+            final_results['seed'] = eval_params.get('seed')
+            final_results['timestamp'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
             self.logger.info(f"🔑 Eval fingerprint: {final_results['eval_fingerprint']}")
         except Exception as _fp_err:
             self.logger.warning(f"Could not compute eval fingerprint: {_fp_err}")

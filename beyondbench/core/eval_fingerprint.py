@@ -68,6 +68,33 @@ def get_environment_info() -> Dict[str, str]:
         "platform": platform.platform(),
     }
 
+    # Git hash
+    try:
+        import subprocess
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            capture_output=True, text=True, timeout=5,
+        )
+        if result.returncode == 0:
+            info["git_hash"] = result.stdout.strip()
+    except Exception:
+        pass
+
+    # Hardware info (GPU)
+    try:
+        import torch
+        if torch.cuda.is_available():
+            gpu_count = torch.cuda.device_count()
+            info["gpu_count"] = str(gpu_count)
+            gpus = []
+            for i in range(gpu_count):
+                name = torch.cuda.get_device_name(i)
+                mem = torch.cuda.get_device_properties(i).total_memory
+                gpus.append(f"{name} ({mem / 1024**3:.1f}GB)")
+            info["gpus"] = gpus
+    except Exception:
+        pass
+
     # beyondbench
     try:
         info["beyondbench_version"] = pkg_version("beyondbench")
