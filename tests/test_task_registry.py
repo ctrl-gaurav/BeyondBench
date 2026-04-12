@@ -21,19 +21,19 @@ class TestTaskRegistryInit:
 
     def test_easy_task_count(self, registry):
         tasks = registry.get_tasks_for_suite("easy")
-        assert len(tasks) == 29
+        assert len(tasks) == 44
 
     def test_medium_task_count(self, registry):
         tasks = registry.get_tasks_for_suite("medium")
-        assert len(tasks) == 5
+        assert len(tasks) == 15
 
     def test_hard_task_count(self, registry):
         tasks = registry.get_tasks_for_suite("hard")
-        assert len(tasks) == 10
+        assert len(tasks) == 20
 
     def test_all_tasks_count(self, registry):
         tasks = registry.get_tasks_for_suite("all")
-        assert len(tasks) == 44
+        assert len(tasks) == 79
 
     def test_invalid_suite_returns_empty(self, registry):
         tasks = registry.get_tasks_for_suite("nonexistent")
@@ -46,20 +46,20 @@ class TestTaskClassImports:
         return TaskRegistry()
 
     def test_easy_tasks_imported(self, registry):
-        """Verify all 29 easy task classes were actually imported."""
+        """Verify all 44 easy task classes were actually imported."""
         easy_tasks = registry.get_tasks_for_suite("easy")
         imported = sum(1 for t in easy_tasks if t in registry._tasks)
-        assert imported == 29, f"Only {imported}/29 easy tasks imported"
+        assert imported == 44, f"Only {imported}/44 easy tasks imported"
 
     def test_medium_tasks_imported(self, registry):
         medium_tasks = registry.get_tasks_for_suite("medium")
         imported = sum(1 for t in medium_tasks if t in registry._tasks)
-        assert imported == 5, f"Only {imported}/5 medium tasks imported"
+        assert imported == 15, f"Only {imported}/15 medium tasks imported"
 
     def test_hard_tasks_imported(self, registry):
         hard_tasks = registry.get_tasks_for_suite("hard")
         imported = sum(1 for t in hard_tasks if t in registry._tasks)
-        assert imported == 10, f"Only {imported}/10 hard tasks imported"
+        assert imported == 20, f"Only {imported}/20 hard tasks imported"
 
     def test_get_task_class_returns_class(self, registry):
         task_class = registry.get_task_class("sum")
@@ -101,6 +101,6 @@ class TestTaskClassImports:
 
     def test_get_suite_stats(self, registry):
         stats = registry.get_suite_stats()
-        assert stats["easy"] == 29
-        assert stats["medium"] == 5
-        assert stats["hard"] == 10
+        assert stats["easy"] == 44
+        assert stats["medium"] == 15
+        assert stats["hard"] == 20

@@ -38,7 +38,7 @@ class TestEvaluationEngineExecution:
         )
         tasks = engine.get_available_tasks("easy")
         assert "easy" in tasks
-        assert len(tasks["easy"]) == 29
+        assert len(tasks["easy"]) == 44
 
     def test_run_evaluation_single_task(self, mock_model_handler, tmp_output_dir):
         engine = EvaluationEngine(
