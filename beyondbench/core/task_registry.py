@@ -65,11 +65,15 @@ class TaskRegistry:
             'logical_operations', 'pattern_completion', 'gcd_lcm', 'combinatorics',
         ]
 
-        # Hard suite tasks (10 domains)
+        # Hard suite tasks (20 domains: 10 original + 10 Phase 14)
         hard_tasks = [
             'tower_hanoi', 'n_queens', 'graph_coloring', 'boolean_sat',
             'sudoku_solving', 'cryptarithmetic', 'matrix_chain_multiplication',
-            'modular_systems', 'constraint_optimization', 'logic_grid_puzzles'
+            'modular_systems', 'constraint_optimization', 'logic_grid_puzzles',
+            # Phase 14 additions
+            'shortest_path', 'knapsack', 'traveling_salesman',
+            'longest_common_subsequence', 'minimax_game', 'regex_matching',
+            'topological_sort', 'interval_scheduling', 'coin_change', 'edit_distance',
         ]
 
         # Register task mappings
@@ -122,7 +126,18 @@ class TaskRegistry:
             'n_queens': ('beyondbench.tasks.hard.n_queens_task', 'NQueensTask'),
             'cryptarithmetic': ('beyondbench.tasks.hard.cryptarithmetic_task', 'CryptarithmeticTask'),
             'constraint_optimization': ('beyondbench.tasks.hard.constraint_optimization_task', 'ConstraintOptimizationTask'),
-            'graph_coloring': ('beyondbench.tasks.hard.graph_coloring_task', 'GraphColoringTask')
+            'graph_coloring': ('beyondbench.tasks.hard.graph_coloring_task', 'GraphColoringTask'),
+            # Phase 14 additions
+            'shortest_path': ('beyondbench.tasks.hard.shortest_path_task', 'ShortestPathTask'),
+            'knapsack': ('beyondbench.tasks.hard.knapsack_task', 'KnapsackTask'),
+            'traveling_salesman': ('beyondbench.tasks.hard.traveling_salesman_task', 'TravelingSalesmanTask'),
+            'longest_common_subsequence': ('beyondbench.tasks.hard.longest_common_subsequence_task', 'LongestCommonSubsequenceTask'),
+            'minimax_game': ('beyondbench.tasks.hard.minimax_game_task', 'MinimaxGameTask'),
+            'regex_matching': ('beyondbench.tasks.hard.regex_matching_task', 'RegexMatchingTask'),
+            'topological_sort': ('beyondbench.tasks.hard.topological_sort_task', 'TopologicalSortTask'),
+            'interval_scheduling': ('beyondbench.tasks.hard.interval_scheduling_task', 'IntervalSchedulingTask'),
+            'coin_change': ('beyondbench.tasks.hard.coin_change_task', 'CoinChangeTask'),
+            'edit_distance': ('beyondbench.tasks.hard.edit_distance_task', 'EditDistanceTask'),
         }
 
         for task_name in self._suite_mapping['hard']:

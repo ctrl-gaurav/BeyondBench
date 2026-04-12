@@ -492,6 +492,71 @@ TASK_PARSER_CONFIGS: dict[str, ParserConfig] = {
         tolerance=0,
         description="Tower of Hanoi move sequence (alias for tower_hanoi)",
     ),
+
+    # ============================================================================
+    # Phase 14: 10 new hard tasks
+    # ============================================================================
+
+    "shortest_path": ParserConfig(
+        expected_type="int",
+        strategies=["boxed", "explicit_statement", "code_block", "latex_math", "fallback"],
+        tolerance=0,
+        description="Shortest path cost in weighted directed graph",
+    ),
+    "knapsack": ParserConfig(
+        expected_type="int",
+        strategies=["boxed", "explicit_statement", "code_block", "latex_math", "fallback"],
+        tolerance=0,
+        description="Maximum value in 0/1 knapsack",
+    ),
+    "traveling_salesman": ParserConfig(
+        expected_type="int",
+        strategies=["boxed", "explicit_statement", "code_block", "latex_math", "fallback"],
+        tolerance=0,
+        description="Minimum TSP tour cost",
+    ),
+    "longest_common_subsequence": ParserConfig(
+        expected_type="int",
+        strategies=["boxed", "explicit_statement", "code_block", "latex_math", "fallback"],
+        tolerance=0,
+        description="Length of longest common subsequence",
+    ),
+    "minimax_game": ParserConfig(
+        expected_type="int",
+        strategies=["boxed", "explicit_statement", "code_block", "latex_math", "fallback"],
+        tolerance=0,
+        description="Optimal minimax game tree value",
+    ),
+    "regex_matching": ParserConfig(
+        expected_type="boolean",
+        strategies=["boxed", "explicit_statement", "fallback"],
+        tolerance=0,
+        description="Whether a string fully matches a regex pattern",
+    ),
+    "topological_sort": ParserConfig(
+        expected_type="list",
+        strategies=["boxed", "list", "explicit_statement", "code_block", "json", "fallback"],
+        tolerance=0,
+        description="A valid topological ordering of a DAG",
+    ),
+    "interval_scheduling": ParserConfig(
+        expected_type="int",
+        strategies=["boxed", "explicit_statement", "code_block", "latex_math", "fallback"],
+        tolerance=0,
+        description="Maximum number of non-overlapping intervals",
+    ),
+    "coin_change": ParserConfig(
+        expected_type="int",
+        strategies=["boxed", "explicit_statement", "code_block", "latex_math", "fallback"],
+        tolerance=0,
+        description="Minimum coins to make target amount",
+    ),
+    "edit_distance": ParserConfig(
+        expected_type="int",
+        strategies=["boxed", "explicit_statement", "code_block", "latex_math", "fallback"],
+        tolerance=0,
+        description="Levenshtein edit distance between two strings",
+    ),
 }
 
 
