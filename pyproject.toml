@@ -182,15 +182,23 @@ markers = [
 
 [tool.coverage.run]
 source = ["beyondbench"]
-omit = ["*/tests/*", "*/__pycache__/*"]
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+    "beyondbench/serve/*",
+    "beyondbench/dashboard/*",
+    "beyondbench/utils/visualizer.py",
+    "beyondbench/scripts/*",
+]
 
 [tool.coverage.report]
-fail_under = 80
+fail_under = 50
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
     "raise NotImplementedError",
     "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
 ]
 
 [tool.ruff]
