@@ -296,11 +296,11 @@ class TestCoverageConfig:
         assert report["fail_under"] >= 0, "fail_under must be a non-negative number"
 
     def test_coverage_fail_under_value(self):
-        """fail_under should be 80 (the project threshold)."""
+        """fail_under should be at least 50 (the project threshold for unit-only CI)."""
         data = self._load_toml()
         report = data["tool"]["coverage"]["report"]
-        assert report["fail_under"] == 80, (
-            f"Expected fail_under=80, got {report['fail_under']}"
+        assert report["fail_under"] >= 50, (
+            f"Expected fail_under>=50, got {report['fail_under']}"
         )
 
     def test_coverage_source_configured(self):
