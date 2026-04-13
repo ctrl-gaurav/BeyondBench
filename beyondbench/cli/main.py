@@ -3050,6 +3050,158 @@ def print_results_summary(results: Dict[str, Any]):
     click.echo("="*80)
 
 
+# ---------------------------------------------------------------------------
+# Baseline management commands (Phase 19)
+# ---------------------------------------------------------------------------
+
+
+@main.group()
+def baseline():
+    """Manage evaluation baselines for regression testing.
+
+    Baselines capture per-task accuracy and parser metrics from a completed
+    evaluation run so that future runs can be automatically checked for
+    regressions.
+
+    \b
+    Typical workflow:
+      1. Run an evaluation and save a baseline:
+           beyondbench baseline save --results-dir ./results --name v0.2.0-qwen
+      2. Run a new evaluation and compare:
+           beyondbench baseline compare --results-dir ./new_results --baseline v0.2.0-qwen
+    """
+    pass
+
+
+@baseline.command("save")
+@click.option(
+    "--results-dir",
+    required=True,
+    type=click.Path(exists=True),
+    help="Path to the results directory containing final_results.json",
+)
+@click.option(
+    "--name",
+    required=True,
+    help="Baseline name (e.g. v0.2.0-qwen-1.5b). Used as the filename stem.",
+)
+def baseline_save(results_dir: str, name: str) -> None:
+    """Save a new baseline from an evaluation results directory.
+
+    Reads final_results.json from RESULTS_DIR and stores per-task accuracy
+    and parser success rates as a named baseline that can later be used for
+    regression comparison.
+    """
+    from ..eval.baseline import BaselineManager
+
+    try:
+        mgr = BaselineManager()
+        out_path = mgr.save(results_dir, name)
+        click.echo(f"Baseline '{name}' saved to: {out_path}")
+        # Echo the tasks that were captured
+        baseline_data = mgr.load(name)
+        task_count = len(baseline_data.get("task_baselines", {}))
+        click.echo(f"Captured metrics for {task_count} task(s).")
+    except FileNotFoundError as exc:
+        raise click.ClickException(str(exc))
+    except ValueError as exc:
+        raise click.ClickException(str(exc))
+    except Exception as exc:
+        raise click.ClickException(f"Unexpected error saving baseline: {exc}")
+
+
+@baseline.command("compare")
+@click.option(
+    "--results-dir",
+    required=True,
+    type=click.Path(exists=True),
+    help="Path to the current results directory containing final_results.json",
+)
+@click.option(
+    "--baseline",
+    "baseline_name",
+    required=True,
+    help="Baseline name to compare against (as given to 'baseline save')",
+)
+@click.option(
+    "--fail-on-regression",
+    is_flag=True,
+    default=False,
+    help="Exit with code 1 if any regression is detected",
+)
+@click.option(
+    "--accuracy-threshold",
+    type=float,
+    default=0.10,
+    show_default=True,
+    help="Maximum allowed accuracy drop before a regression is declared",
+)
+@click.option(
+    "--parser-threshold",
+    type=float,
+    default=0.05,
+    show_default=True,
+    help="Maximum allowed parser success-rate drop before a regression is declared",
+)
+def baseline_compare(
+    results_dir: str,
+    baseline_name: str,
+    fail_on_regression: bool,
+    accuracy_threshold: float,
+    parser_threshold: float,
+) -> None:
+    """Compare current results against a stored baseline.
+
+    Prints a detailed per-task breakdown showing which tasks improved,
+    regressed, or stayed the same relative to the saved baseline.
+    """
+    from ..eval.regression import RegressionChecker
+
+    try:
+        checker = RegressionChecker()
+        exit_code = checker.run(
+            current_results_dir=results_dir,
+            baseline_name=baseline_name,
+            accuracy_threshold=accuracy_threshold,
+            parser_threshold=parser_threshold,
+            print_report=True,
+        )
+        if exit_code != 0 and fail_on_regression:
+            raise SystemExit(1)
+        elif exit_code != 0:
+            click.echo("Error: regression or baseline not found. Use --fail-on-regression to fail CI.")
+    except SystemExit:
+        raise
+    except FileNotFoundError as exc:
+        raise click.ClickException(str(exc))
+    except ValueError as exc:
+        raise click.ClickException(str(exc))
+    except Exception as exc:
+        raise click.ClickException(f"Unexpected error during comparison: {exc}")
+
+
+@baseline.command("list")
+def baseline_list() -> None:
+    """List all saved baselines."""
+    from ..eval.baseline import BaselineManager
+
+    mgr = BaselineManager()
+    names = mgr.list_baselines()
+    if not names:
+        click.echo("No baselines saved yet. Use 'beyondbench baseline save' to create one.")
+        return
+    click.echo(f"Saved baselines ({len(names)}):")
+    for name in names:
+        try:
+            data = mgr.load(name)
+            ts = data.get("timestamp", "unknown")
+            tasks = len(data.get("task_baselines", {}))
+            model = data.get("model_info", {}).get("model_name", "unknown")
+            click.echo(f"  {name:<40s}  {tasks} tasks  model={model}  saved={ts}")
+        except Exception:
+            click.echo(f"  {name}")
+
+
 # Make wizard the default when no command is specified
 def cli():
     """Entry point that shows wizard if no args provided."""
