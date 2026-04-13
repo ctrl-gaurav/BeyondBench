@@ -419,12 +419,16 @@ def evaluate(**kwargs):
 @main.command()
 @click.option('--suite', type=click.Choice(['easy', 'medium', 'hard', 'all']), default='all', help='Task suite to list')
 @click.option('--format', 'output_format', type=click.Choice(['table', 'json', 'yaml']), default='table', help='Output format')
+@click.option('--detailed', is_flag=True, default=False, help='Show detailed metadata (category, author, version, description)')
 @click.pass_obj
-def list_tasks(cli_ctx: "CLIContext", suite: str, output_format: str):
+def list_tasks(cli_ctx: "CLIContext", suite: str, output_format: str, detailed: bool):
     """List available tasks in each suite.
 
     When the global ``--json`` flag is set, output is forced to JSON
     regardless of ``--format``.
+
+    Use ``--detailed`` to show per-task metadata such as category, author,
+    version and description.
     """
 
     logger = get_logger("CLI")
@@ -439,7 +443,9 @@ def list_tasks(cli_ctx: "CLIContext", suite: str, output_format: str):
 
         tasks = registry.get_available_tasks(suite)
 
-        if output_format == 'table':
+        if detailed:
+            _print_tasks_detailed(registry, tasks, output_format)
+        elif output_format == 'table':
             print_tasks_table(tasks)
         elif output_format == 'json':
             click.echo(json.dumps(tasks, indent=2))
@@ -450,6 +456,97 @@ def list_tasks(cli_ctx: "CLIContext", suite: str, output_format: str):
     except Exception as e:
         logger.error(f"Failed to list tasks: {e}")
         sys.exit(1)
+
+
+def _print_tasks_detailed(registry, tasks: dict, output_format: str) -> None:
+    """Print detailed task metadata for all tasks in *tasks*.
+
+    Parameters
+    ----------
+    registry : TaskRegistry
+        The registry to query for task classes.
+    tasks : dict
+        Mapping of suite → list[task_name].
+    output_format : str
+        "table", "json", or "yaml".
+    """
+    from ..plugins.metadata import get_task_metadata
+
+    rows = []
+    for suite_name, task_names in tasks.items():
+        for task_name in task_names:
+            task_class = registry.get_task_class(task_name)
+            if task_class is not None:
+                try:
+                    meta = get_task_metadata(task_class, suite=suite_name)
+                except Exception:
+                    from ..plugins.metadata import TaskMetadata
+                    meta = TaskMetadata(
+                        name=task_name,
+                        description=task_name.replace("_", " ").title() + f" task ({suite_name} suite)",
+                        difficulty=suite_name,
+                        category="general",
+                    )
+            else:
+                from ..plugins.metadata import TaskMetadata
+                meta = TaskMetadata(
+                    name=task_name,
+                    description=task_name.replace("_", " ").title() + f" task ({suite_name} suite)",
+                    difficulty=suite_name,
+                    category="general",
+                )
+            rows.append({
+                "name": task_name,
+                "suite": suite_name,
+                "category": meta.category,
+                "difficulty": meta.difficulty,
+                "author": meta.author or "-",
+                "version": meta.version,
+                "description": meta.description,
+            })
+
+    if output_format == 'json':
+        click.echo(json.dumps(rows, indent=2))
+        return
+    if output_format == 'yaml':
+        import yaml
+        click.echo(yaml.dump(rows, default_flow_style=False))
+        return
+
+    # Table format
+    try:
+        from rich.table import Table
+        from rich.console import Console
+
+        console = Console()
+        table = Table(title="BeyondBench Tasks (detailed)", show_lines=False)
+        table.add_column("Name", style="cyan", no_wrap=True)
+        table.add_column("Suite", style="green")
+        table.add_column("Category", style="yellow")
+        table.add_column("Author")
+        table.add_column("Version")
+        table.add_column("Description")
+
+        for row in rows:
+            table.add_row(
+                row["name"],
+                row["suite"],
+                row["category"],
+                row["author"],
+                row["version"],
+                row["description"],
+            )
+        console.print(table)
+    except ImportError:
+        # Fallback: plain text
+        header = f"{'Name':<40} {'Suite':<8} {'Category':<16} {'Author':<20} {'Ver':<8} Description"
+        click.echo(header)
+        click.echo("-" * len(header))
+        for row in rows:
+            click.echo(
+                f"{row['name']:<40} {row['suite']:<8} {row['category']:<16} "
+                f"{row['author']:<20} {row['version']:<8} {row['description']}"
+            )
 
 
 @main.command()
@@ -3200,6 +3297,86 @@ def baseline_list() -> None:
             click.echo(f"  {name:<40s}  {tasks} tasks  model={model}  saved={ts}")
         except Exception:
             click.echo(f"  {name}")
+
+
+# ------------------------------------------------------------------ #
+# create-task command — scaffold a new plugin project (Phase 22)     #
+# ------------------------------------------------------------------ #
+
+@main.command(name="create-task")
+@click.argument("task_name")
+@click.option(
+    "--output-dir", "-o",
+    default=".",
+    show_default=True,
+    help="Directory where the project folder will be created.",
+)
+@click.option(
+    "--suite",
+    type=click.Choice(["easy", "medium", "hard"]),
+    default="easy",
+    show_default=True,
+    help="Default difficulty suite for the task.",
+)
+@click.option("--author", default="", help="Author name for package metadata.")
+@click.option("--description", default="", help="Short description of the task.")
+def create_task(
+    task_name: str,
+    output_dir: str,
+    suite: str,
+    author: str,
+    description: str,
+) -> None:
+    """Scaffold a new BeyondBench plugin task project.
+
+    Creates a directory named TASK_NAME inside OUTPUT_DIR with all the
+    boilerplate needed to develop, package, and register a custom task:
+
+    \b
+      TASK_NAME/
+        __init__.py      exports the task class
+        task.py          BaseTask subclass with TODO stubs
+        parser.py        response-parsing helper
+        test_task.py     pytest test suite
+        pyproject.toml   package config + entry-point declaration
+        README.md        usage guide
+
+    After scaffolding, install in editable mode and your task will be
+    auto-discovered by BeyondBench:
+
+    \b
+      cd TASK_NAME && pip install -e .
+      beyondbench list-tasks     # task_name should appear
+
+    Examples:
+
+    \b
+      beyondbench create-task my_new_task
+      beyondbench create-task prime_factors --suite hard --author "Jane Doe"
+    """
+    try:
+        from ..plugins.scaffold import create_task_scaffold
+        project_dir = create_task_scaffold(
+            task_name=task_name,
+            output_dir=output_dir,
+            suite=suite,
+            author=author,
+            description=description,
+        )
+        click.echo(f"Created plugin scaffold: {project_dir}")
+        click.echo("")
+        click.echo("Next steps:")
+        click.echo(f"  1. cd {project_dir}")
+        click.echo("  2. Edit task.py — implement generate_data, create_prompt, evaluate_response")
+        click.echo("  3. Edit parser.py — customise answer extraction")
+        click.echo("  4. pip install -e .   (registers the entry point)")
+        click.echo(f"  5. beyondbench list-tasks   # '{task_name}' should appear")
+    except FileExistsError as exc:
+        raise click.ClickException(str(exc))
+    except ValueError as exc:
+        raise click.BadParameter(str(exc), param_hint="TASK_NAME")
+    except Exception as exc:
+        raise click.ClickException(f"Scaffolding failed: {exc}")
 
 
 # Make wizard the default when no command is specified

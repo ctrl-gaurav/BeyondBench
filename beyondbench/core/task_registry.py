@@ -91,6 +91,9 @@ class TaskRegistry:
         self.logger.info(f"   🟡 Medium: {len(medium_tasks)} tasks")
         self.logger.info(f"   🔴 Hard: {len(hard_tasks)} tasks")
 
+        # Load plugins from entry points (Phase 22)
+        self._load_plugins()
+
     def _import_task_classes(self):
         """Import and register actual task classes."""
         # Import easy task classes
@@ -154,6 +157,32 @@ class TaskRegistry:
                 self._tasks[task_name] = task_class
             except (ImportError, AttributeError) as e:
                 self.logger.warning(f"⚠️  Could not import hard task {task_name}: {e}")
+
+    def _load_plugins(self) -> None:
+        """Discover and load plugins from installed entry points (Phase 22)."""
+        try:
+            from ..plugins.discovery import PluginManager, ENTRY_POINT_GROUP
+            from importlib.metadata import entry_points as _eps
+
+            # Quick-check: skip the heavier PluginManager if no plugins installed
+            try:
+                eps = _eps(group=ENTRY_POINT_GROUP)
+            except TypeError:
+                all_eps = _eps()
+                eps = all_eps.get(ENTRY_POINT_GROUP, [])  # type: ignore[attr-defined]
+
+            if not eps:
+                return  # No plugins installed — avoid any overhead
+
+            pm = PluginManager(registry=self)
+            loaded = pm.load_from_entry_points()
+            if loaded:
+                self.logger.info(
+                    f"🔌 Loaded {len(loaded)} plugin task(s): "
+                    + ", ".join(loaded.keys())
+                )
+        except Exception as exc:
+            self.logger.debug(f"Plugin discovery skipped: {exc}")
 
     def register_task(self, task_name: str, task_class: Type[BaseTask], suite: str):
         """
