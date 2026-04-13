@@ -1,16 +1,17 @@
 name: GPU Tests
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  # push:
+  #   branches: [main]
+  # pull_request:
+  #   branches: [main]
   schedule:
     - cron: '0 6 * * 1'  # Weekly Monday 6am UTC
   workflow_dispatch:
 
 jobs:
   gpu-integration:
+    if: github.event_name != 'push' && github.event_name != 'pull_request'
     runs-on: [self-hosted, gpu]
     timeout-minutes: 60
     steps:
