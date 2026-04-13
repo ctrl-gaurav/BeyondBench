@@ -14,3 +14,29 @@ repos:
       - id: check-yaml
       - id: check-json
       - id: check-added-large-files
+        args: ['--maxkb=1000']
+
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: ["--profile", "black", "--line-length", "100"]
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.8.0
+    hooks:
+      - id: mypy
+        additional_dependencies: [types-requests, types-PyYAML]
+        args: ["--ignore-missing-imports", "--no-strict-optional"]
+        pass_filenames: false
+        entry: mypy beyondbench/
+
+  - repo: local
+    hooks:
+      - id: pytest-unit
+        name: pytest unit tests
+        entry: pytest tests/test_imports.py tests/test_parser_common.py -x -q --timeout=60
+        language: system
+        types: [python]
+        pass_filenames: false
+        stages: [pre-commit]

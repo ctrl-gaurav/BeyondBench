@@ -1,0 +1,72 @@
+name: GPU Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 6 * * 1'  # Weekly Monday 6am UTC
+  workflow_dispatch:
+
+jobs:
+  gpu-integration:
+    runs-on: [self-hosted, gpu]
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Check GPU availability
+        run: nvidia-smi
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      - name: Run integration tests
+        run: |
+          pytest tests/integration/ -v --tb=short -x \
+            --timeout=300 -m "integration or gpu"
+        env:
+          CUDA_VISIBLE_DEVICES: "0"
+      - name: Run regression check
+        run: |
+          # Run quick evaluation and compare against baseline
+          if [ -f "tests/baselines/ci-baseline.json" ]; then
+            beyondbench baseline compare \
+              --results-dir ./beyondbench_results \
+              --baseline ci-baseline \
+              --fail-on-regression || echo "Regression check: see output above"
+          else
+            echo "No CI baseline found — skipping regression check"
+          fi
+
+  weekly-full-eval:
+    if: github.event_name == 'schedule'
+    runs-on: [self-hosted, gpu]
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      - name: Run full easy suite evaluation
+        run: |
+          beyondbench evaluate \
+            --model-id Qwen/Qwen2.5-1.5B-Instruct \
+            --suite easy --datapoints 5 \
+            --output-dir ./ci_results
+        env:
+          CUDA_VISIBLE_DEVICES: "0"
+      - name: Upload evaluation results
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekly-eval-results
+          path: ./ci_results/

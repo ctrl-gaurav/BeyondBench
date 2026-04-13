@@ -185,6 +185,7 @@ source = ["beyondbench"]
 omit = ["*/tests/*", "*/__pycache__/*"]
 
 [tool.coverage.report]
+fail_under = 80
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
