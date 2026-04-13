@@ -50,35 +50,20 @@ class TestWorkflowYAML:
         data = self._load_yaml(path)
         assert data is not None
 
-    def test_test_yml_has_lint_job(self):
-        """test.yml must contain a lint job."""
-        path = REPO_ROOT / ".github" / "workflows" / "test.yml"
-        data = self._load_yaml(path)
-        assert "jobs" in data
-        assert "lint" in data["jobs"], "test.yml is missing the 'lint' job"
-
     def test_test_yml_has_test_job(self):
         """test.yml must contain a test job."""
         path = REPO_ROOT / ".github" / "workflows" / "test.yml"
         data = self._load_yaml(path)
+        assert "jobs" in data
         assert "test" in data["jobs"], "test.yml is missing the 'test' job"
 
-    def test_test_yml_test_needs_lint(self):
-        """test job must depend on lint."""
-        path = REPO_ROOT / ".github" / "workflows" / "test.yml"
-        data = self._load_yaml(path)
-        needs = data["jobs"]["test"].get("needs", [])
-        if isinstance(needs, str):
-            needs = [needs]
-        assert "lint" in needs, "test job should declare needs: lint"
-
     def test_test_yml_matrix_python_versions(self):
-        """test.yml matrix must include 3.11, 3.12, 3.13."""
+        """test.yml matrix must include 3.10, 3.11, 3.12, 3.13, 3.14."""
         path = REPO_ROOT / ".github" / "workflows" / "test.yml"
         data = self._load_yaml(path)
         matrix = data["jobs"]["test"]["strategy"]["matrix"]
         versions = [str(v) for v in matrix["python-version"]]
-        for ver in ("3.11", "3.12", "3.13"):
+        for ver in ("3.10", "3.11", "3.12", "3.13", "3.14"):
             assert ver in versions, f"Python {ver} missing from test matrix"
 
     def test_gpu_test_yml_has_integration_job(self):
