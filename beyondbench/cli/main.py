@@ -208,6 +208,16 @@ def main(ctx: click.Context, verbose: bool, quiet: bool, json_mode: bool) -> Non
 @click.option('--validation-warn-only', is_flag=True, default=False,
               help='Treat all pre-flight validation issues as warnings instead of errors')
 
+# Performance Optimization (Phase 23)
+@click.option('--no-cache', is_flag=True, default=False,
+              help='Disable response cache for local models (cache is on by default for deterministic runs)')
+@click.option('--no-warmup', is_flag=True, default=False,
+              help='Skip model warm-up before evaluation')
+@click.option('--quantization', type=click.Choice(['4bit', '8bit', 'gptq', 'awq']), default=None,
+              help='Quantization method for transformers backend (4bit/8bit use bitsandbytes)')
+@click.option('--torch-compile', is_flag=True, default=False,
+              help='Apply torch.compile() to transformers model for faster inference')
+
 def evaluate(**kwargs):
     """
     Run comprehensive evaluation on specified tasks.
@@ -1073,7 +1083,88 @@ def benchmark(
         strategy="auto",
         launch_dashboard_flag=False,
         dashboard_port=7860,
+        no_cache=False,
+        no_warmup=False,
+        quantization=None,
+        torch_compile=False,
     )
+
+
+# ------------------------------------------------------------------ #
+# cache command group (Phase 23)
+# ------------------------------------------------------------------ #
+
+@main.group()
+def cache():
+    """Manage the BeyondBench response cache.
+
+    The response cache stores local model outputs for deterministic runs
+    (temperature=0 or explicit seed) to avoid redundant inference.
+
+    \b
+    Examples:
+      beyondbench cache stats
+      beyondbench cache clear
+    """
+    pass
+
+
+@cache.command("stats")
+@click.option('--cache-dir', default=None,
+              help='Cache directory (default: ~/.beyondbench/cache/)')
+@click.pass_obj
+def cache_stats(cli_ctx: "CLIContext", cache_dir: Optional[str]):
+    """Show response cache statistics.
+
+    Displays total entries, disk usage, hit/miss counts, and cache directory.
+    """
+    json_mode = bool(cli_ctx and cli_ctx.json_mode)
+    try:
+        from ..core.cache import ResponseCache
+        rc = ResponseCache(cache_dir=cache_dir)
+        stats = rc.stats()
+        if json_mode:
+            click.echo(json.dumps(stats, indent=2))
+            return
+        click.echo("\nResponse Cache Statistics")
+        click.echo("-" * 40)
+        click.echo(f"  Cache directory:  {stats['cache_dir']}")
+        click.echo(f"  Total entries:    {stats['total_entries']}")
+        size_mb = stats['total_size_bytes'] / (1024 * 1024)
+        max_gb = stats['max_size_bytes'] / (1024 ** 3)
+        click.echo(f"  Disk usage:       {size_mb:.1f} MB / {max_gb:.0f} GB limit")
+        click.echo(f"  Hits:             {stats['hits']}")
+        click.echo(f"  Misses:           {stats['misses']}")
+        hit_rate_pct = stats['hit_rate'] * 100
+        click.echo(f"  Hit rate:         {hit_rate_pct:.1f}%")
+    except Exception as e:
+        click.echo(f"Error reading cache stats: {e}", err=True)
+        sys.exit(1)
+
+
+@cache.command("clear")
+@click.option('--cache-dir', default=None,
+              help='Cache directory (default: ~/.beyondbench/cache/)')
+@click.option('--yes', '-y', is_flag=True, default=False,
+              help='Skip confirmation prompt')
+def cache_clear(cache_dir: Optional[str], yes: bool):
+    """Clear all cached responses.
+
+    Removes all cached response files and resets the cache index.
+    """
+    if not yes:
+        confirmed = click.confirm("This will delete all cached responses. Continue?", default=False)
+        if not confirmed:
+            click.echo("Aborted.")
+            return
+    try:
+        from ..core.cache import ResponseCache
+        rc = ResponseCache(cache_dir=cache_dir)
+        rc.clear()
+        click.echo("Response cache cleared successfully.")
+    except Exception as e:
+        click.echo(f"Error clearing cache: {e}", err=True)
+        sys.exit(1)
 
 
 # ------------------------------------------------------------------ #
@@ -2582,7 +2673,11 @@ def validate_and_prepare_config(kwargs: Dict[str, Any]) -> Dict[str, Any]:
         'trust_remote_code': kwargs['trust_remote_code'],
         'reasoning_effort': kwargs['reasoning_effort'],
         'thinking_budget': kwargs['thinking_budget'],
-        'skip_chat_template': kwargs.get('no_chat_template', False)
+        'skip_chat_template': kwargs.get('no_chat_template', False),
+        # Phase 23 options
+        'use_cache': not kwargs.get('no_cache', False),
+        'quantization': kwargs.get('quantization', None),
+        'torch_compile': kwargs.get('torch_compile', False),
     }
 
     # Prepare engine configuration
@@ -2604,6 +2699,8 @@ def validate_and_prepare_config(kwargs: Dict[str, Any]) -> Dict[str, Any]:
         'seed': kwargs.get('seed'),
         'prompt_style': kwargs.get('prompt_style', None),
         'contamination_resistance': kwargs.get('contamination_resistance', 'off'),
+        # Phase 23: warm-up control
+        'skip_warmup': kwargs.get('no_warmup', False),
     }
 
     # Process tasks - handle both comma-separated strings and multiple values

@@ -38,7 +38,8 @@ class ModelHandler:
             reasoning_effort: OpenAI reasoning effort ('minimal', 'low', 'medium', 'high')
             thinking_budget: Gemini thinking budget (integer, 0 to disable, -1 for dynamic)
             backend: For local models: 'vllm' (default, fast) or 'transformers' (HuggingFace)
-            **kwargs: Additional parameters (cuda_device, tensor_parallel_size, gpu_memory_utilization, trust_remote_code)
+            **kwargs: Additional parameters (cuda_device, tensor_parallel_size, gpu_memory_utilization,
+                      trust_remote_code, use_cache, quantization, torch_compile)
         """
         self.model_id = model_id
         self.api_provider = api_provider
@@ -48,6 +49,14 @@ class ModelHandler:
         self.client = None
         self.skip_chat_template = kwargs.get('skip_chat_template', False)
         self._chat_template_warned = False
+
+        # Cache configuration (only applies to local models)
+        self._use_cache = kwargs.get('use_cache', True)
+        self._cache = None  # lazily initialised on first local generate call
+
+        # Quantization and torch.compile configuration (transformers backend only)
+        self._quantization = kwargs.get('quantization', None)
+        self._torch_compile = kwargs.get('torch_compile', False)
 
         # Determine backend: api_provider takes precedence, then explicit backend, then kwargs engine, then default vllm
         if api_provider:
@@ -162,12 +171,20 @@ class ModelHandler:
             try:
                 from vllm import LLM, SamplingParams
                 from transformers import AutoTokenizer
-                # VLLM setup with original parameters
+
+                # Estimate optimal batch size from available GPU memory
+                max_num_seqs = self._estimate_vllm_batch_size(
+                    kwargs.get('gpu_memory_utilization', 0.96)
+                )
+
+                # VLLM setup with prefix caching and optimal batch sizing
                 self.model = LLM(
                     model=self.model_id,
                     tensor_parallel_size=kwargs.get('tensor_parallel_size', 1),
                     gpu_memory_utilization=kwargs.get('gpu_memory_utilization', 0.96),
-                    trust_remote_code=kwargs.get('trust_remote_code', False)
+                    trust_remote_code=kwargs.get('trust_remote_code', False),
+                    enable_prefix_caching=True,
+                    max_num_seqs=max_num_seqs,
                 )
                 self.sampling_params_class = SamplingParams
                 # Setup tokenizer for VLLM
@@ -175,7 +192,8 @@ class ModelHandler:
                     self.model_id,
                     trust_remote_code=kwargs.get('trust_remote_code', False)
                 )
-                logging.info(f"✅ Successfully initialized VLLM model '{self.model_id}'")
+                logging.info(f"✅ Successfully initialized VLLM model '{self.model_id}' "
+                             f"(prefix_caching=True, max_num_seqs={max_num_seqs})")
                 return
             except ImportError:
                 logging.warning("⚠️ vLLM not installed. Falling back to transformers backend. "
@@ -191,14 +209,66 @@ class ModelHandler:
             try:
                 from transformers import AutoTokenizer, AutoModelForCausalLM
                 import torch
-                # Transformers setup
+
                 self.tokenizer = AutoTokenizer.from_pretrained(self.model_id)
+
+                # Build quantization config if requested
+                model_kwargs: dict = {
+                    "torch_dtype": torch.float16,
+                    "device_map": "auto",
+                    "trust_remote_code": kwargs.get('trust_remote_code', False),
+                }
+                quant = self._quantization
+                if quant in ("4bit", "8bit"):
+                    try:
+                        from transformers import BitsAndBytesConfig
+                        if quant == "4bit":
+                            bnb_config = BitsAndBytesConfig(
+                                load_in_4bit=True,
+                                bnb_4bit_compute_dtype=torch.float16,
+                                bnb_4bit_use_double_quant=True,
+                                bnb_4bit_quant_type="nf4",
+                            )
+                        else:
+                            bnb_config = BitsAndBytesConfig(load_in_8bit=True)
+                        model_kwargs["quantization_config"] = bnb_config
+                        logging.info(f"Using bitsandbytes {quant} quantization")
+                    except ImportError:
+                        logging.warning("⚠️ bitsandbytes not installed; skipping quantization. "
+                                        "Install with: pip install bitsandbytes")
+                elif quant == "gptq":
+                    try:
+                        from transformers import GPTQConfig
+                        gptq_config = GPTQConfig(bits=4)
+                        model_kwargs["quantization_config"] = gptq_config
+                        logging.info("Using GPTQ quantization")
+                    except (ImportError, Exception) as qe:
+                        logging.warning(f"⚠️ GPTQ quantization unavailable: {qe}")
+                elif quant == "awq":
+                    try:
+                        from transformers import AwqConfig
+                        awq_config = AwqConfig(bits=4)
+                        model_kwargs["quantization_config"] = awq_config
+                        logging.info("Using AWQ quantization")
+                    except (ImportError, Exception) as qe:
+                        logging.warning(f"⚠️ AWQ quantization unavailable: {qe}")
+                elif quant is not None:
+                    logging.warning(f"⚠️ Unknown quantization method '{quant}'; skipping")
+
                 self.model = AutoModelForCausalLM.from_pretrained(
                     self.model_id,
-                    torch_dtype=torch.float16,
-                    device_map="auto",
-                    trust_remote_code=kwargs.get('trust_remote_code', False)
+                    **model_kwargs
                 )
+
+                # Optional torch.compile for faster inference
+                if self._torch_compile:
+                    try:
+                        logging.info("Applying torch.compile() to the model...")
+                        self.model = torch.compile(self.model)
+                        logging.info("✅ torch.compile() applied successfully")
+                    except Exception as ce:
+                        logging.warning(f"⚠️ torch.compile() failed: {ce}")
+
                 logging.info(f"✅ Successfully initialized Transformers model '{self.model_id}'")
             except ImportError:
                 raise RuntimeError("Transformers not installed. Run: pip install transformers torch")
@@ -207,22 +277,106 @@ class ModelHandler:
         else:
             raise ValueError(f"Unsupported engine: {engine}")
 
+    @staticmethod
+    def _estimate_vllm_batch_size(gpu_memory_utilization: float = 0.96) -> int:
+        """
+        Estimate an appropriate max_num_seqs for vLLM based on available GPU memory.
+
+        Uses a simple heuristic: more free VRAM -> more concurrent sequences.
+        Falls back to 256 if torch/CUDA is unavailable.
+        """
+        try:
+            import torch
+            if not torch.cuda.is_available():
+                return 256
+            # Get free memory on the current device (in GB)
+            free_bytes, total_bytes = torch.cuda.mem_get_info(torch.cuda.current_device())
+            free_gb = free_bytes / (1024 ** 3)
+            # Heuristic: ~1 seq per 0.1 GB of free VRAM, clamped to [64, 512]
+            estimated = max(64, min(512, int(free_gb / 0.1)))
+            return estimated
+        except Exception:
+            return 256
+
     def generate(self, prompts: List[str], max_tokens: int = 32768, temperature: float = 0.1,
                  top_p: float = 0.9, **kwargs) -> List[str]:
         """
         Generate responses for given prompts using API or local models.
+
+        For local models, responses are optionally cached (see use_cache parameter in __init__).
+        Caching applies when temperature==0 (deterministic) or when a seed is provided.
 
         Args:
             prompts: List of prompt strings
             max_tokens: Maximum tokens to generate (default: 32768, falls back to 8192 on error)
             temperature: Sampling temperature
             top_p: Top-p sampling parameter
-            **kwargs: Additional generation parameters
+            **kwargs: Additional generation parameters (seed, etc.)
 
         Returns:
             List of generated responses
         """
-        # Route to appropriate generation method
+        # For local models, attempt cache lookup / store
+        if not self.api_provider and getattr(self, '_use_cache', True) and self._should_cache(temperature, kwargs.get('seed')):
+            return self._generate_with_cache(prompts, max_tokens, temperature, top_p, **kwargs)
+
+        # Route to appropriate generation method (no caching)
+        return self._generate_uncached(prompts, max_tokens, temperature, top_p, **kwargs)
+
+    def _should_cache(self, temperature: float, seed) -> bool:
+        """Return True when caching is appropriate for these generation params."""
+        return temperature == 0.0 or seed is not None
+
+    def _get_cache(self):
+        """Lazily initialise and return the ResponseCache instance."""
+        if not hasattr(self, '_cache') or self._cache is None:
+            try:
+                from ..core.cache import ResponseCache
+                self._cache = ResponseCache()
+            except Exception as e:
+                logging.warning(f"⚠️ Could not initialise response cache: {e}")
+                self._cache = None
+        return self._cache
+
+    def _generate_with_cache(self, prompts: List[str], max_tokens: int, temperature: float,
+                              top_p: float, **kwargs) -> List[str]:
+        """Generate with per-prompt cache lookup and store."""
+        cache = self._get_cache()
+        if cache is None:
+            # Cache unavailable, fall through to uncached path
+            return self._generate_uncached(prompts, max_tokens, temperature, top_p, **kwargs)
+
+        seed = kwargs.get('seed')
+        responses: List[Optional[str]] = [None] * len(prompts)
+        uncached_indices: List[int] = []
+        uncached_prompts: List[str] = []
+
+        # Phase 1: check cache for each prompt
+        for i, prompt in enumerate(prompts):
+            cached = cache.get(self.model_id, prompt, temperature, seed)
+            if cached is not None:
+                responses[i] = cached
+            else:
+                uncached_indices.append(i)
+                uncached_prompts.append(prompt)
+
+        # Phase 2: generate for uncached prompts
+        if uncached_prompts:
+            generated = self._generate_uncached(uncached_prompts, max_tokens, temperature, top_p, **kwargs)
+            for idx, prompt, response in zip(uncached_indices, uncached_prompts, generated):
+                responses[idx] = response
+                # Store in cache (only non-empty responses)
+                if response:
+                    try:
+                        cache.put(self.model_id, prompt, temperature, seed, response)
+                    except Exception as ce:
+                        logging.warning(f"Cache store failed: {ce}")
+
+        return [r or "" for r in responses]
+
+    def _generate_uncached(self, prompts: List[str], max_tokens: int, temperature: float,
+                           top_p: float, **kwargs) -> List[str]:
+        """Internal generate without caching; handles max_tokens fallback."""
         try:
             if self.api_provider:
                 return self._generate_api(prompts, max_tokens, temperature, top_p, **kwargs)
@@ -459,21 +613,35 @@ class ModelHandler:
                     max_tokens=max_tokens
                 )
 
-                # Log batch processing info
+                # Sort prompts by length (ascending) to minimise padding waste
+                # and group similar-length prompts together for better throughput.
                 batch_size = len(formatted_prompts)
                 if batch_size > 1:
                     logging.info(f"🚀 vLLM batch processing: {batch_size} prompts at once")
+                    # Keep original order via index mapping
+                    indexed = sorted(enumerate(formatted_prompts), key=lambda x: len(x[1]))
+                    original_indices, sorted_prompts = zip(*indexed)
+                    original_indices = list(original_indices)
+                    sorted_prompts = list(sorted_prompts)
+                else:
+                    original_indices = list(range(batch_size))
+                    sorted_prompts = formatted_prompts
 
                 # Generate for all prompts at once with VLLM (batched inference)
-                # vLLM automatically handles batching for optimal throughput
                 start_time = time.time()
-                outputs = self.model.generate(formatted_prompts, sampling_params)
+                outputs = self.model.generate(sorted_prompts, sampling_params)
                 generation_time = time.time() - start_time
 
                 total_input_tokens = 0
                 total_output_tokens = 0
 
-                for output in outputs:
+                # Re-order outputs back to original prompt order
+                ordered_outputs = [None] * batch_size
+                for sorted_idx, output in enumerate(outputs):
+                    orig_idx = original_indices[sorted_idx]
+                    ordered_outputs[orig_idx] = output
+
+                for output in ordered_outputs:
                     generated_text = output.outputs[0].text
 
                     # Count tokens for statistics
@@ -631,6 +799,14 @@ class ModelHandler:
             'api_provider': self.api_provider
         }
 
+        # Include cache statistics if cache is active
+        _cache = getattr(self, '_cache', None)
+        if _cache is not None:
+            try:
+                stats['cache'] = _cache.stats()
+            except Exception:
+                pass
+
         return stats
 
     def _format_duration(self, seconds: float) -> str:
@@ -741,6 +917,42 @@ class ModelHandler:
         if total > 0:
             logging.info(f"💰 Estimated cost for {num_prompts} prompts: ${total:.4f}")
         return total
+
+    def warm_up(self, num_prompts: int = 3) -> float:
+        """
+        Warm up the local model by running a few dummy inference passes.
+
+        Discards results; the purpose is to trigger JIT compilation, fill
+        GPU caches, and ensure subsequent timed runs are not cold-start
+        outliers.  Skipped silently for API-based models.
+
+        Args:
+            num_prompts: Number of warm-up prompts (default: 3).
+
+        Returns:
+            Total warm-up latency in seconds (0.0 for API models).
+        """
+        if self.api_provider:
+            logging.info("Skipping warm-up for API model.")
+            return 0.0
+
+        _warmup_prompts = [
+            "What is 2+2?",
+            "Hello",
+            "Count to 5",
+        ]
+        prompts = (_warmup_prompts * ((num_prompts // len(_warmup_prompts)) + 1))[:num_prompts]
+
+        logging.info(f"Warming up model with {num_prompts} prompt(s)...")
+        t0 = time.time()
+        try:
+            # Use a small token budget to keep warm-up fast; bypass cache
+            self._generate_uncached(prompts, max_tokens=32, temperature=0.0, top_p=1.0)
+        except Exception as e:
+            logging.warning(f"Warm-up generation failed (non-fatal): {e}")
+        elapsed = time.time() - t0
+        logging.info(f"Warm-up done in {elapsed:.2f}s")
+        return elapsed
 
     def __del__(self):
         """Cleanup method (no resources to clean for API clients)"""

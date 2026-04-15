@@ -78,6 +78,16 @@ class EvaluationEngine:
         start_time = time.time()
         self.logger.info(f"🎯 Starting evaluation: suite={suite}, tasks={tasks}, datapoints={datapoints}")
 
+        # Model warm-up (skip if explicitly disabled via eval_params)
+        if not eval_params.get('skip_warmup', False):
+            try:
+                if hasattr(self.model_handler, 'warm_up'):
+                    warmup_elapsed = self.model_handler.warm_up()
+                    if warmup_elapsed > 0:
+                        self.logger.info(f"Warming up model... done in {warmup_elapsed:.1f}s")
+            except Exception as _wu_err:
+                self.logger.warning(f"Model warm-up failed (non-fatal): {_wu_err}")
+
         # Get tasks to evaluate
         if tasks:
             task_list = tasks
