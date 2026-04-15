@@ -5,6 +5,48 @@ All notable changes to BeyondBench (beyondbench) will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-04-15
+
+### Added
+- **Multi-GPU Parallel Evaluation Engine** (`--parallel --gpus auto`): task/data parallel strategies across up to 8 GPUs
+- **Response Cache** (`beyondbench cache stats/clear`, `--no-cache`): disk-based LRU cache for deterministic inference results
+- **Model Warm-up**: 3 warm-up prompts before evaluation for stable benchmarking (`--no-warmup` to skip)
+- **Quantization Support** (`--quantization 4bit|8bit|gptq|awq`): bitsandbytes, GPTQ, AWQ for transformers backend
+- **torch.compile Integration** (`--torch-compile`): faster transformers inference via compilation
+- **vLLM Optimizations**: prefix caching enabled by default, auto-tuned batch sizes
+- **Plugin System & Custom Task SDK**: entry_points-based discovery, `beyondbench create-task` scaffolding
+- **Comprehensive Documentation** (`docs/`): full API reference, task catalog, tutorials, configuration guide
+- **Gradio Dashboard** (`--dashboard`): real-time evaluation monitoring with live charts
+- **Token & Cost Analytics**: per-model cost estimation for OpenAI/Gemini/Anthropic
+- **Result Visualization**: charts, comparison reports, CSV/Excel export
+- **Configuration System**: YAML configs, JSON schema validation, `beyondbench init` wizard
+- **CLI Enhancements**: `doctor`, `export`, `profile-model`, `baseline`, `validate-config` commands
+- **FastAPI Server v2**: production gateway with job management
+- **New Tasks**: 15 new easy (44 total) + 10 new medium (15 total) + 10 new hard (20 total) tasks added
+- **Prompt Engineering**: concise/detailed/few_shot/cot prompt styles (`--prompt-style`)
+- **Contamination Resistance**: noise injection + prompt rephrasing (`--contamination-resistance`)
+- **Evaluation Reproducibility**: comprehensive seed management (`--seed`)
+- **Regression Testing**: baseline capture/compare for score tracking
+- **CI/CD Pipeline**: GitHub Actions with quality gates
+- **Gradio Example Apps**: interactive demos for all features
+- **Website Updates**: results showcase, task browser, model comparison charts
+
+### Changed
+- **Minimum Python version**: 3.10+ (unchanged from 0.1.0)
+- **Default vLLM settings**: prefix caching on, auto-tuned max_num_seqs
+- **Test suite**: expanded from 239 to 1000+ tests (unit + integration + e2e)
+
+### Fixed
+- **Parser robustness**: universal parser handles all model output formats
+- **vLLM batch processing**: prompt length sorting for optimal throughput
+- **Model handler**: graceful fallback from vLLM to transformers
+
+### Migration from v0.1.0
+- All existing CLI commands remain compatible
+- New `--parallel` flag for multi-GPU (off by default)
+- Cache enabled by default for deterministic runs; use `--no-cache` to disable
+- New optional dependencies: `pip install beyondbench[full]` for all features
+
 ---
 
 ## [0.1.0] - 2026-03-06

@@ -16,7 +16,7 @@
 
 *Contamination-Resistant Evaluation of Reasoning in Language Models*
 
-**🏆 101+ Models Evaluated &bull; 🧠 44 Reasoning Tasks &bull; 🎯 117 Variations &bull; 📊 >10<sup>15</sup> Unique Instances**
+**🏆 101+ Models Evaluated &bull; 🧠 79 Reasoning Tasks &bull; 🎯 138 Variations &bull; 📊 >10<sup>15</sup> Unique Instances**
 
 [**🌟 Explore Leaderboard**](https://ctrl-gaurav.github.io/BeyondBench/) | [**📖 Read Paper**](https://arxiv.org/abs/2509.24210) | [**📦 PyPI**](https://pypi.org/project/beyondbench/) | [**📚 Documentation**](docs/DOCUMENTATION.md)
 
@@ -28,6 +28,7 @@
 
 | Date | Update |
 |------|--------|
+| **Apr 15, 2026** | v0.2.0 released — multi-GPU parallel eval, 1000+ tests, response caching, plugin SDK, Gradio dashboard. See [Changelog](CHANGELOG.md) |
 | **Mar 6, 2026** | v0.1.0 released &mdash; FastAPI serve, CLI improvements, CI/CD, comprehensive tests. See [Changelog](CHANGELOG.md) |
 | **Feb 25, 2026** | v0.0.2 released &mdash; critical bug fixes, much more stable! See [Changelog](CHANGELOG.md) |
 | **Feb 25, 2026** | v0.0.1 released &mdash; 44 tasks, 117 variations, 101+ models |
@@ -39,7 +40,7 @@
 
 ## 💡 What is BeyondBench?
 
-BeyondBench introduces a **revolutionary approach** to evaluating reasoning capabilities in language models without relying on traditional static benchmarks. Our system **dynamically generates** novel problems across **44 distinct reasoning tasks** with **117 variations**, ensuring that models cannot memorize solutions and must demonstrate **true reasoning abilities**.
+BeyondBench introduces a **revolutionary approach** to evaluating reasoning capabilities in language models without relying on traditional static benchmarks. Our system **dynamically generates** novel problems across **79 distinct reasoning tasks** with **138 variations**, ensuring that models cannot memorize solutions and must demonstrate **true reasoning abilities**.
 
 <div align="center">
 <a href="https://ctrl-gaurav.github.io/BeyondBench/">
@@ -62,9 +63,9 @@ BeyondBench introduces a **revolutionary approach** to evaluating reasoning capa
 <td width="33%">
 
 #### 🎯 **Three Difficulty Levels**
-- **Easy**: 29 fundamental reasoning tasks
-- **Medium**: 5 tasks with 49 variations
-- **Hard**: 10 tasks with 68 variations
+- **Easy**: 44 fundamental reasoning tasks
+- **Medium**: 15 tasks with 59 variations
+- **Hard**: 20 tasks with 78 variations
 
 </td>
 <td width="33%">
@@ -133,6 +134,12 @@ pip install beyondbench[vllm]
 
 # Everything
 pip install beyondbench[full]
+```
+
+```bash
+# Performance optimization
+pip install beyondbench[vllm]  # vLLM with prefix caching
+pip install bitsandbytes       # 4-bit/8-bit quantization
 ```
 
 ---
@@ -262,24 +269,38 @@ beyondbench info sorting
 
 ---
 
+## ⚡ Performance
+
+| Feature | Improvement |
+|---------|-------------|
+| **Multi-GPU Parallel Evaluation** | Up to 8x speedup on 8 GPUs |
+| **Response Caching** | Near-instant repeat evaluations |
+| **vLLM Prefix Caching** | 2-3x faster for shared-prefix tasks |
+| **Quantization Support** | 4-bit/8-bit via bitsandbytes, GPTQ, AWQ |
+| **Model Warm-up** | Eliminates cold-start overhead |
+
+---
+
 ## 🧩 Task Suites
 
 <details>
-<summary><strong>Easy Suite (29 Tasks)</strong></summary>
+<summary><strong>Easy Suite (44 Tasks)</strong></summary>
 
 | Category | Tasks |
 |----------|-------|
-| **Arithmetic** | sum, multiplication, subtraction, division, absolute_difference |
-| **Statistics** | mean, median, mode |
-| **Counting** | odd_count, even_count, count_negative, count_unique, count_greater_than_previous, count_palindromic, count_perfect_squares, count_multiples, local_maxima_count |
-| **Extrema** | find_maximum, find_minimum, second_maximum, range, index_of_maximum, max_adjacent_difference, sum_of_max_indices |
-| **Sequences** | sorting, longest_increasing_subsequence, alternating_sum, sum_of_digits |
+| **Arithmetic** | sum, multiplication, subtraction, division, absolute_difference, weighted_sum, parity_check, dot_product |
+| **Statistics** | mean, median, mode, running_average, moving_average, variance, standard_deviation |
+| **Counting** | odd_count, even_count, count_negative, count_unique, count_greater_than_previous, count_palindromic, count_perfect_squares, count_multiples, local_maxima_count, element_frequency |
+| **Extrema** | find_maximum, find_minimum, second_maximum, second_minimum, range, index_of_maximum, max_adjacent_difference, sum_of_max_indices |
+| **Sequences** | sorting, longest_increasing_subsequence, alternating_sum, sum_of_digits, cumulative_sum |
+| **List Operations** | reverse_list, rotate_list, interleave_lists |
+| **Set Operations** | set_intersection, set_difference |
 | **Comparison** | comparison |
 
 </details>
 
 <details>
-<summary><strong>Medium Suite (5 Tasks, 49 Variations)</strong></summary>
+<summary><strong>Medium Suite (15 Tasks, 59 Variations)</strong></summary>
 
 | Task | Variations |
 |------|------------|
@@ -288,11 +309,21 @@ beyondbench info sorting
 | **Geometric Sequence** | 10 (Exponential, compound growth, factorial) |
 | **Prime Sequence** | 11 (Prime gaps, twin primes, Sophie Germain) |
 | **Complex Pattern** | 12 (Interleaved, conditional, multi-rule) |
+| **Arithmetic Progression** | 1 (Varying common differences) |
+| **Harmonic Sequence** | 1 (Reciprocal sequences) |
+| **Collatz Sequence** | 1 (3n+1 conjecture) |
+| **Polynomial Evaluation** | 1 (Evaluate at given point) |
+| **Matrix Operations** | 1 (2x2 multiply, determinant, inverse) |
+| **Number Base Conversion** | 1 (Decimal, binary, hexadecimal) |
+| **Logical Operations** | 1 (AND, OR, NOT, XOR) |
+| **Pattern Completion** | 1 (Numeric pattern inference) |
+| **GCD/LCM** | 1 (Greatest common divisor, least common multiple) |
+| **Combinatorics** | 1 (Permutations and combinations) |
 
 </details>
 
 <details>
-<summary><strong>Hard Suite (10 Tasks, 68 Variations)</strong></summary>
+<summary><strong>Hard Suite (20 Tasks, 78 Variations)</strong></summary>
 
 | Task | Variations | Complexity |
 |------|------------|------------|
@@ -305,6 +336,16 @@ beyondbench info sorting
 | **Matrix Chain** | 5 | Dynamic programming |
 | **Modular Systems** | 5 | Number theory |
 | **Constraint Optimization** | 5 | Operations research |
+| **Shortest Path** | 1 | Dijkstra's algorithm |
+| **Knapsack** | 1 | 0/1 dynamic programming |
+| **Traveling Salesman** | 1 | NP-hard combinatorial |
+| **Longest Common Subsequence** | 1 | Dynamic programming |
+| **Minimax Game** | 1 | Game tree search |
+| **Regex Matching** | 1 | Pattern matching |
+| **Topological Sort** | 1 | DAG ordering |
+| **Interval Scheduling** | 1 | Greedy algorithm |
+| **Coin Change** | 1 | Dynamic programming |
+| **Edit Distance** | 1 | String algorithms |
 | **Logic Grid Puzzles** | 8 | Deductive reasoning |
 
 </details>

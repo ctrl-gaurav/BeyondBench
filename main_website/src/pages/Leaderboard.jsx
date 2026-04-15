@@ -48,7 +48,7 @@ function AnimateIn({ children, delay = 0, className = '', direction = 'up' }) {
 function TypingEffect() {
   const phrases = [
     'Benchmark-Free Reasoning Evaluation',
-    '44 Tasks, 117 Variations, 10^15 Instances',
+    '79 Tasks, 138 Variations, 10^15 Instances',
     'Contamination-Resistant by Design',
     '5 Backends: OpenAI, Gemini, Anthropic, vLLM, HF',
     'Dynamic Algorithmic Problem Generation',
@@ -500,8 +500,8 @@ export default function Leaderboard() {
       {/* Stats */}
       <AnimateIn delay={700} direction="up">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
-        <StatCard icon={Brain} label="Reasoning Tasks" value="44" sub="Easy + Medium + Hard" delay={0} />
-        <StatCard icon={Target} label="Task Variations" value="117" sub="Fine-grained evaluation" delay={100} />
+        <StatCard icon={Brain} label="Reasoning Tasks" value="79" sub="Easy + Medium + Hard" delay={0} />
+        <StatCard icon={Target} label="Task Variations" value="138" sub="Fine-grained evaluation" delay={100} />
         <StatCard icon={BarChart3} label="Models Evaluated" value={`${modelData.length}`} sub="Open & Proprietary" delay={200} />
         <StatCard icon={Zap} label="Unique Instances" value=">10^15" sub="Per task" delay={300} />
       </div>

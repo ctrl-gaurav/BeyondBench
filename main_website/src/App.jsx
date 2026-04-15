@@ -3,6 +3,8 @@ import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import Leaderboard from './pages/Leaderboard'
 import Documentation from './pages/Documentation'
+import ResultsShowcase from './pages/ResultsShowcase'
+import TaskBrowser from './pages/TaskBrowser'
 import { useTheme } from './context/ThemeContext'
 
 function App() {
@@ -26,6 +28,8 @@ function App() {
           <Routes>
             <Route path="/" element={<Leaderboard />} />
             <Route path="/docs" element={<Documentation />} />
+            <Route path="/results" element={<ResultsShowcase />} />
+            <Route path="/tasks" element={<TaskBrowser />} />
           </Routes>
         </main>
         <Footer />

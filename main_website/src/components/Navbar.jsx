@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Trophy, BookOpen, Github, FileText, Hexagon, Sun, Moon, ExternalLink, Menu, X, Package } from 'lucide-react'
+import { Trophy, BookOpen, Github, FileText, Hexagon, Sun, Moon, ExternalLink, Menu, X, Package, BarChart3, Layers } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useTheme } from '../context/ThemeContext'
 import { usePyPIVersion } from '../hooks/usePyPIVersion'
@@ -108,6 +108,28 @@ export default function Navbar() {
                 }`} />
               )}
             </Link>
+            <Link to="/results" className={navLinkClass('/results')}>
+              <BarChart3 className="w-4 h-4" />
+              <span>Results</span>
+              {isActive('/results') && (
+                <span className={`absolute -bottom-px left-2 right-2 h-px ${
+                  isDark
+                    ? 'bg-gradient-to-r from-transparent via-bb-accent to-transparent'
+                    : 'bg-gradient-to-r from-transparent via-bb-accent-dark to-transparent'
+                }`} />
+              )}
+            </Link>
+            <Link to="/tasks" className={navLinkClass('/tasks')}>
+              <Layers className="w-4 h-4" />
+              <span>Tasks</span>
+              {isActive('/tasks') && (
+                <span className={`absolute -bottom-px left-2 right-2 h-px ${
+                  isDark
+                    ? 'bg-gradient-to-r from-transparent via-bb-accent to-transparent'
+                    : 'bg-gradient-to-r from-transparent via-bb-accent-dark to-transparent'
+                }`} />
+              )}
+            </Link>
 
             <div className={`w-px h-6 mx-2 ${isDark ? 'bg-bb-dark-50/20' : 'bg-bb-light-300'}`} />
 
@@ -178,6 +200,14 @@ export default function Navbar() {
               <Link to="/docs" className={navLinkClass('/docs')} onClick={() => setMobileOpen(false)}>
                 <BookOpen className="w-4 h-4" />
                 <span>Documentation</span>
+              </Link>
+              <Link to="/results" className={navLinkClass('/results')} onClick={() => setMobileOpen(false)}>
+                <BarChart3 className="w-4 h-4" />
+                <span>Results</span>
+              </Link>
+              <Link to="/tasks" className={navLinkClass('/tasks')} onClick={() => setMobileOpen(false)}>
+                <Layers className="w-4 h-4" />
+                <span>Tasks</span>
               </Link>
               <div className={`h-px my-2 ${isDark ? 'bg-bb-dark-50/20' : 'bg-bb-light-300/50'}`} />
               <a href="https://arxiv.org/abs/2509.24210" target="_blank" rel="noopener noreferrer" className={extLinkClass}>

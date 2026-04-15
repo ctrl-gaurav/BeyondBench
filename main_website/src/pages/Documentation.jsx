@@ -242,8 +242,8 @@ function OverviewContent({ isDark, cardCls, headCls, textCls }) {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { title: '44 Tasks', desc: '29 easy + 5 medium + 10 hard difficulty tasks covering arithmetic, sequences, constraint satisfaction, and NP-complete problems.' },
-          { title: '117 Variations', desc: 'Fine-grained task variations for nuanced capability evaluation across different problem formulations.' },
+          { title: '79 Tasks', desc: '44 easy + 15 medium + 20 hard difficulty tasks covering arithmetic, sequences, constraint satisfaction, and NP-complete problems.' },
+          { title: '138 Variations', desc: 'Fine-grained task variations for nuanced capability evaluation across different problem formulations.' },
           { title: '>10^15 Instances', desc: 'Each task generates from a problem space of over 10^15 unique instances, ensuring contamination resistance.' },
           { title: '5 Backends', desc: 'vLLM, Transformers, OpenAI, Gemini, and Anthropic APIs. Evaluate any model from any provider.' },
         ].map(item => (
@@ -1015,7 +1015,7 @@ function TaskSuitesContent({ isDark, cardCls, headCls, subheadCls, textCls }) {
     <div className="space-y-6">
       <div className={cardCls}>
         <h2 className={headCls}>Task Suites</h2>
-        <p className={textCls}>BeyondBench organizes 44 tasks into three difficulty suites with 117 total variations.</p>
+        <p className={textCls}>BeyondBench organizes 79 tasks into three difficulty suites with 138 total variations.</p>
       </div>
       <div className={cardCls}>
         <h3 className={subheadCls}>Easy Suite (29 Tasks)</h3>
