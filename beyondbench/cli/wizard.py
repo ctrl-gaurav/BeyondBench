@@ -185,10 +185,10 @@ def select_suite() -> str:
     table.add_column("Tasks")
     table.add_column("Complexity")
 
-    table.add_row("[green]1[/green]", "[bold green]Easy[/bold green]", "29 tasks", "[dim]Basic arithmetic, statistics, counting[/dim]")
-    table.add_row("[yellow]2[/yellow]", "[bold yellow]Medium[/bold yellow]", "5 tasks (49 variations)", "[dim]Sequence patterns, recursive reasoning[/dim]")
-    table.add_row("[red]3[/red]", "[bold red]Hard[/bold red]", "10 tasks (68 variations)", "[dim]NP-complete problems, constraint satisfaction[/dim]")
-    table.add_row("[magenta]4[/magenta]", "[bold magenta]All[/bold magenta]", "44 tasks (117 variations)", "[dim]Complete evaluation across all suites[/dim]")
+    table.add_row("[green]1[/green]", "[bold green]Easy[/bold green]", "44 tasks", "[dim]Basic arithmetic, statistics, counting[/dim]")
+    table.add_row("[yellow]2[/yellow]", "[bold yellow]Medium[/bold yellow]", "15 tasks (49 variations)", "[dim]Sequence patterns, recursive reasoning[/dim]")
+    table.add_row("[red]3[/red]", "[bold red]Hard[/bold red]", "20 tasks (68 variations)", "[dim]NP-complete problems, constraint satisfaction[/dim]")
+    table.add_row("[magenta]4[/magenta]", "[bold magenta]All[/bold magenta]", "79 tasks (138 variations)", "[dim]Complete evaluation across all suites[/dim]")
 
     console.print(table)
 

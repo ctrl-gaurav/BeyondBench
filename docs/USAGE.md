@@ -412,7 +412,7 @@ for task_name, metrics in results['task_results'].items():
 
 ## Task Suites
 
-### Easy Suite (29 Tasks)
+### Easy Suite (44 Tasks)
 
 Fundamental operations with clear numerical answers:
 
@@ -430,7 +430,7 @@ Tasks:
 - **Difference**: max_adjacent_difference
 - **Comparison**: comparison
 
-### Medium Suite (5 Tasks, 49 Variations)
+### Medium Suite (15 Tasks, 49 Variations)
 
 Sequence pattern recognition:
 
@@ -445,7 +445,7 @@ Tasks:
 - **prime_sequence** (11 variations): Prime gaps, twin primes, Sophie Germain
 - **complex_pattern** (12 variations): Interleaved, conditional, multi-rule
 
-### Hard Suite (10 Tasks, 68 Variations)
+### Hard Suite (20 Tasks, 68 Variations)
 
 NP-complete and constraint satisfaction problems:
 

@@ -331,7 +331,7 @@ def create_app() -> FastAPI:
     try:
         app_version = _pkg_version("beyondbench")
     except PackageNotFoundError:
-        app_version = "0.1.0"
+        app_version = "0.2.0"
 
     _auth_note = (
         "\n\n**Authentication:** Set `BEYONDBENCH_API_KEY` environment variable to enable "

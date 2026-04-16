@@ -64,9 +64,9 @@ These tasks scale with list size, controlled via `--list-sizes`.
 
 ---
 
-### Phase 12 Tasks (15 tasks)
+### Additional Easy Tasks (15 tasks)
 
-Additional list-processing and statistical tasks added in Phase 12.
+Additional list-processing and statistical tasks.
 
 | Task Name | Description | Input | Output |
 |-----------|-------------|-------|--------|
@@ -107,7 +107,7 @@ Medium tasks require multi-step mathematical reasoning: sequence prediction, num
 
 ---
 
-### Phase 13 Tasks (10 tasks)
+### Additional Medium Tasks (10 tasks)
 
 | Task Name | Description | What It Tests | Output |
 |-----------|-------------|---------------|--------|
@@ -149,7 +149,7 @@ Hard tasks involve combinatorial optimization, constraint satisfaction, dynamic 
 
 ---
 
-### Phase 14 Tasks (10 tasks)
+### Additional Hard Tasks (10 tasks)
 
 | Task Name | Description | Algorithm Required | Input → Output |
 |-----------|-------------|-------------------|----------------|

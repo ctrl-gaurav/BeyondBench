@@ -6,9 +6,8 @@ A contamination-resistant evaluation framework for language model reasoning
 capabilities across easy, medium, and hard computational tasks.
 
 Key Features:
-- 44 easy suite tasks with scalable complexity
-- 15 medium suite tasks with 59 variations
-- 20 hard suite tasks with 78 variations
+- 79 reasoning tasks (44 easy + 15 medium + 20 hard)
+- 138 task variations across difficulty levels
 - Multi-backend support (vLLM, Transformers, OpenAI, Gemini, Anthropic)
 - Multi-GPU parallel evaluation engine
 - Response caching and performance optimization

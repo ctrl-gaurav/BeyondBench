@@ -28,7 +28,7 @@
 
 | Date | Update |
 |------|--------|
-| **Apr 15, 2026** | v0.2.0 released — multi-GPU parallel eval, 1000+ tests, response caching, plugin SDK, Gradio dashboard. See [Changelog](CHANGELOG.md) |
+| **Apr 16, 2026** | v0.2.0 released — multi-GPU parallel eval, 1000+ tests, response caching, plugin SDK, Gradio dashboard. See [Changelog](CHANGELOG.md) |
 | **Mar 6, 2026** | v0.1.0 released &mdash; FastAPI serve, CLI improvements, CI/CD, comprehensive tests. See [Changelog](CHANGELOG.md) |
 | **Feb 25, 2026** | v0.0.2 released &mdash; critical bug fixes, much more stable! See [Changelog](CHANGELOG.md) |
 | **Feb 25, 2026** | v0.0.1 released &mdash; 44 tasks, 117 variations, 101+ models |

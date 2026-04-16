@@ -1271,7 +1271,7 @@ function OutputContent({ isDark, cardCls, headCls, subheadCls, textCls, pypiVers
     "sudoku": { "accuracy": 0.12, "instruction_following": 0.98, "suite": "hard" }
   },
   "metadata": {
-    "version": "${pypiVersion || '0.1.0'}",
+    "version": "${pypiVersion || '0.2.0'}",
     "timestamp": "2025-02-05T10:30:00Z",
     "seed": 42
   }

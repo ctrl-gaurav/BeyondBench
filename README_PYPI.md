@@ -7,7 +7,7 @@
 [![License](https://img.shields.io/badge/License-Apache_2.0-green.svg?style=for-the-badge)](https://github.com/ctrl-gaurav/BeyondBench/blob/main/LICENSE)
 [![Stars](https://img.shields.io/github/stars/ctrl-gaurav/BeyondBench?style=for-the-badge&logo=github)](https://github.com/ctrl-gaurav/BeyondBench/stargazers)
 
-**101+ Models Evaluated | 44 Reasoning Tasks | 117 Variations | >10^15 Unique Instances**
+**101+ Models Evaluated | 79 Reasoning Tasks | 138 Variations | >10^15 Unique Instances**
 
 [Explore Leaderboard](https://ctrl-gaurav.github.io/BeyondBench/) | [Read Paper](https://arxiv.org/abs/2509.24210) | [GitHub](https://github.com/ctrl-gaurav/BeyondBench) | [Documentation](https://github.com/ctrl-gaurav/BeyondBench/blob/main/docs/DOCUMENTATION.md)
 
@@ -15,12 +15,12 @@
 
 ## What is BeyondBench?
 
-BeyondBench introduces a **revolutionary approach** to evaluating reasoning capabilities in language models without relying on traditional static benchmarks. Our system **dynamically generates** novel problems across **44 distinct reasoning tasks** with **117 variations**, ensuring that models cannot memorize solutions and must demonstrate **true reasoning abilities**.
+BeyondBench introduces a **revolutionary approach** to evaluating reasoning capabilities in language models without relying on traditional static benchmarks. Our system **dynamically generates** novel problems across **79 distinct reasoning tasks** with **138 variations**, ensuring that models cannot memorize solutions and must demonstrate **true reasoning abilities**.
 
 ### Key Features
 
 - **Dynamic Problem Generation** — Problem space >10^15 unique instances, zero risk of data contamination
-- **Three Difficulty Levels** — Easy (29 tasks), Medium (5 tasks, 49 variations), Hard (10 tasks, 68 variations)
+- **Three Difficulty Levels** — Easy (44 tasks), Medium (15 tasks, 49 variations), Hard (20 tasks, 68 variations)
 - **Multi-Backend Support** — OpenAI, Gemini, Anthropic APIs + vLLM and HuggingFace Transformers
 - **Contamination-Resistant** — No static benchmark memorization, novel problems every run
 - **Comprehensive Metrics** — Accuracy, instruction-following compliance, token efficiency
@@ -105,14 +105,16 @@ print(f"Average Accuracy: {results['summary']['avg_accuracy']:.2%}")
 
 ---
 
-### New in v0.1.0
+### New in v0.2.0
 
-- **API Server**: `beyondbench serve` - FastAPI REST API
-- **Config Files**: `beyondbench init` and `beyondbench run-config`
-- **Results Viewer**: `beyondbench results list/show/compare`
-- **Task Info**: `beyondbench info <task>`
-- **CI/CD**: GitHub Actions for testing, linting, PyPI publishing
-- **239 Tests**: Comprehensive test coverage
+- **79 Reasoning Tasks**: 44 easy + 15 medium (49 variations) + 20 hard (68 variations)
+- **Multi-GPU Parallel Evaluation**: Automatic batch auto-tuning and tensor parallelism
+- **Plugin SDK**: Create and share custom tasks with `beyondbench plugin scaffold`
+- **Gradio Dashboard**: Real-time evaluation monitoring with `--dashboard` flag
+- **Response Caching**: Skip redundant API calls across runs
+- **Universal Parser**: Unified parsing engine with confidence scoring
+- **1000+ Tests**: Comprehensive unit, integration, and end-to-end test coverage
+- **API Server**: `beyondbench serve` - FastAPI REST API with WebSocket support
 
 ---
 
@@ -130,13 +132,13 @@ print(f"Average Accuracy: {results['summary']['avg_accuracy']:.2%}")
 
 ## Task Suites
 
-### Easy Suite (29 Tasks)
+### Easy Suite (44 Tasks)
 Arithmetic (sum, multiplication, subtraction, division, absolute\_difference), Statistics (mean, median, mode), Counting (odd\_count, even\_count, count\_negative, count\_unique, and more), Extrema (find\_maximum, find\_minimum, second\_maximum, range, and more), Sequences (sorting, longest\_increasing\_subsequence, alternating\_sum, sum\_of\_digits), Comparison
 
-### Medium Suite (5 Tasks, 49 Variations)
+### Medium Suite (15 Tasks, 49 Variations)
 Fibonacci Sequence (6 variations), Algebraic Sequence (10), Geometric Sequence (10), Prime Sequence (11), Complex Pattern (12)
 
-### Hard Suite (10 Tasks, 68 Variations)
+### Hard Suite (20 Tasks, 68 Variations)
 Tower of Hanoi, N-Queens, Graph Coloring, Boolean SAT, Sudoku, Cryptarithmetic, Matrix Chain, Modular Systems, Constraint Optimization, Logic Grid Puzzles
 
 ---

@@ -757,6 +757,8 @@ class ParallelEvaluationEngine(EvaluationEngine):
         done_gpus: set = set()
         expected = len(procs)
         results_received = 0
+        # Allow up to 30 minutes per worker (workers may have many tasks)
+        per_worker_timeout = 1800
 
         # Progress drain thread
         def drain_progress():
@@ -782,7 +784,7 @@ class ParallelEvaluationEngine(EvaluationEngine):
         # Wait for all result payloads
         while results_received < expected:
             try:
-                raw = result_queue.get(timeout=600)
+                raw = result_queue.get(timeout=per_worker_timeout)
                 payload = json.loads(raw)
                 gpu_id = payload.get("gpu_id", -1)
                 if "error" in payload and not payload.get("task_results"):

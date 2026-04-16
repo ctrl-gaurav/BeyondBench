@@ -173,7 +173,7 @@ def main(ctx: click.Context, verbose: bool, quiet: bool, json_mode: bool) -> Non
 
 # Parser Configuration
 @click.option('--parser', type=click.Choice(['unified', 'legacy']), default='unified',
-              help='Parser mode: unified (Phase 1 UnifiedParser) or legacy (original per-task parsers)')
+              help='Parser mode: unified (default) or legacy (original per-task parsers)')
 
 # Multi-GPU Parallel Options
 @click.option('--parallel', is_flag=True, default=False, help='Enable multi-GPU parallel evaluation')
@@ -1335,7 +1335,7 @@ def reproduce(fingerprint: str, results_dir: str):
 
     if found is None:
         click.echo(f"No results file found containing fingerprint '{fingerprint}' in '{results_dir}'.")
-        click.echo("Make sure you ran the evaluation with beyondbench >= 0.3.0 (Phase 17).")
+        click.echo("Make sure you ran the evaluation with beyondbench >= 0.2.0.")
         sys.exit(1)
 
     result_file, result_data = found
