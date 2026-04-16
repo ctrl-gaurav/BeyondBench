@@ -7,45 +7,164 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.2.0] - 2026-04-15
 
+A major release delivering 79 reasoning tasks, multi-GPU parallel evaluation, a plugin system, Gradio dashboard, comprehensive documentation, and production-grade infrastructure.
+
 ### Added
-- **Multi-GPU Parallel Evaluation Engine** (`--parallel --gpus auto`): task/data parallel strategies across up to 8 GPUs
-- **Response Cache** (`beyondbench cache stats/clear`, `--no-cache`): disk-based LRU cache for deterministic inference results
-- **Model Warm-up**: 3 warm-up prompts before evaluation for stable benchmarking (`--no-warmup` to skip)
-- **Quantization Support** (`--quantization 4bit|8bit|gptq|awq`): bitsandbytes, GPTQ, AWQ for transformers backend
-- **torch.compile Integration** (`--torch-compile`): faster transformers inference via compilation
-- **vLLM Optimizations**: prefix caching enabled by default, auto-tuned batch sizes
-- **Plugin System & Custom Task SDK**: entry_points-based discovery, `beyondbench create-task` scaffolding
-- **Comprehensive Documentation** (`docs/`): full API reference, task catalog, tutorials, configuration guide
-- **Gradio Dashboard** (`--dashboard`): real-time evaluation monitoring with live charts
-- **Token & Cost Analytics**: per-model cost estimation for OpenAI/Gemini/Anthropic
-- **Result Visualization**: charts, comparison reports, CSV/Excel export
-- **Configuration System**: YAML configs, JSON schema validation, `beyondbench init` wizard
-- **CLI Enhancements**: `doctor`, `export`, `profile-model`, `baseline`, `validate-config` commands
-- **FastAPI Server v2**: production gateway with job management
-- **New Tasks**: 15 new easy (44 total) + 10 new medium (15 total) + 10 new hard (20 total) tasks added
-- **Prompt Engineering**: concise/detailed/few_shot/cot prompt styles (`--prompt-style`)
-- **Contamination Resistance**: noise injection + prompt rephrasing (`--contamination-resistance`)
-- **Evaluation Reproducibility**: comprehensive seed management (`--seed`)
-- **Regression Testing**: baseline capture/compare for score tracking
-- **CI/CD Pipeline**: GitHub Actions with quality gates
-- **Gradio Example Apps**: interactive demos for all features
-- **Website Updates**: results showcase, task browser, model comparison charts
+
+#### Parser & Evaluation Core
+- **Universal Parser** (`parsers/core.py`): unified parsing engine with strategy pipeline and confidence scoring, replacing 14 individual parser files
+- **10 Pluggable Parse Strategies**: boxed, explicit_statement, code_block, latex_math, json, list, grid, comparison, sequence, fallback — each with configurable priority
+- **Per-Model Parsing Adapters** (`parsers/model_adapters.py`): auto-detection and normalization for Qwen, Llama, Phi, Mistral, Gemma, and API model families
+- **Common Parser Library** (`parsers/common.py`): shared extraction functions for boxed formats (nested braces, double-dollar LaTeX, malformed), explicit statements (multilingual, inverted patterns), and number cleaning (commas, fractions, scientific notation)
+- **Parser Legacy Fallback**: `--parser=unified|legacy` CLI flag with automatic legacy fallback when unified parser returns low confidence
+
+#### Multi-GPU Parallel Evaluation Engine
+- **GPU-Aware Task Distribution** (`core/gpu_scheduler.py`): GPU discovery via nvidia-smi, VRAM estimation, occupancy detection, `CUDA_VISIBLE_DEVICES` awareness
+- **Parallel Evaluation Engine** (`core/parallel_engine.py`): task_parallel, data_parallel, and model_parallel strategies using multiprocessing with spawn context
+- **Result Aggregation** (`core/result_aggregator.py`): merge multi-GPU results, handle partial failures, data_parallel shard merging, unified final_results.json format
+- **Real-Time Progress Tracking**: Rich Live table with per-GPU status (task, progress, accuracy, elapsed, utilization, memory)
+- **CLI Flags**: `--parallel`, `--gpus auto|0,1,2`, `--strategy task_parallel|data_parallel`
+
+#### Model Behavior Profiling
+- **Model Profiler** (`core/model_profiler.py`): calibration-based output pattern analysis with caching to `~/.beyondbench/profiles/`
+- **14 Pre-Built Profiles**: Qwen (4 sizes), Llama (2), Phi, Mistral, Gemma (2), GPT-4o (2), Gemini, Claude
+- **Adaptive Parsing**: profile-driven strategy reordering in UnifiedParser for higher parse success rates
+- **Model Comparison Workflow** (`core/model_comparison.py`): simultaneous multi-model evaluation with `beyondbench compare` CLI command
+
+#### Live Observability Dashboard
+- **Gradio Dashboard** (`dashboard/`): 5-tab interface — Overview (progress, accuracy gauges), Per-Task Results (sortable table), GPU Monitor (memory, utilization, temperature timeline), Token Analytics (input/output charts, cost), Live Log (streaming, filtering, search, download)
+- **Data Bridge** (`dashboard/data_bridge.py`): event bridge between evaluation engine and dashboard with gr.Timer polling every 2s
+- **CLI Integration**: `beyondbench dashboard` command and `--dashboard` flag during evaluation
+- **Compare Mode**: `--compare` for side-by-side result visualization
+
+#### Token & Cost Analytics
+- **Token Counter** (`utils/token_counter.py`): model_tokenizer → tiktoken → estimate fallback chain, TokenUsage/TokenAnalytics dataclasses, per-request logging, tokens/sec throughput
+- **Cost Tracker** (`utils/cost_tracker.py`): 2025 pricing tables for OpenAI (gpt-4o/4o-mini/o1/o3/o4/gpt-5), Anthropic (claude-3-5/sonnet-4/opus-4), Gemini (2.5 pro/flash/flash-lite + 1.5), per-task cost breakdown, pre-evaluation estimates, custom pricing support
+- **Request Logger** (`utils/request_logger.py`): JSONL append-only writer with context manager, load/replay helpers, `--log-requests` flag
+
+#### Result Visualization & Reporting
+- **Report Generator** (`utils/report_generator.py`): HTML (embedded Plotly charts + dark CSS), Markdown (GitHub-flavored tables), LaTeX (booktabs), PDF via WeasyPrint (optional, gracefully skipped)
+- **Visualizer** (`utils/visualizer.py`): 8 chart types — accuracy_by_task, accuracy_by_suite, accuracy_by_difficulty (heatmap), token_distribution, latency_distribution, model_comparison, scaling_curve, radar_chart — with Plotly → Matplotlib fallback
+- **CLI Command**: `beyondbench report --format html|markdown|pdf|latex|all --charts-dir --compare`
+
+#### Configuration System Hardening
+- **JSON Schema Validation**: full config schema with enum/range/type constraints, required fields, additionalProperties:false
+- **Config Presets**: quick_test, full_evaluation, paper_quality, debug — ready-to-use YAML configurations
+- **Environment Variable Support**: 14 `BEYONDBENCH_*` env vars with type casting and deep-merge, `.env` file auto-loading via python-dotenv
+- **Model Validation**: HuggingFace existence probe, GPU free-memory precheck, backend-dependency check, API-key validation, VRAM estimation
+- **Config Loader**: `ConfigLoader.load()` with `ConfigProxy` hybrid (attribute + dict) access, root-only shortcut aliases
+
+#### CLI Polish & Developer Experience
+- **Rich Console Output**: tables, panels, banners throughout CLI using Rich library
+- **Interactive Wizard Upgrade**: step-by-step model → suite → params → confirm → run with Rich Prompt/Panel/Live/Progress
+- **New Commands**: `info`, `doctor`, `benchmark`, `export`, `profile-model`, `install-completion`
+- **Global Flags**: `--verbose/-v`, `--quiet/-q`, `--json` with mutual-exclusion check and CLIContext propagation
+- **GPU Utilization Display**: `GPUUtilizationSampler` background thread, Rich live table columns, tqdm postfix (`G0:73%/18.1GB`)
+- **Shell Completion**: `beyondbench install-completion {bash,zsh,fish}`
+
+#### FastAPI Server v2 — Production Gateway
+- **WebSocket Endpoints**: `/ws/jobs/{job_id}` per-job + `/ws/progress` all-jobs stream with keepalive pings and log replay
+- **Authentication & Rate Limiting**: Bearer token via `BEYONDBENCH_API_KEY`, sliding-window rate limiter via `BEYONDBENCH_RATE_LIMIT_RPM`
+- **Batch Evaluation API**: `POST /evaluate/batch` (max 20 configs), `GET /jobs` with status filter, `DELETE /jobs/{job_id}` cancel/remove
+- **Result Comparison API**: `POST /compare` + `POST /evaluate/compare` — load from filesystem or in-memory completed jobs
+- **Prometheus Metrics**: `GET /metrics` — beyondbench_up, uptime_seconds, gpu_count, jobs_total by status
+- **Full OpenAPI Documentation**: Swagger UI at `/docs`, ReDoc at `/redoc`, all models have `json_schema_extra` examples
+
+#### New Tasks
+- **15 New Easy Tasks** (44 total): weighted_sum, running_average, parity_check, cumulative_sum, reverse_list, rotate_list, interleave_lists, set_intersection, set_difference, moving_average, element_frequency, second_minimum, variance, standard_deviation, dot_product
+- **10 New Medium Tasks** (15 total): arithmetic_progression, harmonic_sequence, collatz_sequence, polynomial_evaluation, matrix_operations, number_base_conversion, logical_operations, pattern_completion, gcd_lcm, combinatorics
+- **10 New Hard Tasks** (20 total): shortest_path (Dijkstra), knapsack (0/1 DP), traveling_salesman (brute-force), longest_common_subsequence (DP), minimax_game (game tree), regex_matching (fullmatch), topological_sort (Kahn's), interval_scheduling (greedy), coin_change (DP), edit_distance (Levenshtein)
+
+#### Prompt Engineering & Optimization
+- **Prompt Template System** (`prompts/`): PromptTemplate, PromptLibrary with 79 tasks × 4 styles = 316 templates
+- **4 Prompt Styles**: concise, detailed, few_shot, cot — selectable via `--prompt-style`
+- **Dynamic Few-Shot Generation**: FewShotGenerator produces fresh examples at runtime with seed variation for contamination resistance
+- **Model-Family Hints**: Qwen/Llama/Phi/Mistral/Gemma-specific `\boxed{}` instructions appended when model_id is known
+
+#### Contamination Resistance Hardening
+- **Instance Fingerprinting** (`core/fingerprint.py`): SHA-256 per instance (task + data + seed), within-dataset uniqueness verification
+- **Problem Rephrasing** (`core/rephraser.py`): 14 operation types × 3–5 phrasings each, seed-controlled random selection
+- **Noise Injection** (`core/noise_injector.py`): low (polite prefix), medium (context sentences), high (distractor numbers) — `--contamination-resistance low|medium|high`
+- **Audit Script**: `audit_contamination.py` verified all 79 tasks produce distinct datasets across seeds
+
+#### Evaluation Reproducibility & Seed Management
+- **Seed Propagation**: `seed_manager.py` propagates to random, numpy, torch, torch.cuda with deterministic flags
+- **Evaluation Fingerprint** (`eval_fingerprint.py`): SHA-256 of model_id + config + seed + tasks + version, stored in final_results.json
+- **Result Versioning**: environment dict with python, platform, beyondbench, torch, transformers, vllm, numpy versions, seed, timestamp (UTC ISO), git_hash, gpu_count, gpus (name + memory)
+
+#### Gradio Example Apps
+- **Live Eval Dashboard** (`examples/gradio_live_eval.py`): model/suite/GPU selection, real-time results, log stream, CSV/JSON download — port 7860
+- **Model Arena** (`examples/gradio_model_arena.py`): side-by-side comparison, parallel response fetching, human voting (A/B/tie), leaderboard — port 7861
+- **Task Explorer** (`examples/gradio_task_explorer.py`): browse 79 tasks by suite, search/filter, sample instances with ground truth, try custom responses — port 7862
+- **Parser Debugger** (`examples/gradio_parser_debugger.py`): paste model response, see per-strategy parse results with confidence — port 7863
+- **GPU Monitor** (`examples/gradio_gpu_monitor.py`): real-time GPU stats with rolling history and alert thresholds — port 7864
+
+#### Regression Testing & Baseline Management
+- **Baseline Manager** (`eval/baseline.py`): save/load/compare/check_regression with JSON storage in `tests/baselines/`
+- **CLI Commands**: `beyondbench baseline save|compare|list`, `--fail-on-regression` exits with code 1 on threshold breach (>10% accuracy drop)
+
+#### CI/CD Pipeline & Quality Gates
+- **GitHub Actions**: Python 3.10–3.14 matrix CI, unit tests with coverage (`--cov-fail-under=45`), GPU integration tests (weekly), TestPyPI + PyPI publish pipeline
+- **Pre-Commit Hooks**: ruff lint + format, isort, trailing-whitespace, check-yaml/json, large file check, mypy, pytest on commit
+
+#### Documentation
+- **Getting Started Guide** (`docs/getting_started.md`): installation, first evaluation walkthrough, viewing results
+- **User Guide** (`docs/user_guide.md`): all CLI commands, config files, model backends, multi-GPU, prompt styles, contamination resistance
+- **Task Reference** (`docs/task_reference.md`): all 79+ tasks with descriptions, I/O format, difficulty, organized by category
+- **API Reference** (`docs/api_reference.md`): EvaluationEngine, TaskRegistry, ModelHandler, BaseTask, ParallelEvaluationEngine, ResultAggregator
+- **Contributing Guide** (`docs/contributing.md`): dev setup, code style, testing, adding tasks/parsers/backends, PR workflow
+- **Jupyter Notebooks** (`docs/examples/`): 4 notebooks — basic evaluation, custom tasks, model comparison, result analysis
+
+#### Plugin System & Custom Task SDK
+- **Plugin Manager** (`plugins/`): entry_points-based discovery (`beyondbench.tasks` group) + local directory discovery, plugin validation
+- **Task Scaffolding**: `beyondbench create-task <name>` generates complete plugin project (task.py, parser.py, test_task.py, pyproject.toml with entry-point)
+- **Task Metadata System**: TaskMetadata dataclass with name/description/difficulty/category/author/version/tags, 11 category taxonomy, `beyondbench list-tasks --detailed`
+
+#### Performance Optimization & Caching
+- **Response Cache** (`core/cache.py`): disk-based LRU, SHA-256 key, 10GB default, thread-safe, `beyondbench cache stats|clear`, `--no-cache` flag
+- **vLLM Batch Auto-Tuning**: `_estimate_vllm_batch_size()` auto-tunes max_num_seqs (64–512) from GPU free VRAM, `enable_prefix_caching=True`
+- **Quantization** (`--quantization 4bit|8bit|gptq|awq`): bitsandbytes, GPTQConfig, AwqConfig with ImportError guards
+- **torch.compile** (`--torch-compile`): faster transformers inference via compilation
+- **Model Warm-Up**: 3 dummy prompts (max_tokens=32), `--no-warmup` to skip, latency logged separately
+- **GPU Memory Cleanup**: `ModelHandler.cleanup()` deletes model/tokenizer, gc.collect + torch.cuda.empty_cache, wired into parallel engine worker finally blocks
+
+#### Website & Release Polish
+- **React Website Update**: task explorer page showing all 79 tasks with search/filter/expand, results showcase with interactive Recharts (bar, radar, scatter), documentation page with syntax-highlighted code blocks
+- **PyPI Package**: version 0.2.0, all classifiers and optional dependencies documented, README_PYPI.md description
+- **Comprehensive CHANGELOG**: organized by category with migration guide
 
 ### Changed
-- **Minimum Python version**: 3.10+ (unchanged from 0.1.0)
-- **Default vLLM settings**: prefix caching on, auto-tuned max_num_seqs
-- **Test suite**: expanded from 239 to 1000+ tests (unit + integration + e2e)
+- **Task Count**: 44 tasks → 79 tasks (44 easy + 15 medium + 20 hard)
+- **Variation Count**: 117 → 138 total task variations
+- **Default vLLM Settings**: prefix caching enabled by default, auto-tuned max_num_seqs based on available VRAM
+- **Test Suite**: expanded from 239 to 1800+ tests (unit + integration + e2e) across all components
+- **Parser Architecture**: monolithic per-task parsers replaced with pluggable strategy pipeline + confidence scoring
+- **Version**: 0.1.0 → 0.2.0 (pyproject.toml, `__init__.py` fallback)
+- **Contact Email**: updated to gks@vt.edu across all files
 
 ### Fixed
-- **Parser robustness**: universal parser handles all model output formats
-- **vLLM batch processing**: prompt length sorting for optimal throughput
-- **Model handler**: graceful fallback from vLLM to transformers
+- **Parser Robustness**: universal parser handles nested `\boxed{}`, multilingual answer patterns, scientific notation, fractions, comma-separated thousands, inverted answer patterns — 435/435 format variation tests pass
+- **BaseTask Error Handling**: `_run_fold_batch()` now retries individual failed prompts, `_get_ground_truth()` handles all task types including medium/hard-specific keys
+- **Token Counting**: fallback chain (model_tokenizer → tiktoken → estimate) with clear logging and accuracy tracking
+- **ModelHandler**: chat templates for transformers backend, streaming support for API backends, updated 2025 pricing
+- **CLI Auto-Detection**: auto-detect API provider from model_id, auto-detect API keys from environment
+- **GPU Memory**: cleanup verified — GPUs return to baseline VRAM after parallel evaluation completes
+- **vLLM Batch Processing**: prompt length sorting for optimal throughput, dtype → torch_dtype fallback bug fixed
+- **Contamination Resistance**: fixed NQueensTask (randomized reference solution), TowerHanoiTask (randomized peg assignment), GraphColoringTask (seed-dependent generation), LogicGridPuzzlesTask (shuffled entity assignments), FibonacciSequenceTask (randomized starting values)
+- **Parallel Engine**: queue deadlock fix with `_slim_result`, occupancy detection prevents vLLM conflicts on shared machines, `CUDA_VISIBLE_DEVICES` awareness
+- **Gradio 6.0 Compatibility**: theme/css moved from Blocks() to launch() with version-adaptive code
+
+### Removed
+- **Dead Contact Email**: removed `contact@beyondbench.org` (replaced with `gks@vt.edu`)
 
 ### Migration from v0.1.0
-- All existing CLI commands remain compatible
-- New `--parallel` flag for multi-GPU (off by default)
-- Cache enabled by default for deterministic runs; use `--no-cache` to disable
-- New optional dependencies: `pip install beyondbench[full]` for all features
+- All existing CLI commands (`evaluate`, `list-tasks`, `run-config`, `wizard`, `serve`, `init`, `info`, `results`) remain fully compatible
+- New `--parallel` flag for multi-GPU evaluation (off by default — single-GPU behavior unchanged)
+- Response cache enabled by default for deterministic runs (temperature=0 or seeded); use `--no-cache` to disable
+- New optional dependency groups: `pip install beyondbench[dashboard]` for Gradio, `pip install beyondbench[viz]` for charts, `pip install beyondbench[full]` for everything
+- `--parser unified` is the new default; `--parser legacy` falls back to v0.1.0 parser behavior
+- New `BEYONDBENCH_*` environment variables available for config overrides (see `docs/user_guide.md`)
+- Python 3.10+ required (unchanged from v0.1.0)
 
 ---
 

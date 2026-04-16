@@ -221,6 +221,12 @@ def _worker_task_parallel(
         result_queue.put(json.dumps({"gpu_id": gpu_id, "error": err, "task_results": {}, "overall_stats": {}}))
 
     finally:
+        # Free GPU memory before the process exits
+        if 'handler' in locals() and handler is not None:
+            try:
+                handler.cleanup()
+            except Exception:
+                pass
         progress_queue.put({"gpu_id": gpu_id, "done": True})
 
 
@@ -348,6 +354,12 @@ def _worker_data_parallel(
         result_queue.put(json.dumps({"gpu_id": gpu_id, "error": err, "task_results": {}, "overall_stats": {}}))
 
     finally:
+        # Free GPU memory before the process exits
+        if 'handler' in locals() and handler is not None:
+            try:
+                handler.cleanup()
+            except Exception:
+                pass
         progress_queue.put({"gpu_id": gpu_id, "done": True})
 
 

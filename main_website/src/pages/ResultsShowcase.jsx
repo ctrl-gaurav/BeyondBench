@@ -196,7 +196,7 @@ export default function ResultsShowcase() {
         <SectionHeader
           icon={TrendingUp}
           title="Top 20 Models by Overall Accuracy"
-          subtitle="Sorted by overall accuracy across all 44 tasks"
+          subtitle="Sorted by overall accuracy across all 79 tasks"
           isDark={isDark}
         />
         <div className="h-80">
@@ -412,7 +412,7 @@ export default function ResultsShowcase() {
           { label: 'Models Evaluated', value: modelData.length + '+' },
           { label: 'Best Accuracy', value: Math.max(...modelData.map(m => m.accuracy)).toFixed(1) + '%' },
           { label: 'Avg Accuracy', value: (modelData.reduce((s, m) => s + m.accuracy, 0) / modelData.length).toFixed(1) + '%' },
-          { label: 'Tasks Covered', value: '44' },
+          { label: 'Tasks Covered', value: '79' },
         ].map(({ label, value }) => (
           <div
             key={label}

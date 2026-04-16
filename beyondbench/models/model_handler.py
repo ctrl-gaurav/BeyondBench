@@ -954,6 +954,33 @@ class ModelHandler:
         logging.info(f"Warm-up done in {elapsed:.2f}s")
         return elapsed
 
+    def cleanup(self) -> None:
+        """Release GPU memory held by the model.
+
+        Deletes the model/tokenizer references and calls
+        ``torch.cuda.empty_cache()`` + ``gc.collect()`` so that VRAM is
+        returned to the OS/driver.  Safe to call multiple times or on
+        API-only handlers (no-op in those cases).
+        """
+        import gc
+        if hasattr(self, 'model') and self.model is not None:
+            del self.model
+            self.model = None
+        if hasattr(self, 'tokenizer') and self.tokenizer is not None:
+            del self.tokenizer
+            self.tokenizer = None
+        gc.collect()
+        try:
+            import torch
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except ImportError:
+            pass
+        logging.info("Model handler cleanup complete — GPU memory freed.")
+
     def __del__(self):
-        """Cleanup method (no resources to clean for API clients)"""
-        pass
+        """Best-effort cleanup on garbage collection."""
+        try:
+            self.cleanup()
+        except Exception:
+            pass

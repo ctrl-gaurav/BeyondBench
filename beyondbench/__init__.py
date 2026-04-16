@@ -2,14 +2,18 @@
 beyondbench: BeyondBench Evaluation Package
 =====================================
 
-A comprehensive evaluation framework for language model reasoning capabilities
-across easy, medium, and hard computational tasks.
+A contamination-resistant evaluation framework for language model reasoning
+capabilities across easy, medium, and hard computational tasks.
 
 Key Features:
-- 29 easy suite tasks with scalable complexity
-- 5 medium suite tasks with 49 variations
-- 10 hard suite tasks with 68 variations
-- Multi-backend support (vLLM, Transformers, OpenAI, Gemini)
+- 44 easy suite tasks with scalable complexity
+- 15 medium suite tasks with 59 variations
+- 20 hard suite tasks with 78 variations
+- Multi-backend support (vLLM, Transformers, OpenAI, Gemini, Anthropic)
+- Multi-GPU parallel evaluation engine
+- Response caching and performance optimization
+- Plugin system and custom task SDK
+- Gradio dashboard for live monitoring
 - Robust parsing and error handling
 - Comprehensive metrics and reporting
 """

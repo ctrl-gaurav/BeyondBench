@@ -120,7 +120,7 @@ export default function Footer() {
         <div className={`mt-10 pt-6 border-t text-center text-xs ${
           isDark ? 'border-bb-dark-50/10 text-gray-600' : 'border-bb-light-300/50 text-gray-400'
         }`}>
-          Built by the BeyondBench Team &bull; MIT License
+          Built by the BeyondBench Team &bull; Apache-2.0 License
         </div>
       </div>
     </footer>
