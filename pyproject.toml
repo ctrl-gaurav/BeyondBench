@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "beyondbench"
-version = "0.2.0"
+version = "0.2.1"
 description = "BeyondBench: Contamination-Resistant Evaluation of Reasoning in Language Models"
 readme = "README_PYPI.md"
 license = {text = "Apache-2.0"}
@@ -129,10 +129,11 @@ Changelog = "https://github.com/ctrl-gaurav/BeyondBench/blob/main/CHANGELOG.md"
 Paper = "https://arxiv.org/abs/2509.24210"
 
 [tool.setuptools]
-packages = ["beyondbench", "beyondbench.cli", "beyondbench.core", "beyondbench.models", "beyondbench.tasks", "beyondbench.tasks.easy", "beyondbench.tasks.medium", "beyondbench.tasks.hard", "beyondbench.utils", "beyondbench.parsers", "beyondbench.plugins", "beyondbench.scripts", "beyondbench.serve", "beyondbench.dashboard", "beyondbench.utils.model_profiles"]
+packages = ["beyondbench", "beyondbench.cli", "beyondbench.configs", "beyondbench.core", "beyondbench.eval", "beyondbench.models", "beyondbench.parsers", "beyondbench.parsers.strategies", "beyondbench.plugins", "beyondbench.prompts", "beyondbench.scripts", "beyondbench.serve", "beyondbench.dashboard", "beyondbench.tasks", "beyondbench.tasks.easy", "beyondbench.tasks.medium", "beyondbench.tasks.hard", "beyondbench.utils", "beyondbench.utils.model_profiles"]
 
 [tool.setuptools.package-data]
-beyondbench = ["configs/*.yaml", "configs/*.json", "py.typed"]
+beyondbench = ["py.typed"]
+"beyondbench.configs" = ["*.yaml", "*.json"]
 "beyondbench.utils.model_profiles" = ["*.json"]
 
 [tool.black]

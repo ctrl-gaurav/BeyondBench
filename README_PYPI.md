@@ -105,7 +105,11 @@ print(f"Average Accuracy: {results['summary']['avg_accuracy']:.2%}")
 
 ---
 
-### New in v0.2.0
+### New in v0.2.1 (Apr 17, 2026)
+
+Critical packaging fix — four subpackages (`parsers.strategies`, `configs`, `eval`, `prompts`) were missing from the v0.2.0 PyPI wheel, causing `ImportError` on fresh installs. No API changes.
+
+### New in v0.2.0 (Apr 16, 2026)
 
 - **79 Reasoning Tasks**: 44 easy + 15 medium (49 variations) + 20 hard (68 variations)
 - **Multi-GPU Parallel Evaluation**: Automatic batch auto-tuning and tensor parallelism

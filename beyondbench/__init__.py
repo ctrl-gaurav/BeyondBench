@@ -21,7 +21,7 @@ from importlib.metadata import version as _pkg_version, PackageNotFoundError
 try:
     __version__ = _pkg_version("beyondbench")
 except PackageNotFoundError:
-    __version__ = "0.2.0"  # fallback for development
+    __version__ = "0.2.1"  # fallback for development
 
 __author__ = "BeyondBench Team"
 __email__ = "gks@vt.edu"

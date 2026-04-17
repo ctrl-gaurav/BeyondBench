@@ -28,6 +28,7 @@
 
 | Date | Update |
 |------|--------|
+| **Apr 17, 2026** | v0.2.1 released — critical PyPI packaging fix (missing subpackages in wheel). See [Changelog](CHANGELOG.md) |
 | **Apr 16, 2026** | v0.2.0 released — multi-GPU parallel eval, 1000+ tests, response caching, plugin SDK, Gradio dashboard. See [Changelog](CHANGELOG.md) |
 | **Mar 6, 2026** | v0.1.0 released &mdash; FastAPI serve, CLI improvements, CI/CD, comprehensive tests. See [Changelog](CHANGELOG.md) |
 | **Feb 25, 2026** | v0.0.2 released &mdash; critical bug fixes, much more stable! See [Changelog](CHANGELOG.md) |
